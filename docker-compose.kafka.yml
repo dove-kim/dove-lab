@@ -1,0 +1,47 @@
+version: '3.8'
+
+services:
+  kafka:
+    image: apache/kafka:latest
+    container_name: kafka-broker
+    restart: always
+    networks:
+      - kafka-network
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      CLUSTER_ID: "S8m4E7uS9K2lC6jR4tP0Q" # 임의의 고유 클러스터 ID (처음 시작 시 생성)
+
+      # 로그 디렉토리 설정 및 호스트 마운트
+      KAFKA_LOG_DIRS: "/var/lib/kafka/data" # 컨테이너 내부의 Kafka 데이터 및 로그 경로
+    volumes:
+      #      - /home/kafka/data:/var/lib/kafka/data
+      #      - /home/kafka/logs:/var/lib/kafka/logs
+      - /Users/wini-woong/Documents/private-github/data:/var/lib/kafka/data
+    #      - /home/kafka/logs:/var/lib/kafka/logs
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:latest
+    container_name: kafka-ui
+    restart: always
+    networks:
+      - kafka-network
+    ports:
+      - "28080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: Local Kafka Cluster # UI에 표시될 클러스터 이름
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092 # Kafka 브로커 주소 (docker-compose 내부 네트워크)
+    depends_on:
+      - kafka # Kafka 브로커가 먼저 시작되도록 의존성 설정
+
+networks:
+  kafka-network:
