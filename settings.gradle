@@ -1,0 +1,5 @@
+rootProject.name = 'stock-ledger-system'
+
+include 'stock-batch'
+include 'stock-consumer'
+include 'stock-krx-data'
