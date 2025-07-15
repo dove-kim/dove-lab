@@ -1,5 +1,5 @@
 package com.dove.stockkrxdata.domain.enums;
 
-public enum MarketType {
+public enum KrxMarketType {
     KOSPI, KOSDAQ, KONEX
 }

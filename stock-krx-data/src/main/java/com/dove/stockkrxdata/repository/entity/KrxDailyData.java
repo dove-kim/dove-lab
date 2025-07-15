@@ -1,8 +1,8 @@
 package com.dove.stockkrxdata.repository.entity;
 
 import com.dove.stockkrxdata.domain.enums.KrxDailyDataStatus;
-import com.dove.stockkrxdata.domain.enums.MarketType;
-import com.dove.stockkrxdata.global.jpa.LocalDateToTimestampConverter;
+import com.dove.stockkrxdata.domain.enums.KrxMarketType;
+import com.dpot.commonjpa.converter.LocalDateToTimestampConverter;
 import jakarta.persistence.*;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -35,7 +35,7 @@ public class KrxDailyData {
 
     @Column(name = "MARKET_TYPE", nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
-    private MarketType marketType;
+    private KrxMarketType krxMarketType;
 
     @Column(name = "RAW_DATA", columnDefinition = "json")
     private String rawData;
@@ -49,9 +49,9 @@ public class KrxDailyData {
 
 
     @Builder
-    private KrxDailyData(LocalDate baseDate, MarketType marketType, String rawData, KrxDailyDataStatus status, LocalDateTime apiCallAt) {
+    private KrxDailyData(LocalDate baseDate, KrxMarketType krxMarketType, String rawData, KrxDailyDataStatus status, LocalDateTime apiCallAt) {
         this.baseDate = baseDate;
-        this.marketType = marketType;
+        this.krxMarketType = krxMarketType;
         this.rawData = rawData;
         this.status = status;
         this.apiCallAt = apiCallAt;
@@ -59,13 +59,13 @@ public class KrxDailyData {
 
     public static KrxDailyData success(
             LocalDate baseDate,
-            MarketType marketType,
+            KrxMarketType krxMarketType,
             String rawData,
             LocalDateTime apiCallAt
     ) {
         return KrxDailyData.builder()
                 .baseDate(baseDate)
-                .marketType(marketType)
+                .krxMarketType(krxMarketType)
                 .rawData(rawData)
                 .status(KrxDailyDataStatus.SUCCESS)
                 .apiCallAt(apiCallAt)
@@ -74,12 +74,12 @@ public class KrxDailyData {
 
     public static KrxDailyData failed(
             LocalDate baseDate,
-            MarketType marketType,
+            KrxMarketType krxMarketType,
             LocalDateTime apiCallAt
     ) {
         return KrxDailyData.builder()
                 .baseDate(baseDate)
-                .marketType(marketType)
+                .krxMarketType(krxMarketType)
                 .status(KrxDailyDataStatus.API_FAILED)
                 .apiCallAt(apiCallAt)
                 .build();
@@ -87,12 +87,12 @@ public class KrxDailyData {
 
     public static KrxDailyData authFailed(
             LocalDate baseDate,
-            MarketType marketType,
+            KrxMarketType krxMarketType,
             LocalDateTime apiCallAt
     ) {
         return KrxDailyData.builder()
                 .baseDate(baseDate)
-                .marketType(marketType)
+                .krxMarketType(krxMarketType)
                 .status(KrxDailyDataStatus.API_AUTH_FAILED)
                 .apiCallAt(apiCallAt)
                 .build();
@@ -100,12 +100,12 @@ public class KrxDailyData {
 
     public static KrxDailyData responseParseError(
             LocalDate baseDate,
-            MarketType marketType,
+            KrxMarketType krxMarketType,
             LocalDateTime apiCallAt
     ) {
         return KrxDailyData.builder()
                 .baseDate(baseDate)
-                .marketType(marketType)
+                .krxMarketType(krxMarketType)
                 .status(KrxDailyDataStatus.BODY_ERROR)
                 .apiCallAt(apiCallAt)
                 .build();
@@ -113,12 +113,12 @@ public class KrxDailyData {
 
     public static KrxDailyData responseNull(
             LocalDate baseDate,
-            MarketType marketType,
+            KrxMarketType krxMarketType,
             LocalDateTime apiCallAt
     ) {
         return KrxDailyData.builder()
                 .baseDate(baseDate)
-                .marketType(marketType)
+                .krxMarketType(krxMarketType)
                 .status(KrxDailyDataStatus.BODY_NULL)
                 .apiCallAt(apiCallAt)
                 .build();

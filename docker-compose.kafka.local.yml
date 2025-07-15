@@ -22,11 +22,11 @@ services:
       CLUSTER_ID: "S8m4E7uS9K2lC6jR4tP0Q" # 임의의 고유 클러스터 ID (처음 시작 시 생성)
 
       # 로그 디렉토리 설정 및 호스트 마운트
-      KAFKA_LOG_DIRS: "/var/lib/kafka/data" # 컨테이너 내부의 Kafka 데이터 및 로그 경로
-    volumes:
+#      KAFKA_LOG_DIRS: "/var/lib/kafka/data" # 컨테이너 내부의 Kafka 데이터 및 로그 경로
+#    volumes:
       #      - /home/kafka/data:/var/lib/kafka/data
       #      - /home/kafka/logs:/var/lib/kafka/logs
-      - /Users/wini-woong/Documents/private-github/data:/var/lib/kafka/data
+#      - /Users/wini-woong/Documents/private-github/data:/var/lib/kafka/data
     #      - /home/kafka/logs:/var/lib/kafka/logs
 
   kafka-ui:
