@@ -1,4 +1,4 @@
-package com.dove.stockkrxdata.global.jpa;
+package com.dpot.commonjpa.converter;
 
 import jakarta.persistence.AttributeConverter;
 import jakarta.persistence.Converter;
