@@ -4,6 +4,17 @@ configurations {
 	}
 }
 
+bootJar {
+	enabled = true
+	archiveFileName = "stock-consumer.jar"
+}
+jar {
+	enabled = false
+}
+bootRun {
+	enabled = true
+}
+
 dependencies {
 	implementation project(':stock-krx-data')
 
@@ -18,8 +29,4 @@ dependencyManagement {
 	imports {
 		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
 	}
-}
-
-tasks.named('test') {
-	useJUnitPlatform()
 }
