@@ -1,6 +1,6 @@
 spring:
   application:
-    name: stock-consumer
+    name: stock-batch
 
   profiles:
     default: local

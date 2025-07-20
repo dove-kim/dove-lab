@@ -1,0 +1,59 @@
+version: '3.8'
+
+services:
+  kafka:
+    image: apache/kafka:3.9.1
+    container_name: kafka-broker
+    restart: always
+    networks:
+      - stock-project-network
+    ports:
+      - "9092:9092"
+    environment:
+      KAFKA_NODE_ID: 1
+      KAFKA_PROCESS_ROLES: 'broker,controller'
+      KAFKA_CONTROLLER_QUORUM_VOTERS: '1@kafka:29093'
+      KAFKA_LISTENERS: 'PLAINTEXT://kafka:29092,CONTROLLER://kafka:29093,PLAINTEXT_HOST://0.0.0.0:9092'
+      KAFKA_ADVERTISED_LISTENERS: 'PLAINTEXT://kafka:29092,PLAINTEXT_HOST://localhost:9092'
+      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: 'CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT,PLAINTEXT_HOST:PLAINTEXT'
+      KAFKA_CONTROLLER_LISTENER_NAMES: 'CONTROLLER'
+      KAFKA_INTER_BROKER_LISTENER_NAME: 'PLAINTEXT'
+      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: 1
+      CLUSTER_ID: "S8m4E7uS9K2lC6jR4tP0Q" # 고유 클러스터 ID
+
+    volumes:
+      - ./container/kafka_data:/var/lib/kafka/data
+
+  mysql:
+    image: mysql:8.0
+    container_name: mysql-db
+    restart: always
+    networks:
+      - stock-project-network
+    ports:
+      - "13306:3306"
+    environment:
+      MYSQL_ROOT_PASSWORD: admin
+      MYSQL_DATABASE: DOVE_STOCK
+      MYSQL_USER: dove_local_test
+      MYSQL_PASSWORD: dove1234
+    volumes:
+      - ./container/mysql_data:/var/lib/mysql
+      - ./doc/init.sql:/docker-entrypoint-initdb.d/init.sql
+
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: kafka-ui
+    restart: always
+    networks:
+      - stock-project-network
+    ports:
+      - "28080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: Local Kafka Cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      - kafka
+
+networks:
+  stock-project-network:
