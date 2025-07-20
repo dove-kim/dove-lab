@@ -1,18 +1,15 @@
 spring:
-  # H2 데이터베이스 설정
   datasource:
     url: jdbc:h2:mem:testdb;MODE=MYSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE
     driver-class-name: org.h2.Driver
     username: sa
     password:
 
-  # JPA (Hibernate) 설정
   jpa:
     hibernate:
-      ddl-auto: update # 테스트 시 엔티티 기반으로 스키마 자동 생성/업데이트
+      ddl-auto: update
       naming:
-        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl # 실제 DB 컬럼명 유지 (snake_case 자동 변환 방지)
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
     properties:
-      hibernate.format_sql: true # SQL 포매팅
-      hibernate.show_sql: true # 콘솔에 SQL 출력
-    open-in-view: false # Lazy Loading 관련 설정 (테스트에서는 크게 중요하지 않지만 일반적으로 false 권장)
+      hibernate.format_sql: true
+      hibernate.show_sql: true

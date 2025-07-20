@@ -1,32 +1,36 @@
-configurations {
-	compileOnly {
-		extendsFrom annotationProcessor
-	}
-}
+//configurations {
+//	compileOnly {
+//		extendsFrom annotationProcessor
+//	}
+//}
 
 bootJar {
-	enabled = true
-	archiveFileName = "stock-consumer.jar"
+    enabled = true
+    archiveFileName = "stock-consumer.jar"
 }
 jar {
-	enabled = false
+    enabled = false
 }
 bootRun {
-	enabled = true
+    enabled = true
 }
 
 dependencies {
-	implementation project(':stock-krx-data')
+    implementation project(":stock-data")
+    implementation project(':stock-krx-data')
 
-	implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
-	implementation 'org.springframework.kafka:spring-kafka'
+    implementation 'org.springframework.kafka:spring-kafka'
 
-	testImplementation 'org.springframework.kafka:spring-kafka-test'
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.19.2'
+
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
 }
 
 dependencyManagement {
-	imports {
-		mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
-	}
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
 }
