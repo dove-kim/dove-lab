@@ -1,7 +1,8 @@
 rootProject.name = 'stock-ledger-system'
 
-include 'stock-batch'
-include 'stock-consumer'
+include 'app-stock-batch'
+include 'app-stock-consumer'
+
 include 'stock-krx-data'
 include 'stock-data'
 include 'common-jpa'

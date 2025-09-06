@@ -1,0 +1,23 @@
+spring:
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://127.0.0.1:13306/DOVE_STOCK?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: dove_local_test
+    password: dove1234
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+      auto-commit: true
+
+  kafka:
+    bootstrap-servers: 127.0.0.1:9092
+
+logging:
+  level:
+    org.hibernate.SQL: debug
+    org.hibernate.type.descriptor.sql: trace
+    com.zaxxer.hikari.HikariConfig: debug
+    com.zaxxer.hikari: trace

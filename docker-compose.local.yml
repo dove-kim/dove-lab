@@ -24,6 +24,20 @@ services:
     volumes:
       - ./container/kafka_data:/var/lib/kafka/data
 
+  kafka-ui:
+    image: provectuslabs/kafka-ui:v0.7.2
+    container_name: kafka-ui
+    restart: always
+    networks:
+      - stock-project-network
+    ports:
+      - "28080:8080"
+    environment:
+      KAFKA_CLUSTERS_0_NAME: Local Kafka Cluster
+      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
+    depends_on:
+      - kafka
+
   mysql:
     image: mysql:8.0
     container_name: mysql-db
@@ -39,21 +53,7 @@ services:
       MYSQL_PASSWORD: dove1234
     volumes:
       - ./container/mysql_data:/var/lib/mysql
-      - ./doc/init.sql:/docker-entrypoint-initdb.d/init.sql
-
-  kafka-ui:
-    image: provectuslabs/kafka-ui:v0.7.2
-    container_name: kafka-ui
-    restart: always
-    networks:
-      - stock-project-network
-    ports:
-      - "28080:8080"
-    environment:
-      KAFKA_CLUSTERS_0_NAME: Local Kafka Cluster
-      KAFKA_CLUSTERS_0_BOOTSTRAPSERVERS: kafka:29092
-    depends_on:
-      - kafka
+      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
 
 networks:
   stock-project-network:
