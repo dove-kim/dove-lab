@@ -11,12 +11,32 @@
 
 ## 프로젝트 구성
 1. Spring boot3(Java21)
-2. Kafka 3.9
-3. Mysql 8.0
 
-## 인프라 구성방법
-1. mysql, kafka 구성
+## 인프라
+1. mysql, kafka
 >[docker-compose.local.yml](./docker-compose.local.yml)
+2. 카프카 토픽 
+```shell
+docker exec $KAFKA_CONTAINER /opt/kafka/bin/kafka-topics.sh \
+    --bootstrap-server $BOOTSTRAP_SERVER \
+    --create \
+    --topic KRX_DATA_REQUEST \
+    --partitions 3 \
+    --replication-factor 1 \
+    --config retention.ms=604800000 \
+    --config compression.type=snappy
 
-2. mysql table 생성
-> [init.sql](./doc/init.sql)
+```
+3. (운영)
+
+## Kafka 메시지 발행 도구
+
+테스트용 메시지를 쉽게 발행할 수 있는 스크립트를 제공합니다.
+
+```bash
+# 실행 권한 부여
+chmod +x message_publish.sh
+
+# 메시지 발행 도구 실행
+./message_publish.sh
+```

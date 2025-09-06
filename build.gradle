@@ -46,39 +46,3 @@ subprojects {
         useJUnitPlatform()
     }
 }
-
-//def hasBeenTested = new HashSet<String>()
-
-//allprojects { project ->
-//    project.tasks.withType(Test).configureEach { testTask ->
-//        testTask.onlyIf {
-//            def shouldRun = !hasBeenTested.contains(project.path)
-//            if (shouldRun) {
-//                hasBeenTested.add(project.path)
-//            }
-//            return shouldRun
-//        }
-//    }
-//}
-
-//gradle.projectsEvaluated {
-//    def getProjectDependencies
-//    getProjectDependencies = { Project project ->
-//        def deps = new HashSet<Project>()
-//        project.configurations.implementation.allDependencies.withType(ProjectDependency).each { dep ->
-//            def depProject = project.project(":${dep.name}")
-//            deps.add(depProject)
-//            deps.addAll(getProjectDependencies(depProject))
-//        }
-//        return deps
-//    }
-//
-//    subprojects { project ->
-//        project.tasks.withType(Test).configureEach { testTask ->
-//            def allDeps = getProjectDependencies(project)
-//            allDeps.each { dep ->
-//                testTask.mustRunAfter(dep.tasks.withType(Test))
-//            }
-//        }
-//    }
-//}
