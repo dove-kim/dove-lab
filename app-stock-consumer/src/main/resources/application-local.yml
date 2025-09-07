@@ -21,3 +21,4 @@ logging:
     org.hibernate.type.descriptor.sql: trace
     com.zaxxer.hikari.HikariConfig: debug
     com.zaxxer.hikari: trace
+    org.hibernate.orm.jdbc.bind: trace

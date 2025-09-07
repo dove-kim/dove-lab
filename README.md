@@ -17,8 +17,8 @@
 >[docker-compose.local.yml](./docker-compose.local.yml)
 2. 카프카 토픽 
 ```shell
-docker exec $KAFKA_CONTAINER /opt/kafka/bin/kafka-topics.sh \
-    --bootstrap-server $BOOTSTRAP_SERVER \
+docker exec kafka-broker /opt/kafka/bin/kafka-topics.sh \
+    --bootstrap-server kafka:9092     \
     --create \
     --topic KRX_DATA_REQUEST \
     --partitions 3 \
@@ -27,7 +27,45 @@ docker exec $KAFKA_CONTAINER /opt/kafka/bin/kafka-topics.sh \
     --config compression.type=snappy
 
 ```
-3. (운영)
+3. (운영) docker compose yml 생성
+
+```yaml
+version: '3.8'
+
+services:
+  stock-batch:
+    image: app-stock-batch:latest
+    container_name: stock-batch
+    restart: unless-stopped
+    environment:
+      # Spring 프로파일
+      SPRING_PROFILES_ACTIVE: prod
+
+      # 데이터베이스 설정
+      DB_USERNAME:
+      DB_PASSWORD:
+
+    volumes:
+      - ./logs/app-batch:/app/logs
+
+  stock-consumer:
+    image: stock-consumer:latest
+    container_name: stock-consumer
+    restart: unless-stopped
+    environment:
+      # Spring 프로파일
+      SPRING_PROFILES_ACTIVE: prod
+
+      # 데이터베이스 설정
+      DB_USERNAME: 
+      DB_PASSWORD:
+
+      # 한국거래소 키 설정
+      KRX_API_AUTH_KEY: 
+      
+    volumes:
+      - ./logs/app-consumer:/app/logs
+```
 
 ## Kafka 메시지 발행 도구
 
