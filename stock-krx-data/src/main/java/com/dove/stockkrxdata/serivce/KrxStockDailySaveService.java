@@ -5,13 +5,14 @@ import com.dove.stockkrxdata.enums.KrxMarketType;
 import com.dove.stockdata.enums.MarketType;
 import com.dove.stockdata.service.StockDataSaveService;
 import lombok.AllArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.List;
 
 @Service
-@AllArgsConstructor
+@RequiredArgsConstructor
 public class KrxStockDailySaveService {
     private final KrxStockService krxStockService;
     private final StockDataSaveService stockDataSaveService;

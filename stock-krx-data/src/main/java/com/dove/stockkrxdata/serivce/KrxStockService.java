@@ -9,6 +9,7 @@ import com.dove.stockkrxdata.repository.KrxDailyDataRepository;
 import feign.FeignException;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -23,6 +24,9 @@ import java.util.stream.Collectors;
 @Service
 @RequiredArgsConstructor
 public class KrxStockService {
+    @Value("${krx.api.auth-key}")
+    private String krxApiAuthKey;
+
     private final KrxStockClient krxStockClient;
     private final KrxDailyDataRepository krxDailyDataRepository;
 
@@ -32,9 +36,8 @@ public class KrxStockService {
         KrxStockResponse response = null;
 
         try {
-            // KrxMarketType enum의 getClientMethod를 사용하여 동적으로 클라이언트 메서드 호출
             BiFunction<String, LocalDate, KrxStockResponse> clientMethod = krxMarketType.getClientMethod(krxStockClient);
-            response = clientMethod.apply("key", baseDate); // "key"는 인증 키
+            response = clientMethod.apply(krxApiAuthKey, baseDate);
 
             if (response == null || response.getDataList() == null || response.getDataList().isEmpty()) {
                 krxDailyDataRepository.save(KrxDailyData.responseNull(baseDate, krxMarketType, apiCallAt));

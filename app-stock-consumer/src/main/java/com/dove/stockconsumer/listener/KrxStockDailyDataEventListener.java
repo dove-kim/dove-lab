@@ -14,9 +14,8 @@ import org.springframework.stereotype.Component;
 @Component
 @RequiredArgsConstructor
 public class KrxStockDailyDataEventListener {
-    private final ObjectMapper objectMapper;
-
     private final KrxStockDailySaveService krxStockDailySaveService;
+    private final ObjectMapper objectMapper;
 
     @KafkaListener(
             groupId = "krxDailyData-1",
@@ -24,20 +23,37 @@ public class KrxStockDailyDataEventListener {
             concurrency = "3"
     )
     public void krxStockDailyData(ConsumerRecord<String, String> data, Acknowledgment acknowledgment) {
-        String messageValue = data.value(); // 메시지 value를 String으로 받음
-        KrxDailyStockDataRequest krxDailyStockDataRequest = null;
-
         try {
-            // String 메시지를 KrxDailyStockDataRequest DTO로 수동 파싱
-            krxDailyStockDataRequest = objectMapper.readValue(messageValue, KrxDailyStockDataRequest.class);
+            String rawMessage = data.value();
+            log.debug("Received raw message: {}", rawMessage);
+
+            // JSON 파싱 시도
+            KrxDailyStockDataRequest krxDailyStockDataRequest = parseMessage(rawMessage);
+            if (krxDailyStockDataRequest == null) {
+                log.warn("Failed to parse message, skipping: topic={}, partition={}, offset={}",
+                        data.topic(), data.partition(), data.offset());
+                return;
+            }
 
             // 한국 거래소 데이터 조회 및 저장 요청
             krxStockDailySaveService
                     .saveKrxDailyStockData(krxDailyStockDataRequest.getMarketType(), krxDailyStockDataRequest.getBaseDate());
 
         } catch (Exception e) {
-            log.error(e.toString(), e);
+            log.error("Unexpected error processing message: topic={}, partition={}, offset={}, error={}",
+                    data.topic(), data.partition(), data.offset(), e.getMessage(), e);
+        } finally {
+            acknowledgment.acknowledge();
         }
-        acknowledgment.acknowledge();
     }
+
+    private KrxDailyStockDataRequest parseMessage(String rawMessage) {
+        try {
+            return objectMapper.readValue(rawMessage, KrxDailyStockDataRequest.class);
+        } catch (Exception e) {
+            log.warn("Cannot parse message as KrxDailyStockDataRequest: {}, error: {}", rawMessage, e.getMessage());
+            return null;
+        }
+    }
+
 }

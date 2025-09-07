@@ -1,0 +1,3 @@
+krx:
+  api:
+    auth-key: ${KRX_API_AUTH_KEY}

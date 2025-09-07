@@ -10,7 +10,7 @@ import java.time.LocalDate;
 
 @FeignClient(
         name = "krx-stock-api",
-        url = "http://data-dbg.krx.co.kr/svc/apis",
+        url = "https://data-dbg.krx.co.kr/svc/apis",
         configuration = KrxStockClientConfig.class
 )
 public interface KrxStockClient {
@@ -20,7 +20,7 @@ public interface KrxStockClient {
             @RequestParam("basDd") @DateTimeFormat(pattern = "yyyyMMdd") LocalDate basDd
     );
 
-    @GetMapping("/sto/ksq_bydd_trd")  // KOSDAQ API endpoint
+    @GetMapping("/sto/ksq_bydd_trd")
     KrxStockResponse getDailyKosdaqStockInfo(
             @RequestHeader("AUTH_KEY") String authKey,
             @RequestParam("basDd") @DateTimeFormat(pattern = "yyyyMMdd") LocalDate basDd

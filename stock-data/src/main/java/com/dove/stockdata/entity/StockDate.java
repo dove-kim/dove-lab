@@ -1,7 +1,9 @@
 package com.dove.stockdata.entity;
 
-import com.dove.commonjpa.converter.LocalDateToTimestampConverter;
-import jakarta.persistence.*;
+import jakarta.persistence.Column;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Id;
+import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
 import lombok.Getter;
@@ -17,6 +19,5 @@ import java.time.LocalDate;
 public class StockDate {
     @Id
     @Column(name = "DATE", nullable = false, unique = true)
-    @Convert(converter = LocalDateToTimestampConverter.class)
-    private LocalDate date;
+    private LocalDate baseDate;
 }
