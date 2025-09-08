@@ -19,5 +19,5 @@ import java.time.LocalDate;
 public class StockDate {
     @Id
     @Column(name = "DATE", nullable = false, unique = true)
-    private LocalDate baseDate;
+    private LocalDate date;
 }
