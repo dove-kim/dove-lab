@@ -42,7 +42,7 @@ jobs:
     steps:
       - name: Checkout Repository
         uses: actions/checkout@v4
-      
+
       - name: Set up JDK 21
         uses: actions/setup-java@v3
         with:
@@ -52,7 +52,7 @@ jobs:
 
       - name: Grant execute permission for gradlew
         run: chmod +x ./gradlew
-      
+
       - name: Build with Gradle
         run: ./gradlew build
 
@@ -65,7 +65,16 @@ jobs:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-          
+
+      - name: Set image tag dynamically
+        id: set_tag
+        run: |
+          if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
+            echo "IMAGE_TAG=latest" >> "$GITHUB_ENV"
+          else
+            echo "IMAGE_TAG=${{ github.ref_name }}" >> "$GITHUB_ENV"
+          fi
+
       - name: Build and Push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -73,5 +82,5 @@ jobs:
           file: ${{ matrix.app_dir }}/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ env.DOCKER_APP_NAME }}/${{ matrix.app_dir }}:latest
+            ghcr.io/${{ env.DOCKER_APP_NAME }}/${{ matrix.app_dir }}:${{ env.IMAGE_TAG }}
             ghcr.io/${{ env.DOCKER_APP_NAME }}/${{ matrix.app_dir }}:${{ github.sha }}
