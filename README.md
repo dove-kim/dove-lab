@@ -34,7 +34,7 @@ version: '3.8'
 
 services:
   stock-batch:
-    image: app-stock-batch:latest
+    image: ghcr.io/dove-kim/stock-ledger-system/app-stock-batch:latest
     container_name: stock-batch
     restart: unless-stopped
     environment:
@@ -49,7 +49,7 @@ services:
       - ./logs/app-batch:/app/logs
 
   stock-consumer:
-    image: stock-consumer:latest
+    image: ghcr.io/dove-kim/stock-ledger-system/stock-consumer:latest
     container_name: stock-consumer
     restart: unless-stopped
     environment:
