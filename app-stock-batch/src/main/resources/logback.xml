@@ -2,7 +2,7 @@
 <configuration>
     <property name="LOG_PATH" value="/logs"/>
 
-    <include file="logback/console_appender.xml"/>
+    <include resource="logback/console_appender.xml"/>
 
     <springProfile name="local">
         <root level="DEBUG">
@@ -11,8 +11,9 @@
     </springProfile>
 
     <springProfile name="prod">
-        <include file="logback/basic_rolling_appender.xml"/>
-        <include file="logback/error_rolling_appender.xml"/>
+        <include resource="logback/basic_rolling_appender.xml"/>
+        <include resource="logback/error_rolling_appender.xml"/>
+
 
         <root level="INFO">
             <appender-ref ref="INFO_FILE"/>
