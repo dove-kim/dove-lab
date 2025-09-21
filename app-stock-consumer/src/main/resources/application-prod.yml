@@ -13,7 +13,7 @@ spring:
       auto-commit: true
 
   kafka:
-    bootstrap-servers: 127.0.0.1:9092
+    bootstrap-servers: ${KAFKA_HOST}:${KAFKA_PORT}
 
 logging:
   level:
