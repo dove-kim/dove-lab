@@ -42,6 +42,8 @@ services:
       SPRING_PROFILES_ACTIVE: prod
 
       # 데이터베이스 설정
+      DB_HOST:
+      DB_PORT:
       DB_USERNAME:
       DB_PASSWORD:
 
@@ -57,8 +59,14 @@ services:
       SPRING_PROFILES_ACTIVE: prod
 
       # 데이터베이스 설정
+      DB_HOST:
+      DB_PORT:
       DB_USERNAME: 
       DB_PASSWORD:
+        
+      # 카프카 설정
+      KAFKA_HOST:
+      KAFKA_PORT:
 
       # 한국거래소 키 설정
       KRX_API_AUTH_KEY: 
