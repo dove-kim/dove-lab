@@ -2,7 +2,9 @@
   "permissions": {
     "allow": [
       "Bash(./gradlew clean:*)",
-      "Bash(export:*)"
+      "Bash(export:*)",
+      "Bash(git mv:*)",
+      "Bash(./gradlew test:*)"
     ]
   }
 }
