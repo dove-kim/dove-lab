@@ -1,0 +1,31 @@
+bootJar {
+    enabled = true
+    archiveFileName = "app-stock-consumer.jar"
+}
+jar {
+    enabled = false
+}
+bootRun {
+    enabled = true
+}
+
+dependencies {
+    implementation project(":app-common")
+    implementation project(":stock-data")
+    implementation project(':stock-krx-data')
+
+    implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
+
+    implementation 'org.springframework.kafka:spring-kafka'
+
+    implementation 'com.fasterxml.jackson.datatype:jackson-datatype-jsr310'
+    implementation 'com.fasterxml.jackson.core:jackson-databind:2.19.2'
+
+    testImplementation 'org.springframework.kafka:spring-kafka-test'
+}
+
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}

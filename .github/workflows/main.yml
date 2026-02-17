@@ -25,7 +25,7 @@ jobs:
       - name: Find all 'app-*' directories
         id: find_dirs
         run: |
-          JSON_ARRAY=$(find . -maxdepth 1 -type d -name "app-*" | sed 's/.\///' | jq -Rcs 'split("\n") | map(select(length > 0))')
+          JSON_ARRAY=$(find ./app -maxdepth 1 -type d -name "app-*" | sed 's/.\///' | jq -Rcs 'split("\n") | map(select(length > 0))')
           echo "app_dirs=$JSON_ARRAY" >> "$GITHUB_OUTPUT"
         shell: bash
 
