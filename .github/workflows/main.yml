@@ -75,6 +75,10 @@ jobs:
             echo "IMAGE_TAG=${{ github.ref_name }}" >> "$GITHUB_ENV"
           fi
 
+      - name: Extract app name
+        id: app_name
+        run: echo "name=$(basename ${{ matrix.app_dir }})" >> "$GITHUB_OUTPUT"
+
       - name: Build and Push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -82,5 +86,5 @@ jobs:
           file: ${{ matrix.app_dir }}/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ env.DOCKER_APP_NAME }}/${{ matrix.app_dir }}:${{ env.IMAGE_TAG }}
-            ghcr.io/${{ env.DOCKER_APP_NAME }}/${{ matrix.app_dir }}:${{ github.sha }}
+            ghcr.io/${{ env.DOCKER_APP_NAME }}/${{ steps.app_name.outputs.name }}:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ env.DOCKER_APP_NAME }}/${{ steps.app_name.outputs.name }}:${{ github.sha }}
