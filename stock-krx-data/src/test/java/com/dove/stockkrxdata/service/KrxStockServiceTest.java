@@ -1,4 +1,4 @@
-package com.dove.stockkrxdata.serivce;
+package com.dove.stockkrxdata.service;
 
 import com.dove.stockkrxdata.client.KrxStockClient;
 import com.dove.stockkrxdata.client.KrxStockResponse;

@@ -3,7 +3,7 @@
 
 # Kafka 메시지 발행 스크립트
 KAFKA_CONTAINER="kafka-broker"
-BOOTSTRAP_SERVER="kafka:29092"
+BOOTSTRAP_SERVER="kafka:9092"
 
 echo "=== Kafka 메시지 발행 도구 ==="
 echo "1. 토픽 목록 조회"

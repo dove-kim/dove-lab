@@ -1,4 +1,4 @@
-package com.dove.stockkrxdata.serivce;
+package com.dove.stockkrxdata.service;
 
 import com.dove.stockkrxdata.dto.KrxStockInfo;
 import com.dove.stockkrxdata.enums.KrxMarketType;
