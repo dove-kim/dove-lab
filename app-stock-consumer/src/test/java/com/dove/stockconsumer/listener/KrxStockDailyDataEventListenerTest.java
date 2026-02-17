@@ -2,7 +2,7 @@ package com.dove.stockconsumer.listener;
 
 import com.dove.stockconsumer.dto.KrxDailyStockDataRequest;
 import com.dove.stockdata.enums.MarketType;
-import com.dove.stockkrxdata.serivce.KrxStockDailySaveService;
+import com.dove.stockkrxdata.service.KrxStockDailySaveService;
 import com.fasterxml.jackson.core.JsonProcessingException;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.apache.kafka.clients.consumer.ConsumerRecord;

@@ -39,6 +39,7 @@ out/
 
 ### log ###
 .log
+/logs
 
 graph.md
 .DS_Store

@@ -10,6 +10,7 @@ import java.time.LocalDate;
 
 @Getter
 @AllArgsConstructor
+@NoArgsConstructor
 public class KrxDailyStockDataRequest {
     /**
      * 이벤트 스키마 버전

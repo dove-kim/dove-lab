@@ -1,7 +1,7 @@
 package com.dove.stockconsumer.listener;
 
 import com.dove.stockconsumer.dto.KrxDailyStockDataRequest;
-import com.dove.stockkrxdata.serivce.KrxStockDailySaveService;
+import com.dove.stockkrxdata.service.KrxStockDailySaveService;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -30,7 +30,7 @@ public class KrxStockDailyDataEventListener {
             // JSON 파싱 시도
             KrxDailyStockDataRequest krxDailyStockDataRequest = parseMessage(rawMessage);
             if (krxDailyStockDataRequest == null) {
-                log.warn("Failed to parse message, skipping: topic={}, partition={}, offset={}",
+                log.debug("Failed to parse message, skipping: topic={}, partition={}, offset={}",
                         data.topic(), data.partition(), data.offset());
                 return;
             }
@@ -51,7 +51,7 @@ public class KrxStockDailyDataEventListener {
         try {
             return objectMapper.readValue(rawMessage, KrxDailyStockDataRequest.class);
         } catch (Exception e) {
-            log.warn("Cannot parse message as KrxDailyStockDataRequest: {}, error: {}", rawMessage, e.getMessage());
+            log.error("Cannot parse message as KrxDailyStockDataRequest: {}, error: {}", rawMessage, e.getMessage());
             return null;
         }
     }
