@@ -1,6 +1,5 @@
 package com.dove.stockdata.entity;
 
-import com.dove.commonjpa.converter.LocalDateToTimestampConverter;
 import com.dove.stockdata.enums.MarketType;
 import jakarta.persistence.*;
 import lombok.*;
@@ -21,6 +20,5 @@ public class StockDataId {
     private String stockCode;
 
     @Column(name = "TRADE_DATE", nullable = false)
-    @Convert(converter = LocalDateToTimestampConverter.class)
     private LocalDate tradeDate;
 }

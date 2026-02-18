@@ -1,6 +1,5 @@
 package com.dove.stockbatch.dto;
 
-import com.dove.stockdata.enums.MarketType;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -14,12 +13,7 @@ public class KrxDailyStockDataRequest {
     /**
      * 이벤트 스키마 버전
      */
-    private final int eventVersion = 1;
-
-    /**
-     * 시장 타입
-     */
-    private MarketType marketType;
+    private final int eventVersion = 2;
 
     /**
      * 요청 날짜
@@ -27,8 +21,7 @@ public class KrxDailyStockDataRequest {
     @JsonFormat(shape = JsonFormat.Shape.STRING, pattern = "yyyyMMdd")
     private LocalDate baseDate;
 
-    public KrxDailyStockDataRequest(MarketType marketType, LocalDate baseDate) {
-        this.marketType = marketType;
+    public KrxDailyStockDataRequest(LocalDate baseDate) {
         this.baseDate = baseDate;
     }
 }
