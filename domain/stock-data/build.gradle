@@ -1,7 +1,7 @@
 bootJar.enabled = false
 
 dependencies {
-    implementation project(':common-jpa')
+    implementation project(':jpa')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
