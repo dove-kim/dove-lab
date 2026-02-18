@@ -10,9 +10,9 @@ bootRun {
 }
 
 dependencies {
-    implementation project(":app-common")
+    implementation project(":logging")
     implementation project(":stock-data")
-    implementation project(':stock-krx-data')
+    implementation project(':krx-market-data')
 
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 

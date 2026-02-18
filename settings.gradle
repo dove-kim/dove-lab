@@ -1,16 +1,16 @@
 rootProject.name = 'stock-ledger-system'
 
-include 'app-common'
 include 'app-stock-batch'
 include 'app-stock-consumer'
-
-include 'stock-krx-data'
-include 'stock-data'
-include 'common-jpa'
-
 project(':app-stock-batch').projectDir = file('app/app-stock-batch')
 project(':app-stock-consumer').projectDir = file('app/app-stock-consumer')
 
-project(':stock-krx-data').projectDir = file('domain/stock-krx-data')
+include 'krx-market-data'
+include 'stock-data'
+project(':krx-market-data').projectDir = file('domain/krx-market-data')
 project(':stock-data').projectDir = file('domain/stock-data')
-project(':common-jpa').projectDir = file('domain/common-jpa')
+
+include 'logging'
+include 'jpa'
+project(':logging').projectDir = file('infra/logging')
+project(':jpa').projectDir = file('infra/jpa')

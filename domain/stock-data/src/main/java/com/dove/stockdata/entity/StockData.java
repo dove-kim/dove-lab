@@ -10,7 +10,6 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 
-import java.math.BigDecimal;
 import java.time.LocalDate;
 
 @Getter
@@ -25,22 +24,22 @@ public class StockData {
     @Column(name = "VOLUME", nullable = false)
     private Long volume; // 거래량
 
-    @Column(name = "OPEN_PRICE", nullable = false, precision = 19, scale = 2)
-    private BigDecimal openPrice; // 시가 (소수점 고려하여 BigDecimal 사용)
+    @Column(name = "OPEN_PRICE", nullable = false)
+    private Long openPrice; // 시가
 
-    @Column(name = "CLOSE_PRICE", nullable = false, precision = 19, scale = 2)
-    private BigDecimal closePrice; // 종가
+    @Column(name = "CLOSE_PRICE", nullable = false)
+    private Long closePrice; // 종가
 
-    @Column(name = "LOW_PRICE", nullable = false, precision = 19, scale = 2)
-    private BigDecimal lowPrice; // 저가
+    @Column(name = "LOW_PRICE", nullable = false)
+    private Long lowPrice; // 저가
 
-    @Column(name = "HIGH_PRICE", nullable = false, precision = 19, scale = 2)
-    private BigDecimal highPrice; // 고가
+    @Column(name = "HIGH_PRICE", nullable = false)
+    private Long highPrice; // 고가
 
     public StockData(
             MarketType marketType, String stockCode,
             LocalDate tradeDate, Long volume,
-            BigDecimal openPrice, BigDecimal closePrice, BigDecimal lowPrice, BigDecimal highPrice
+            Long openPrice, Long closePrice, Long lowPrice, Long highPrice
     ) {
         this.id = new StockDataId(marketType, stockCode, tradeDate);
         this.volume = volume;
