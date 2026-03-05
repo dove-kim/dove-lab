@@ -1,0 +1,11 @@
+bootJar.enabled = false
+
+dependencies {
+    implementation project(':jpa')
+    implementation project(':stock-data')
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'com.fasterxml.jackson.core:jackson-annotations'
+
+    testImplementation 'com.h2database:h2'
+}

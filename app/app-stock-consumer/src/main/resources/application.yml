@@ -23,7 +23,10 @@ spring:
 
 logging:
   level:
-    org.hibernate.SQL: debug
-    org.hibernate.type.descriptor.sql: trace
-    com.zaxxer.hikari.HikariConfig: debug
-    com.zaxxer.hikari: trace
+    root: INFO
+    com.dove: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN
+    com.zaxxer.hikari: INFO
+    org.apache.kafka: WARN
+    org.springframework.kafka: WARN
