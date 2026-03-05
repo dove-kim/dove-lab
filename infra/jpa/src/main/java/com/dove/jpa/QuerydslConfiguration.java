@@ -7,20 +7,11 @@ import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 /**
- * Querydsl 설정
- *
- * @see JpaConfig
+ * Querydsl 설정. JPAQueryFactory 빈을 등록한다.
  */
 @Configuration
 public class QuerydslConfiguration {
 
-    /**
-     * for Querydsl
-     *
-     * @param entityManager EntityManager
-     * @return JPAQueryFactory
-     * @see EntityManager
-     */
     @Bean
     public JPAQueryFactory jpaQueryFactory(EntityManager entityManager) {
         return new JPAQueryFactory(
