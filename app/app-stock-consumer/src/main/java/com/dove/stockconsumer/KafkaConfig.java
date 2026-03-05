@@ -16,6 +16,9 @@ import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * Kafka Consumer 설정. CooperativeSticky 할당 전략과 수동 ACK 모드를 사용한다.
+ */
 @Configuration
 public class KafkaConfig {
     @Value("${spring.kafka.bootstrap-servers:localhost:9092}")

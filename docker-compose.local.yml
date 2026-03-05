@@ -24,6 +24,17 @@ services:
     volumes:
       - ./container/kafka_data:/var/lib/kafka/data
 
+  kafka-init:
+    image: apache/kafka:3.9.1
+    container_name: kafka-init
+    networks:
+      - stock-project-network
+    depends_on:
+      - kafka
+    entrypoint: ["/bin/sh", "/scripts/kafka-init.sh"]
+    volumes:
+      - ./kafka-init.sh:/scripts/kafka-init.sh
+
   kafka-ui:
     image: provectuslabs/kafka-ui:v0.7.2
     container_name: kafka-ui
