@@ -13,6 +13,9 @@ import org.springframework.kafka.support.serializer.JsonSerializer;
 import java.util.HashMap;
 import java.util.Map;
 
+/**
+ * Kafka Producer 설정. JSON 직렬화를 사용하며 타입 헤더를 비활성화한다.
+ */
 @Configuration
 public class KafkaConfig {
     @Value("${spring.kafka.bootstrap-servers:localhost:9092}")

@@ -34,27 +34,17 @@
 [docker-compose.local.yml](./docker-compose.local.yml)로 인프라를 띄우면 기본값으로 바로 실행된다.
 
 ```bash
-# 1. 인프라 실행
+# 1. 인프라 실행 (Kafka 토픽은 kafka-init 컨테이너가 자동 생성)
 docker compose -f docker-compose.local.yml up -d
 
-# 2. 카프카 토픽 생성 (최초 1회)
-docker exec kafka-broker /opt/kafka/bin/kafka-topics.sh \
-    --bootstrap-server kafka:9092 \
-    --create \
-    --topic KRX_DATA_REQUEST \
-    --partitions 3 \
-    --replication-factor 1 \
-    --config retention.ms=604800000 \
-    --config compression.type=snappy
-
-# 3. stock-batch 실행 (콘솔 DEBUG)
+# 2. stock-batch 실행 (콘솔 DEBUG)
 DB_HOST=127.0.0.1 DB_PORT=13306 \
 DB_USERNAME=dove_local_test DB_PASSWORD=dove1234 \
 KAFKA_HOST=localhost KAFKA_PORT=9092 \
 LOG_LEVEL=DEBUG \
 ./gradlew :app-stock-batch:bootRun
 
-# 4. stock-consumer 실행 (콘솔 DEBUG)
+# 3. stock-consumer 실행 (콘솔 DEBUG)
 DB_HOST=127.0.0.1 DB_PORT=13306 \
 DB_USERNAME=dove_local_test DB_PASSWORD=dove1234 \
 KAFKA_HOST=localhost KAFKA_PORT=9092 \
@@ -114,14 +104,42 @@ services:
     network_mode: "host"
 ```
 
-## Kafka 메시지 발행 도구
+## 쉘 스크립트
 
-테스트용 메시지를 쉽게 발행할 수 있는 스크립트를 제공합니다.
+### kafka-init.sh — Kafka 토픽 초기화
+
+Docker 컨테이너 내부에서 실행되며, `docker-compose.local.yml`의 `kafka-init` 서비스가 자동 호출한다.
+
+| 환경변수 | 기본값 | 설명 |
+|---|---|---|
+| `BOOTSTRAP_SERVER` | `kafka:29092` | Kafka 브로커 주소 |
+| `TOPICS` | `KRX_STOCK_PRICE_QUERY TECHNICAL_INDICATOR_CALC` | 생성할 토픽 (공백 구분) |
+| `PARTITIONS` | `4` | 파티션 수 |
+| `REPLICATION_FACTOR` | `1` | 복제 팩터 |
+
+운영 환경에서는 docker-compose의 `environment`로 오버라이드한다.
+
+```yaml
+kafka-init:
+  environment:
+    BOOTSTRAP_SERVER: "prod-kafka:29092"
+    PARTITIONS: "12"
+    REPLICATION_FACTOR: "3"
+```
+
+### message_publish.sh — Kafka 메시지 발행
+
+호스트에서 직접 실행하는 대화형 도구로, 종료(`q`) 전까지 반복 사용 가능하다.
 
 ```bash
-# 실행 권한 부여
-chmod +x message_publish.sh
-
-# 메시지 발행 도구 실행
+# 로컬 (기본값: kafka-broker / kafka:29092)
 ./message_publish.sh
+
+# 운영 (컨테이너명과 브로커 주소 지정)
+./message_publish.sh prod-broker prod-kafka:29092
 ```
+
+| 인자 | 순서 | 기본값 | 설명 |
+|---|---|---|---|
+| `KAFKA_CONTAINER` | 1번째 | `kafka-broker` | Docker 컨테이너명 |
+| `BOOTSTRAP_SERVER` | 2번째 | `kafka:29092` | 컨테이너 내부 브로커 주소 |

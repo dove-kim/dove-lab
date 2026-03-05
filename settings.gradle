@@ -7,8 +7,12 @@ project(':app-stock-consumer').projectDir = file('app/app-stock-consumer')
 
 include 'krx-market-data'
 include 'stock-data'
+include 'technical-indicator'
+include 'event-support'
 project(':krx-market-data').projectDir = file('domain/krx-market-data')
 project(':stock-data').projectDir = file('domain/stock-data')
+project(':technical-indicator').projectDir = file('domain/technical-indicator')
+project(':event-support').projectDir = file('domain/event-support')
 
 include 'logging'
 include 'jpa'

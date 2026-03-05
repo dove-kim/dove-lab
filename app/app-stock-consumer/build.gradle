@@ -13,7 +13,10 @@ dependencies {
     implementation project(":logging")
     implementation project(":stock-data")
     implementation project(':krx-market-data')
+    implementation project(':technical-indicator')
+    implementation project(':event-support')
 
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
 
     implementation 'org.springframework.kafka:spring-kafka'
@@ -22,6 +25,7 @@ dependencies {
     implementation 'com.fasterxml.jackson.core:jackson-databind:2.19.2'
 
     testImplementation 'org.springframework.kafka:spring-kafka-test'
+    testImplementation 'com.h2database:h2'
 }
 
 dependencyManagement {
