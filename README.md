@@ -143,3 +143,5 @@ kafka-init:
 |---|---|---|---|
 | `KAFKA_CONTAINER` | 1번째 | `kafka-broker` | Docker 컨테이너명 |
 | `BOOTSTRAP_SERVER` | 2번째 | `kafka:29092` | 컨테이너 내부 브로커 주소 |
+
+docker exec mysql-db ls -lh /var/lib/mysql/DOVE_STOCK/ | sort -k5 -h

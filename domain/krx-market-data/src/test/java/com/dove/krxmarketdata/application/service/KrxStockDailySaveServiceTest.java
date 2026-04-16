@@ -19,6 +19,9 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.time.LocalDate;
 import java.util.Collections;
 import java.util.List;
+import java.util.Optional;
+
+import com.dove.stockdata.domain.entity.MarketCalendarId;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -146,6 +149,27 @@ class KrxStockDailySaveServiceTest {
 
             verify(stockDataSaveService, never()).update(
                     any(), any(), any(), any(), any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("이미 저장된 날짜+시장으로 다시 호출하면 기존 MarketCalendar의 dayType을 업데이트한다")
+        void shouldUpdateExistingMarketCalendarWhenCalledAgain() {
+            // Given
+            MarketCalendar existing = new MarketCalendar(testDate, MarketType.KOSPI, MarketDayType.HOLIDAY);
+            when(marketCalendarRepository.findById(new MarketCalendarId(testDate, MarketType.KOSPI)))
+                    .thenReturn(Optional.of(existing));
+            List<KrxStockInfo> kospiList = List.of(
+                    createMockKrxStockInfo("005930", "삼성전자", testDate, MarketType.KOSPI,
+                            1000000L, 70000L, 71000L, 69500L, 71500L)
+            );
+            when(krxStockService.getStockListBy(eq(MarketType.KOSPI), eq(testDate)))
+                    .thenReturn(kospiList);
+
+            // When
+            krxStockDailySaveService.saveDailyMarketDataByMarket(testDate, MarketType.KOSPI);
+
+            // Then
+            assertThat(existing.getDayType()).isEqualTo(MarketDayType.TRADING);
         }
 
         @Test

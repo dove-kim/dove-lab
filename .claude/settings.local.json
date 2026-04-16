@@ -1,0 +1,18 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(gh issue:*)",
+      "Bash(\"C:/Program Files/GitHub CLI/gh.exe\" issue:*)",
+      "Bash(xargs grep *)",
+      "Bash(JAVA_HOME=\"C:/Users/kimza/.jdks/corretto-21.0.7\" ./gradlew :app:app-stock-consumer:test --tests \"com.dove.stockconsumer.KafkaConfigTest\")",
+      "Bash(JAVA_HOME=\"C:/Users/kimza/.jdks/corretto-21.0.7\" ./gradlew projects)",
+      "Bash(JAVA_HOME=\"C:/Users/kimza/.jdks/corretto-21.0.7\" ./gradlew :app-stock-consumer:test --tests \"com.dove.stockconsumer.KafkaConfigTest\")",
+      "Bash(JAVA_HOME=\"C:/Users/kimza/.jdks/corretto-21.0.7\" ./gradlew :app-stock-consumer:test --tests \"com.dove.stockconsumer.KafkaConfigTest.shouldMarkCommitFailedExceptionAsNonRetryable\" --info)",
+      "Bash(JAVA_HOME=\"C:/Users/kimza/.jdks/corretto-21.0.7\" ./gradlew :app-stock-consumer:dependencies --configuration runtimeClasspath)",
+      "Bash(JAVA_HOME=\"C:/Users/kimza/.jdks/corretto-21.0.7\" ./gradlew :app-stock-consumer:dependencies --configuration testRuntimeClasspath)",
+      "Bash(JAVA_HOME=\"C:/Users/kimza/.jdks/corretto-21.0.7\" ./gradlew :app-stock-consumer:test)",
+      "Bash(JAVA_HOME=\"C:/Users/kimza/.jdks/corretto-21.0.7\" ./gradlew :app-stock-consumer:test --tests \"com.dove.stockconsumer.listener.StockIndicatorCalcEventListenerTest\")"
+    ]
+  }
+}
+

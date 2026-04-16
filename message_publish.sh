@@ -43,7 +43,7 @@ publish_single_date() {
 
     read -p "메시지를 발행하시겠습니까? (y/n): " confirm
     if [[ $confirm == "y" || $confirm == "Y" ]]; then
-        publish_message "KRX_STOCK_PRICE_QUERY" "date-key" "$message"
+        publish_message "KRX_STOCK_PRICE_QUERY" "${base_date}-${market_type}" "$message"
         echo "메시지 발행 완료!"
     else
         echo "메시지 발행을 취소했습니다."
@@ -113,7 +113,7 @@ publish_date_range() {
             current_date=$(date -d "@$current_timestamp" '+%Y%m%d')
             message="{\"eventVersion\":1,\"marketType\":\"$market_type\",\"baseDate\":\"$current_date\"}"
 
-            publish_message "KRX_STOCK_PRICE_QUERY" "date-key" "$message"
+            publish_message "KRX_STOCK_PRICE_QUERY" "${current_date}-${market_type}" "$message"
 
             sent_count=$(( sent_count + 1 ))
             echo "[$sent_count/$total_days] $current_date 발행 완료"
