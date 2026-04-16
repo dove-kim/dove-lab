@@ -1,5 +1,6 @@
 package com.dove.stockconsumer;
 
+import org.apache.kafka.clients.consumer.CommitFailedException;
 import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.CooperativeStickyAssignor;
 import org.apache.kafka.common.serialization.StringDeserializer;
@@ -11,6 +12,8 @@ import org.springframework.kafka.config.KafkaListenerContainerFactory;
 import org.springframework.kafka.core.DefaultKafkaConsumerFactory;
 import org.springframework.kafka.listener.ConcurrentMessageListenerContainer;
 import org.springframework.kafka.listener.ContainerProperties;
+import org.springframework.kafka.listener.DefaultErrorHandler;
+import org.springframework.util.backoff.FixedBackOff;
 
 import java.util.HashMap;
 import java.util.List;
@@ -29,6 +32,7 @@ public class KafkaConfig {
         ConcurrentKafkaListenerContainerFactory<String, Object> factory = new ConcurrentKafkaListenerContainerFactory<>();
         factory.setConsumerFactory(new DefaultKafkaConsumerFactory<>(consumerConfig()));
         factory.getContainerProperties().setAckMode(ContainerProperties.AckMode.MANUAL_IMMEDIATE);
+        factory.setCommonErrorHandler(errorHandler());
 
         return factory;
     }
@@ -45,9 +49,15 @@ public class KafkaConfig {
 
         props.put(ConsumerConfig.FETCH_MIN_BYTES_CONFIG, 1024);
         props.put(ConsumerConfig.FETCH_MAX_WAIT_MS_CONFIG, 500);
-        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 100);
+        props.put(ConsumerConfig.MAX_POLL_RECORDS_CONFIG, 10);
 
         return props;
     }
 
+    @Bean
+    public DefaultErrorHandler errorHandler() {
+        DefaultErrorHandler errorHandler = new DefaultErrorHandler(new FixedBackOff(1000, 3));
+        errorHandler.addNotRetryableExceptions(CommitFailedException.class);
+        return errorHandler;
+    }
 }
