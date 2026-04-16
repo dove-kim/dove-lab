@@ -49,6 +49,15 @@ services:
     depends_on:
       - kafka
 
+  redis:
+    image: redis:7-alpine
+    container_name: redis
+    restart: always
+    networks:
+      - stock-project-network
+    ports:
+      - "6379:6379"
+
   mysql:
     image: mysql:8.0
     container_name: mysql-db

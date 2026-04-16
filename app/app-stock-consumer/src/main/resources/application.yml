@@ -26,6 +26,15 @@ spring:
       naming:
         physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
 
+redis:
+  host: ${REDIS_HOST:localhost}
+  port: ${REDIS_PORT:6379}
+
+distributed-lock:
+  wait-time: ${DISTRIBUTED_LOCK_WAIT_TIME:5}
+  lease-time: ${DISTRIBUTED_LOCK_LEASE_TIME:60}
+  ttl-seconds: ${DISTRIBUTED_LOCK_TTL_SECONDS:86400}
+
 logging:
   level:
     root: INFO

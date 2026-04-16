@@ -9,10 +9,13 @@ import com.dove.technicalindicator.domain.repository.TechnicalIndicatorRepositor
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
+import org.redisson.api.RedissonClient;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.test.context.TestPropertySource;
+import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
@@ -24,11 +27,15 @@ import static org.mockito.Mockito.verify;
 
 @SpringBootTest
 @Import(TestConsumerConfiguration.class)
+@TestPropertySource(properties = "distributed-lock.enabled=false")
 @DisplayName("StockIndicatorCalcEventListener 통합 테스트")
 class StockIndicatorCalcEventListenerIntegrationTest {
 
     @Autowired
     private StockIndicatorCalcEventListener stockIndicatorCalcEventListener;
+
+    @MockitoBean
+    private RedissonClient redissonClient;
 
     @Autowired
     private StockDataRepository stockDataRepository;

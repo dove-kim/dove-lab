@@ -16,5 +16,10 @@ project(':event-support').projectDir = file('domain/event-support')
 
 include 'logging'
 include 'jpa'
+include 'redis'
 project(':logging').projectDir = file('infra/logging')
 project(':jpa').projectDir = file('infra/jpa')
+project(':redis').projectDir = file('infra/redis')
+
+include 'distributed-lock'
+project(':distributed-lock').projectDir = file('lib/distributed-lock')

@@ -1,5 +1,6 @@
 package com.dove.stockconsumer.listener;
 
+import com.dove.distributedlock.IdempotentConsumer;
 import com.dove.stockdata.application.dto.KrxDailyStockDataRequest;
 import com.dove.krxmarketdata.application.service.KrxStockDailySaveService;
 import com.dove.eventsupport.domain.entity.FailedEvent;
@@ -38,6 +39,7 @@ public class KrxStockDailyDataEventListener {
             topics = "KRX_STOCK_PRICE_QUERY",
             concurrency = "4"
     )
+    @IdempotentConsumer(prefix = "krx-daily", keyExpression = "#data.key()")
     public void krxStockDailyData(ConsumerRecord<String, String> data, Acknowledgment acknowledgment) {
         try {
             String rawMessage = data.value();
