@@ -45,3 +45,5 @@ graph.md
 .DS_Store
 
 /container
+
+settings.local.json
