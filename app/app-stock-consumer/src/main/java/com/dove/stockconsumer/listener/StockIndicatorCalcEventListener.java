@@ -1,5 +1,6 @@
 package com.dove.stockconsumer.listener;
 
+import com.dove.distributedlock.IdempotentConsumer;
 import com.dove.eventsupport.domain.entity.FailedEvent;
 import com.dove.eventsupport.domain.repository.FailedEventRepository;
 import com.dove.stockdata.domain.repository.StockDataQueryRepository;
@@ -39,6 +40,7 @@ public class StockIndicatorCalcEventListener {
             topics = "TECHNICAL_INDICATOR_CALC",
             concurrency = "4"
     )
+    @IdempotentConsumer(prefix = "indicator-calc", keyExpression = "#data.key() + ':' + #data.value()")
     public void onIndicatorCalcEventRequest(ConsumerRecord<String, String> data, Acknowledgment acknowledgment) {
         try {
             String rawMessage = data.value();
