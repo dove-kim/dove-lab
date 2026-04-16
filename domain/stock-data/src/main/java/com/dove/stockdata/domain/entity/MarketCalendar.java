@@ -32,4 +32,8 @@ public class MarketCalendar {
     @Column(name = "DAY_TYPE", nullable = false, length = 20)
     @Enumerated(EnumType.STRING)
     private MarketDayType dayType;
+
+    public void updateDayType(MarketDayType dayType) {
+        this.dayType = dayType;
+    }
 }

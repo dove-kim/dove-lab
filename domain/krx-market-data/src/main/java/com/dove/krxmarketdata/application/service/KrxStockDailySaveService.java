@@ -1,6 +1,7 @@
 package com.dove.krxmarketdata.application.service;
 
 import com.dove.stockdata.domain.entity.MarketCalendar;
+import com.dove.stockdata.domain.entity.MarketCalendarId;
 import com.dove.stockdata.domain.enums.MarketDayType;
 import com.dove.stockdata.domain.enums.MarketType;
 import com.dove.stockdata.domain.repository.MarketCalendarRepository;
@@ -35,9 +36,17 @@ public class KrxStockDailySaveService {
             return List.of();
         }
 
-        marketCalendarRepository.save(new MarketCalendar(targetDate, marketType, MarketDayType.TRADING));
+        saveOrUpdateCalendar(targetDate, marketType, MarketDayType.TRADING);
         stockList.forEach(this::saveStockInfo);
         return stockList.stream().map(KrxStockInfo::stockCode).toList();
+    }
+
+    private void saveOrUpdateCalendar(LocalDate date, MarketType marketType, MarketDayType dayType) {
+        marketCalendarRepository.findById(new MarketCalendarId(date, marketType))
+                .ifPresentOrElse(
+                        existing -> existing.updateDayType(dayType),
+                        () -> marketCalendarRepository.save(new MarketCalendar(date, marketType, dayType))
+                );
     }
 
     private void saveStockInfo(KrxStockInfo info) {
