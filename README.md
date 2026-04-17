@@ -25,6 +25,11 @@
 | `KAFKA_HOST` | Kafka 브로커 호스트 | `localhost` | |
 | `KAFKA_PORT` | Kafka 브로커 포트 | `9092` | |
 | `KRX_API_AUTH_KEY` | 한국거래소 API 인증키 | (없음) | stock-consumer에서 필수 |
+| `REDIS_HOST` | Redis 호스트 | `localhost` | stock-consumer에서 사용 |
+| `REDIS_PORT` | Redis 포트 | `6379` | |
+| `DISTRIBUTED_LOCK_WAIT_TIME` | 분산락 대기 시간 (초) | `5` | |
+| `DISTRIBUTED_LOCK_LEASE_TIME` | 분산락 임대 시간 (초) | `60` | |
+| `DISTRIBUTED_LOCK_TTL_SECONDS` | 멱등성 키 TTL (초) | `86400` | 기본 24시간 |
 | `LOG_LEVEL` | 로그 레벨 | `DEBUG` | DEBUG, INFO, WARN, ERROR |
 | `LOG_PATH` | 로그 파일 경로 | `./logs` | 파일 로깅 활성화 시 사용 |
 | `SPRING_PROFILES_INCLUDE` | 파일 로깅 활성화 | (없음) | `file` 설정 시 파일 로깅 추가 |
@@ -97,6 +102,8 @@ services:
       KAFKA_HOST: <Kafka 호스트>
       KAFKA_PORT: <Kafka 포트>
       KRX_API_AUTH_KEY: <한국거래소 API 인증키>
+      REDIS_HOST: <Redis 호스트>
+      REDIS_PORT: <Redis 포트>
       LOG_LEVEL: INFO
       SPRING_PROFILES_INCLUDE: file
     volumes:

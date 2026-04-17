@@ -1,6 +1,7 @@
 package com.dove.stockconsumer.listener;
 
 import com.dove.krxmarketdata.infrastructure.client.KrxStockClient;
+import org.redisson.api.RedissonClient;
 import com.dove.krxmarketdata.infrastructure.client.KrxStockResponse;
 import com.dove.stockconsumer.TestConsumerConfiguration;
 import com.dove.stockdata.domain.entity.StockDataChange;
@@ -12,6 +13,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.context.SpringBootTest;
 import org.springframework.context.annotation.Import;
 import org.springframework.kafka.support.Acknowledgment;
+import org.springframework.test.context.TestPropertySource;
 import org.springframework.test.context.bean.override.mockito.MockitoBean;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -27,6 +29,7 @@ import static org.mockito.Mockito.when;
 
 @SpringBootTest
 @Import(TestConsumerConfiguration.class)
+@TestPropertySource(properties = "distributed-lock.enabled=false")
 @DisplayName("KrxStockDailyDataEventListener 통합 테스트")
 class KrxStockDailyDataEventListenerIntegrationTest {
 
@@ -35,6 +38,9 @@ class KrxStockDailyDataEventListenerIntegrationTest {
 
     @MockitoBean
     private KrxStockClient krxStockClient;
+
+    @MockitoBean
+    private RedissonClient redissonClient;
 
     @Autowired
     private StockDataChangeRepository stockDataChangeRepository;
