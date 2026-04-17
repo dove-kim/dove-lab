@@ -1,0 +1,12 @@
+plugins {
+    id 'java-library'
+}
+
+bootJar.enabled = false
+
+dependencies {
+    api project(':redis')
+    implementation 'org.springframework.boot:spring-boot-starter-aop'
+
+    testImplementation 'org.mockito:mockito-core'
+}
