@@ -1,6 +1,6 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 
 import java.util.List;
@@ -25,16 +25,16 @@ public class AdxCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<StockData> stockDataList) {
-        int size = stockDataList.size();
+    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+        int size = dailyStockPriceList.size();
 
         double[] tr = new double[size - 1];
         double[] plusDm = new double[size - 1];
         double[] minusDm = new double[size - 1];
 
         for (int i = 1; i < size; i++) {
-            StockData current = stockDataList.get(i);
-            StockData previous = stockDataList.get(i - 1);
+            DailyStockPrice current = dailyStockPriceList.get(i);
+            DailyStockPrice previous = dailyStockPriceList.get(i - 1);
 
             double highDiff = current.getHighPrice() - previous.getHighPrice();
             double lowDiff = previous.getLowPrice() - current.getLowPrice();

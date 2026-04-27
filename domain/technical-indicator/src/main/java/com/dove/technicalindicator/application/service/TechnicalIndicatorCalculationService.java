@@ -1,8 +1,8 @@
 package com.dove.technicalindicator.application.service;
 
-import com.dove.stockdata.domain.entity.StockData;
-import com.dove.stockdata.domain.enums.MarketType;
-import com.dove.stockdata.domain.repository.StockDataQueryRepository;
+import com.dove.stockprice.application.service.DailyStockPriceQueryService;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
+import com.dove.market.domain.enums.MarketType;
 import com.dove.technicalindicator.domain.calculator.TechnicalIndicatorCalculator;
 import com.dove.technicalindicator.domain.entity.TechnicalIndicator;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
@@ -27,7 +27,7 @@ import java.util.Map;
 @RequiredArgsConstructor
 public class TechnicalIndicatorCalculationService {
 
-    private final StockDataQueryRepository stockDataQueryRepository;
+    private final DailyStockPriceQueryService dailyStockPriceQueryService;
     private final TechnicalIndicatorRepository technicalIndicatorRepository;
     private final List<TechnicalIndicatorCalculator> calculators;
 
@@ -50,7 +50,7 @@ public class TechnicalIndicatorCalculationService {
     public void calculateWithRecalculation(MarketType marketType, String stockCode, LocalDate tradeDate) {
         calculateForStock(marketType, stockCode, tradeDate);
 
-        List<LocalDate> futureDates = stockDataQueryRepository.findTradeDatesAfter(
+        List<LocalDate> futureDates = dailyStockPriceQueryService.findTradeDatesAfter(
                 marketType, stockCode, tradeDate);
 
         for (LocalDate futureDate : futureDates) {
@@ -63,7 +63,7 @@ public class TechnicalIndicatorCalculationService {
                                  MarketType marketType, String stockCode, LocalDate tradeDate) {
         try {
             int requiredSize = calculator.requiredDataSize();
-            List<StockData> recentData = stockDataQueryRepository.findRecentStockData(
+            List<DailyStockPrice> recentData = dailyStockPriceQueryService.findRecentDailyStockPrice(
                     marketType, stockCode, tradeDate, requiredSize);
 
             if (recentData.size() < requiredSize) {
@@ -72,7 +72,7 @@ public class TechnicalIndicatorCalculationService {
                 return;
             }
 
-            List<StockData> ascData = new ArrayList<>(recentData);
+            List<DailyStockPrice> ascData = new ArrayList<>(recentData);
             ascData.sort(Comparator.comparing(sd -> sd.getId().getTradeDate()));
 
             Map<IndicatorType, Double> results = calculator.calculate(ascData);

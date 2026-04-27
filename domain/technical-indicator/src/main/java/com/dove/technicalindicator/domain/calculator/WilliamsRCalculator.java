@@ -1,6 +1,6 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 
 import java.util.List;
@@ -24,16 +24,16 @@ public class WilliamsRCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<StockData> stockDataList) {
+    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
         long highestHigh = Long.MIN_VALUE;
         long lowestLow = Long.MAX_VALUE;
 
-        for (StockData data : stockDataList) {
+        for (DailyStockPrice data : dailyStockPriceList) {
             highestHigh = Math.max(highestHigh, data.getHighPrice());
             lowestLow = Math.min(lowestLow, data.getLowPrice());
         }
 
-        long close = stockDataList.get(stockDataList.size() - 1).getClosePrice();
+        long close = dailyStockPriceList.get(dailyStockPriceList.size() - 1).getClosePrice();
 
         if (highestHigh == lowestLow) {
             return Map.of(IndicatorType.WILLIAMS_R, 0.0);

@@ -1,0 +1,40 @@
+server:
+  port: ${SERVER_PORT:28180}
+
+spring:
+  application:
+    name: stock-batch
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:13306}/DOVE_STOCK?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: ${DB_USERNAME:dove_local_test}
+    password: ${DB_PASSWORD:dove1234}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+      auto-commit: true
+
+  kafka:
+    bootstrap-servers: ${KAFKA_HOST:localhost}:${KAFKA_PORT:9092}
+
+  jpa:
+    hibernate:
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+
+krx:
+  target-markets: ${KRX_TARGET_MARKETS:KOSPI,KOSDAQ}
+
+logging:
+  level:
+    root: INFO
+    com.dove: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN
+    com.zaxxer.hikari: INFO
+    org.apache.kafka: WARN
+    org.springframework.kafka: WARN
