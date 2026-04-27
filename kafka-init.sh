@@ -1,6 +1,16 @@
 #!/bin/sh
+# Kafka 토픽 초기화. docker-compose의 kafka-init 서비스가 자동 호출.
+#
+# 환경변수 (기본값):
+#   BOOTSTRAP_SERVER    (kafka:29092)                                                    Kafka 브로커 주소
+#   TOPICS              (STOCK_PRICE_QUERY STOCK_LISTING_QUERY TECHNICAL_INDICATOR_CALC) 생성할 토픽 (공백 구분)
+#   PARTITIONS          (4)                                                              파티션 수
+#   REPLICATION_FACTOR  (1)                                                              복제 팩터
+#
+# 운영 환경: docker-compose의 environment로 오버라이드.
+
 BOOTSTRAP_SERVER="${BOOTSTRAP_SERVER:-kafka:29092}"
-TOPICS="${TOPICS:-KRX_STOCK_PRICE_QUERY TECHNICAL_INDICATOR_CALC}"
+TOPICS="${TOPICS:-STOCK_PRICE_QUERY STOCK_LISTING_QUERY TECHNICAL_INDICATOR_CALC}"
 PARTITIONS="${PARTITIONS:-4}"
 REPLICATION_FACTOR="${REPLICATION_FACTOR:-1}"
 

@@ -1,7 +1,7 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
-import com.dove.stockdata.domain.enums.MarketType;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
+import com.dove.market.domain.enums.MarketType;
 import com.dove.technicalindicator.domain.calculator.RsiCalculator;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 import org.junit.jupiter.api.DisplayName;
@@ -20,8 +20,8 @@ class RsiCalculatorTest {
 
     private final RsiCalculator rsiCalculator = new RsiCalculator();
 
-    private StockData createStockData(LocalDate date, long closePrice) {
-        return new StockData(MarketType.KOSPI, "005930", date,
+    private DailyStockPrice createDailyStockPrice(LocalDate date, long closePrice) {
+        return new DailyStockPrice(MarketType.KOSPI, "005930", date,
                 1000L, 100L, closePrice, 90L, 110L);
     }
 
@@ -35,8 +35,8 @@ class RsiCalculatorTest {
         long[] prices = {4400, 4434, 4409, 4361, 4433, 4483, 4510, 4542, 4584,
                 4608, 4589, 4603, 4561, 4628, 4628};
 
-        List<StockData> data = IntStream.range(0, 15)
-                .mapToObj(i -> createStockData(LocalDate.of(2024, 1, 1).plusDays(i), prices[i]))
+        List<DailyStockPrice> data = IntStream.range(0, 15)
+                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, 1).plusDays(i), prices[i]))
                 .toList();
 
         // When
@@ -51,8 +51,8 @@ class RsiCalculatorTest {
     @DisplayName("모두 상승이면 RSI는 100에 가깝다")
     void shouldReturn100WhenAllGains() {
         // Given
-        List<StockData> data = IntStream.range(0, 15)
-                .mapToObj(i -> createStockData(LocalDate.of(2024, 1, 1).plusDays(i), 1000 + i * 100))
+        List<DailyStockPrice> data = IntStream.range(0, 15)
+                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, 1).plusDays(i), 1000 + i * 100))
                 .toList();
 
         // When
@@ -66,8 +66,8 @@ class RsiCalculatorTest {
     @DisplayName("모두 하락이면 RSI는 0에 가깝다")
     void shouldReturn0WhenAllLosses() {
         // Given
-        List<StockData> data = IntStream.range(0, 15)
-                .mapToObj(i -> createStockData(LocalDate.of(2024, 1, 1).plusDays(i), 10000 - i * 100))
+        List<DailyStockPrice> data = IntStream.range(0, 15)
+                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, 1).plusDays(i), 10000 - i * 100))
                 .toList();
 
         // When

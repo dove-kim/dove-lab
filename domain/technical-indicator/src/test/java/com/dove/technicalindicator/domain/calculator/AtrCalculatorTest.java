@@ -1,7 +1,7 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
-import com.dove.stockdata.domain.enums.MarketType;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
+import com.dove.market.domain.enums.MarketType;
 import com.dove.technicalindicator.domain.calculator.AtrCalculator;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 import org.junit.jupiter.api.DisplayName;
@@ -19,8 +19,8 @@ class AtrCalculatorTest {
 
     private final AtrCalculator calculator = new AtrCalculator();
 
-    private StockData createStockData(LocalDate date, long high, long low, long close) {
-        return new StockData(MarketType.KOSPI, "005930", date,
+    private DailyStockPrice createDailyStockPrice(LocalDate date, long high, long low, long close) {
+        return new DailyStockPrice(MarketType.KOSPI, "005930", date,
                 1000L, 100L, close, low, high);
     }
 
@@ -28,8 +28,8 @@ class AtrCalculatorTest {
     @DisplayName("알려진 값으로 ATR(14)를 검증한다")
     void shouldCalculateAtrFromKnownValues() {
         // Given - 15개 데이터, 고가-저가 = 20 일정
-        List<StockData> data = IntStream.range(0, 15)
-                .mapToObj(i -> createStockData(
+        List<DailyStockPrice> data = IntStream.range(0, 15)
+                .mapToObj(i -> createDailyStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         110, 90, 100))
                 .toList();
@@ -51,12 +51,12 @@ class AtrCalculatorTest {
     @DisplayName("갭 상승 시 True Range를 정확히 계산한다")
     void shouldHandleGapUp() {
         // Given - 전일 종가 100, 당일 고가 120 저가 115 → TR = max(5, 20, 15) = 20
-        List<StockData> data = IntStream.range(0, 15)
+        List<DailyStockPrice> data = IntStream.range(0, 15)
                 .mapToObj(i -> {
                     if (i == 0) {
-                        return createStockData(LocalDate.of(2024, 1, 1), 105, 95, 100);
+                        return createDailyStockPrice(LocalDate.of(2024, 1, 1), 105, 95, 100);
                     }
-                    return createStockData(
+                    return createDailyStockPrice(
                             LocalDate.of(2024, 1, 1).plusDays(i),
                             120, 115, 118);
                 })

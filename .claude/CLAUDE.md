@@ -1,75 +1,84 @@
-# 개발 가이드
+# 개발 규칙
 
-항상 plan.md의 지시사항을 따른다. plan.md를 통해 개발 할 경우 미완료 테스트를 찾아 테스트를 구현한 뒤, 해당 테스트를 통과시키기 위한 최소한의 코드만 작성한다.
+## 진행 중인 작업
 
-# 역할과 전문성
+`plan.md`가 있으면 **항상 우선**. 미완료 체크박스를 찾아 순서대로 수행.
+다른 plan 문서: `plan-indicator-cursor.md`, `plan-ml-dataset.md`, `plan-ml-serving.md` (모두 `plan.md` 완료 후 진행).
 
-Kent Beck의 테스트 주도 개발(TDD)과 Tidy First 원칙을 따르는 시니어 소프트웨어 엔지니어로서, 이 방법론을 정확하게 따르며 개발을 진행한다.
+## 방법론
 
-# 핵심 개발 원칙
+- **TDD Red → Green → Refactor**: 실패 테스트 먼저, 통과시킬 최소 코드, 그 후 리팩토링.
+- **Tidy First**: 구조적 변경(rename/move/extract)과 행위적 변경(기능 추가·수정)을 **같은 커밋에 섞지 않음**. 둘 다 필요하면 구조적 먼저.
+- 테스트 이름은 행위 기술: `shouldXxxWhenYyy`.
+- 결함 수정은 실패 테스트 작성 → 수정.
 
-- 항상 TDD 사이클을 따른다: Red -> Green -> Refactor
-- 가장 단순한 실패 테스트를 먼저 작성한다
-- 테스트를 통과시키기 위한 최소한의 코드만 구현한다
-- 테스트가 통과한 후에만 리팩토링한다
-- Beck의 "Tidy First" 접근법에 따라 구조적 변경과 행위적 변경을 분리한다
-- 개발 전 과정에서 높은 코드 품질을 유지한다
+## 커밋
 
-# TDD 방법론 가이드
+- Claude는 `git commit` 실행 금지. 사용자만 커밋.
+- 작업 단위 완료 시 변경 내역 요약 보고만.
 
-- 작은 기능 단위를 정의하는 실패 테스트를 먼저 작성한다
-- 행위를 설명하는 의미 있는 테스트 이름을 사용한다 (예: "shouldSumTwoPositiveNumbers")
-- 테스트 실패를 명확하고 이해하기 쉽게 만든다
-- 테스트를 통과시키기 위한 최소한의 코드만 작성한다 - 그 이상은 금지
-- 테스트 통과 후 리팩토링이 필요한지 검토한다
-- 새로운 기능에 대해 사이클을 반복한다
-- 결함 수정 시, 먼저 API 수준의 실패 테스트를 작성하고, 문제를 재현하는 가장 작은 테스트를 작성한 뒤, 두 테스트를 모두 통과시킨다
+## 코드 품질
 
-# Tidy First 접근법
+- 중복 제거. 이름으로 의도 표현. 의존성 명시.
+- 메서드 작게·단일 책임. 상태/부수 효과 최소화. 가장 단순한 해결책.
+- 각 리팩토링 후 테스트 실행.
 
-- 모든 변경을 두 가지 유형으로 명확히 분리한다:
-  1. 구조적 변경: 행위를 바꾸지 않고 코드를 정리 (이름 변경, 메서드 추출, 코드 이동)
-  2. 행위적 변경: 실제 기능을 추가하거나 수정
-- 같은 커밋에 구조적 변경과 행위적 변경을 절대 섞지 않는다
-- 두 가지 모두 필요할 때는 항상 구조적 변경을 먼저 수행한다
-- 구조적 변경 전후로 테스트를 실행하여 행위가 변경되지 않았음을 검증한다
+## 아키텍처 계층
 
-# 커밋 규칙
+구조는 **헥사고날(Ports & Adapters) 4계층 멀티모듈**, 도메인 모델은 **DDD 전술 패턴**(Aggregate, Bounded Context, Port/ACL)으로 설계 (plan.md 기준):
 
-- 다음 조건을 모두 만족할 때만 커밋한다:
-  1. 모든 테스트가 통과할 것
-  2. 모든 컴파일러/린터 경고가 해결될 것
-  3. 변경이 하나의 논리적 작업 단위를 나타낼 것
-  4. 커밋 메시지에 구조적 변경인지 행위적 변경인지 명시할 것
-- 크고 드문 커밋보다 작고 빈번한 커밋을 지향한다
+```
+application/           Driver adapter — @KafkaListener, @Scheduled 진입점
+  └── service/         조합 유스케이스 (도메인 service + port만 주입)
 
-# 코드 품질 기준
+domain/                Aggregate 단위 모듈 (entity + repo + JPA/QueryDSL + CQRS service)
+  market, stock, stock-price, technical-indicator, krx-call-log, event-retry
 
-- 중복을 철저히 제거한다
-- 이름과 구조를 통해 의도를 명확히 표현한다
-- 의존성을 명시적으로 만든다
-- 메서드를 작고 단일 책임에 집중하게 유지한다
-- 상태와 부수 효과를 최소화한다
-- 가능한 가장 단순한 해결책을 사용한다
+infrastructure/        Driven adapter — 외부 시스템 연결
+  krx                  KRX API 어댑터 (port 구현)
+  redis                Redisson 클라이언트
+  distributed-lock     Redisson 분산락 + 멱등 가드 AOP
 
-# 리팩토링 가이드
+library/               도메인 무관 공통 기술
+  jpa, logging
+```
 
-- 테스트가 통과하는 상태("Green" 단계)에서만 리팩토링한다
-- 정립된 리팩토링 패턴을 올바른 이름과 함께 사용한다
-- 한 번에 하나의 리팩토링만 수행한다
-- 각 리팩토링 단계 후 테스트를 실행한다
-- 중복 제거 또는 명확성 향상을 위한 리팩토링을 우선한다
+각 Fetcher 포트는 자기 `Outcome`(sealed) + `Reason`(enum)을 nested로 소유 (Published Language).
+event-retry는 reason을 `String`으로 저장 (ACL). 공용 타입 의존 없음.
 
-# 작업 흐름 예시
+## 계층 경계 원칙 (필수)
 
-새로운 기능을 구현할 때:
+- **app 모듈은 Repository 직접 주입 금지**. 도메인 모듈의 Query/Command service 또는 port만 주입.
+- 모든 모듈은 **CQRS 분리**. 조회 전용은 `*QueryService`, 변경은 `*CommandService`.
+- 도메인 모듈은 자기 aggregate의 entity + repo + QueryDSL 구현을 함께 소유 (관심사 응집).
+- 조합(여러 aggregate 엮는 유스케이스)은 app의 `service/` 패키지. 별도 application 모듈 없음.
+- Port는 관련 aggregate의 domain 모듈에 위치 (`DailyPriceFetcher` → `stock-price`, `StockListingFetcher` → `stock`).
 
-1. 기능의 작은 부분에 대한 간단한 실패 테스트를 작성한다
-2. 테스트를 통과시키기 위한 최소한의 코드를 구현한다
-3. 테스트를 실행하여 통과 확인 (Green)
-4. 필요한 구조적 변경을 수행하고 (Tidy First), 각 변경 후 테스트 실행
-5. 구조적 변경을 별도로 커밋한다
-6. 다음 작은 기능 단위에 대한 테스트를 추가한다
-7. 기능이 완성될 때까지 반복하며, 행위적 변경과 구조적 변경을 별도로 커밋한다
+## 쿼리 규칙
 
-항상 한 번에 하나의 테스트를 작성하고, 실행하고, 구조를 개선한다. 매번 모든 테스트를 실행한다 (장시간 실행 테스트 제외).
+- **native SQL / JPQL 문자열 사용 금지**. Spring Data JPA 메서드 또는 QueryDSL만 사용.
+
+## 엔티티 규칙
+
+- 모든 `@Table`에 목적에 맞는 `@Index` 또는 `uniqueConstraints` 명시.
+- 쿼리 패턴에 맞는 복합 인덱스를 엔티티 정의에 포함 (PendingEventRetry의 `(EVENT_TYPE, EVENT_KEY)` unique + `NEXT_RETRY_AT` index 참고).
+- 신규/변경 컬럼·테이블에 한글 `@Comment` 부착.
+
+## DDL 배포
+
+- 스키마 변경은 **`init.sql`을 단일 진실 원천**으로 유지. 배포는 이 파일로 수행.
+- JPA `ddl-auto`는 개발·테스트(H2) 한정. 운영은 `init.sql`.
+
+## 빌드/테스트 실행
+
+- 사용자가 직접 수행. Claude는 필요 시 제안만.
+- JAVA_HOME: `C:/Users/kimza/.jdks/corretto-21.0.7`
+- Kafka는 테스트에서 Mockito로 모킹 (EmbeddedKafka 미사용).
+
+## 이후 개발 방향 (개요)
+
+`plan.md` 모듈 재편 완료 후 진행 순서:
+
+1. **`plan-indicator-cursor.md`** — 커서 기반 기술적 지표 계산. `StockDataChange` + `TECHNICAL_INDICATOR_CALC` 토픽 흐름을 `IndicatorCursor` + `INDICATOR_ADVANCE` 단일 토픽으로 전환. 지표 계산기 정합성 보강 (OBV 승계, Wilder 계열 requiredDataSize 상향) + ML용 파생 피처 확장.
+2. **`plan-ml-dataset.md`** — 스윙 트레이딩 ML 학습 데이터셋 구성. `technical_indicator` wide-format pivot + 상위 20% 이진 분류 레이블. Survivorship / look-ahead bias 방지.
+3. **`plan-ml-serving.md`** — Python 학습 → Spring 네이티브 추론 (LightGBM → LightGBM+XGBoost+CatBoost 앙상블). 일별 배치 예측 + `STOCK_PREDICTION` 저장.

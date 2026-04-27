@@ -1,0 +1,43 @@
+# 운영용 docker-compose 예시. 복사 후 환경변수 채워서 사용.
+# 환경변수 설명은 README.md 상단 표 참조.
+
+version: '3.8'
+
+services:
+  stock-batch:
+    image: ghcr.io/dove-kim/stock-ledger-system/stock-batch:latest
+    container_name: stock-batch
+    restart: unless-stopped
+    environment:
+      DB_HOST: <DB 호스트>
+      DB_PORT: <DB 포트>
+      DB_USERNAME: <DB 사용자명>
+      DB_PASSWORD: <DB 비밀번호>
+      KAFKA_HOST: <Kafka 호스트>
+      KAFKA_PORT: <Kafka 포트>
+      KRX_TARGET_MARKETS: "KOSPI,KOSDAQ,KONEX"
+      LOG_LEVEL: INFO
+      SPRING_PROFILES_INCLUDE: file
+    volumes:
+      - ./logs/batch:/logs
+    network_mode: "host"
+
+  stock-consumer:
+    image: ghcr.io/dove-kim/stock-ledger-system/stock-consumer:latest
+    container_name: stock-consumer
+    restart: unless-stopped
+    environment:
+      DB_HOST: <DB 호스트>
+      DB_PORT: <DB 포트>
+      DB_USERNAME: <DB 사용자명>
+      DB_PASSWORD: <DB 비밀번호>
+      KAFKA_HOST: <Kafka 호스트>
+      KAFKA_PORT: <Kafka 포트>
+      KRX_API_AUTH_KEY: <한국거래소 API 인증키>
+      REDIS_HOST: <Redis 호스트>
+      REDIS_PORT: <Redis 포트>
+      LOG_LEVEL: INFO
+      SPRING_PROFILES_INCLUDE: file
+    volumes:
+      - ./logs/consumer:/logs
+    network_mode: "host"

@@ -1,6 +1,6 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 
 import java.util.List;
@@ -30,9 +30,9 @@ public class SmaCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<StockData> stockDataList) {
-        double sum = stockDataList.stream()
-                .mapToLong(StockData::getClosePrice)
+    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+        double sum = dailyStockPriceList.stream()
+                .mapToLong(DailyStockPrice::getClosePrice)
                 .sum();
 
         double sma = sum / period;

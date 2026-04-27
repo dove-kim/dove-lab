@@ -1,6 +1,6 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 
 import java.util.List;
@@ -27,9 +27,9 @@ public class MacdCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<StockData> stockDataList) {
-        double[] closePrices = stockDataList.stream()
-                .mapToDouble(StockData::getClosePrice)
+    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+        double[] closePrices = dailyStockPriceList.stream()
+                .mapToDouble(DailyStockPrice::getClosePrice)
                 .toArray();
 
         double[] ema12 = calculateEma(closePrices, SHORT_PERIOD);

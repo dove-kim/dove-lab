@@ -1,6 +1,6 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 
 import java.util.List;
@@ -25,10 +25,10 @@ public class CciCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<StockData> stockDataList) {
-        double[] typicalPrices = new double[stockDataList.size()];
-        for (int i = 0; i < stockDataList.size(); i++) {
-            StockData data = stockDataList.get(i);
+    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+        double[] typicalPrices = new double[dailyStockPriceList.size()];
+        for (int i = 0; i < dailyStockPriceList.size(); i++) {
+            DailyStockPrice data = dailyStockPriceList.get(i);
             typicalPrices[i] = (data.getHighPrice() + data.getLowPrice() + data.getClosePrice()) / 3.0;
         }
 

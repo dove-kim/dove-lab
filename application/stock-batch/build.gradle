@@ -1,0 +1,26 @@
+bootJar {
+    enabled = true
+    archiveFileName = "stock-batch.jar"
+}
+jar {
+    enabled = false
+}
+bootRun {
+    enabled = true
+}
+
+dependencies {
+    implementation project(":logging")
+    implementation project(":market")
+    implementation project(":stock")
+    implementation project(":stock-price")
+    implementation project(":technical-indicator")
+    implementation project(":event-retry")
+
+    implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'org.springframework.boot:spring-boot-starter-web'
+    implementation 'org.springframework.kafka:spring-kafka'
+
+    testImplementation 'com.h2database:h2'
+}
+
