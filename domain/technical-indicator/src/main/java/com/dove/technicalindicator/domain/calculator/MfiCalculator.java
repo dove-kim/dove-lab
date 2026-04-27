@@ -1,6 +1,6 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 
 import java.util.List;
@@ -24,13 +24,13 @@ public class MfiCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<StockData> stockDataList) {
+    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
         double positiveFlow = 0;
         double negativeFlow = 0;
 
-        for (int i = 1; i < stockDataList.size(); i++) {
-            StockData current = stockDataList.get(i);
-            StockData previous = stockDataList.get(i - 1);
+        for (int i = 1; i < dailyStockPriceList.size(); i++) {
+            DailyStockPrice current = dailyStockPriceList.get(i);
+            DailyStockPrice previous = dailyStockPriceList.get(i - 1);
 
             double currentTp = (current.getHighPrice() + current.getLowPrice() + current.getClosePrice()) / 3.0;
             double previousTp = (previous.getHighPrice() + previous.getLowPrice() + previous.getClosePrice()) / 3.0;

@@ -1,25 +1,31 @@
 rootProject.name = 'stock-ledger-system'
 
-include 'app-stock-batch'
-include 'app-stock-consumer'
-project(':app-stock-batch').projectDir = file('app/app-stock-batch')
-project(':app-stock-consumer').projectDir = file('app/app-stock-consumer')
+include 'stock-batch'
+include 'stock-consumer'
+project(':stock-batch').projectDir = file('application/stock-batch')
+project(':stock-consumer').projectDir = file('application/stock-consumer')
 
-include 'krx-market-data'
-include 'stock-data'
+include 'krx-call-log'
+include 'krx'
 include 'technical-indicator'
-include 'event-support'
-project(':krx-market-data').projectDir = file('domain/krx-market-data')
-project(':stock-data').projectDir = file('domain/stock-data')
+include 'market'
+include 'stock'
+include 'stock-price'
+include 'event-retry'
+project(':krx-call-log').projectDir = file('domain/krx-call-log')
+project(':krx').projectDir = file('infrastructure/krx')
 project(':technical-indicator').projectDir = file('domain/technical-indicator')
-project(':event-support').projectDir = file('domain/event-support')
+project(':market').projectDir = file('domain/market')
+project(':stock').projectDir = file('domain/stock')
+project(':stock-price').projectDir = file('domain/stock-price')
+project(':event-retry').projectDir = file('domain/event-retry')
 
 include 'logging'
 include 'jpa'
 include 'redis'
-project(':logging').projectDir = file('infra/logging')
-project(':jpa').projectDir = file('infra/jpa')
-project(':redis').projectDir = file('infra/redis')
+project(':logging').projectDir = file('library/logging')
+project(':jpa').projectDir = file('library/jpa')
+project(':redis').projectDir = file('infrastructure/redis')
 
 include 'distributed-lock'
-project(':distributed-lock').projectDir = file('lib/distributed-lock')
+project(':distributed-lock').projectDir = file('infrastructure/distributed-lock')

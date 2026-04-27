@@ -1,6 +1,6 @@
 package com.dove.technicalindicator.domain.entity;
 
-import com.dove.stockdata.domain.enums.MarketType;
+import com.dove.market.domain.enums.MarketType;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 import jakarta.persistence.*;
 import lombok.*;

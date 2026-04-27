@@ -1,6 +1,6 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 
 import java.util.List;
@@ -26,8 +26,8 @@ public class StochasticCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<StockData> stockDataList) {
-        int totalSize = stockDataList.size();
+    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+        int totalSize = dailyStockPriceList.size();
         int kCount = totalSize - K_PERIOD + 1;
         double[] kValues = new double[kCount];
 
@@ -36,12 +36,12 @@ public class StochasticCalculator implements TechnicalIndicatorCalculator {
             long lowestLow = Long.MAX_VALUE;
 
             for (int j = i; j < i + K_PERIOD; j++) {
-                StockData data = stockDataList.get(j);
+                DailyStockPrice data = dailyStockPriceList.get(j);
                 highestHigh = Math.max(highestHigh, data.getHighPrice());
                 lowestLow = Math.min(lowestLow, data.getLowPrice());
             }
 
-            long close = stockDataList.get(i + K_PERIOD - 1).getClosePrice();
+            long close = dailyStockPriceList.get(i + K_PERIOD - 1).getClosePrice();
 
             if (highestHigh == lowestLow) {
                 kValues[i] = 100.0;

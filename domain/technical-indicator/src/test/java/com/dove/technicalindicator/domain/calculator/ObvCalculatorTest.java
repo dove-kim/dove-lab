@@ -1,7 +1,7 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
-import com.dove.stockdata.domain.enums.MarketType;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
+import com.dove.market.domain.enums.MarketType;
 import com.dove.technicalindicator.domain.calculator.ObvCalculator;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 import org.junit.jupiter.api.DisplayName;
@@ -18,8 +18,8 @@ class ObvCalculatorTest {
 
     private final ObvCalculator calculator = new ObvCalculator();
 
-    private StockData createStockData(LocalDate date, long closePrice, long volume) {
-        return new StockData(MarketType.KOSPI, "005930", date,
+    private DailyStockPrice createDailyStockPrice(LocalDate date, long closePrice, long volume) {
+        return new DailyStockPrice(MarketType.KOSPI, "005930", date,
                 volume, 100L, closePrice, 90L, 110L);
     }
 
@@ -27,11 +27,11 @@ class ObvCalculatorTest {
     @DisplayName("알려진 값으로 OBV를 검증한다")
     void shouldCalculateObvFromKnownValues() {
         // Given - 상승(+1000), 하락(-500), 상승(+2000) → OBV = 2500
-        List<StockData> data = List.of(
-                createStockData(LocalDate.of(2024, 1, 1), 100, 1000),
-                createStockData(LocalDate.of(2024, 1, 2), 110, 1000),
-                createStockData(LocalDate.of(2024, 1, 3), 105, 500),
-                createStockData(LocalDate.of(2024, 1, 4), 120, 2000));
+        List<DailyStockPrice> data = List.of(
+                createDailyStockPrice(LocalDate.of(2024, 1, 1), 100, 1000),
+                createDailyStockPrice(LocalDate.of(2024, 1, 2), 110, 1000),
+                createDailyStockPrice(LocalDate.of(2024, 1, 3), 105, 500),
+                createDailyStockPrice(LocalDate.of(2024, 1, 4), 120, 2000));
 
         // When
         Map<IndicatorType, Double> result = calculator.calculate(data);
@@ -44,9 +44,9 @@ class ObvCalculatorTest {
     @DisplayName("상승일에는 거래량을 더한다")
     void shouldAddVolumeOnUpDay() {
         // Given
-        List<StockData> data = List.of(
-                createStockData(LocalDate.of(2024, 1, 1), 100, 1000),
-                createStockData(LocalDate.of(2024, 1, 2), 110, 5000));
+        List<DailyStockPrice> data = List.of(
+                createDailyStockPrice(LocalDate.of(2024, 1, 1), 100, 1000),
+                createDailyStockPrice(LocalDate.of(2024, 1, 2), 110, 5000));
 
         // When
         Map<IndicatorType, Double> result = calculator.calculate(data);
@@ -59,9 +59,9 @@ class ObvCalculatorTest {
     @DisplayName("하락일에는 거래량을 뺀다")
     void shouldSubtractVolumeOnDownDay() {
         // Given
-        List<StockData> data = List.of(
-                createStockData(LocalDate.of(2024, 1, 1), 110, 1000),
-                createStockData(LocalDate.of(2024, 1, 2), 100, 5000));
+        List<DailyStockPrice> data = List.of(
+                createDailyStockPrice(LocalDate.of(2024, 1, 1), 110, 1000),
+                createDailyStockPrice(LocalDate.of(2024, 1, 2), 100, 5000));
 
         // When
         Map<IndicatorType, Double> result = calculator.calculate(data);

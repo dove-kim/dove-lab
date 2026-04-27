@@ -1,6 +1,6 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 
 import java.util.List;
@@ -22,13 +22,13 @@ public class ObvCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<StockData> stockDataList) {
+    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
         long obv = 0;
 
-        for (int i = 1; i < stockDataList.size(); i++) {
-            long currentClose = stockDataList.get(i).getClosePrice();
-            long previousClose = stockDataList.get(i - 1).getClosePrice();
-            long volume = stockDataList.get(i).getVolume();
+        for (int i = 1; i < dailyStockPriceList.size(); i++) {
+            long currentClose = dailyStockPriceList.get(i).getClosePrice();
+            long previousClose = dailyStockPriceList.get(i - 1).getClosePrice();
+            long volume = dailyStockPriceList.get(i).getVolume();
 
             if (currentClose > previousClose) {
                 obv += volume;

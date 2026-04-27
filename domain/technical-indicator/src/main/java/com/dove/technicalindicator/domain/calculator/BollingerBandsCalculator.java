@@ -1,6 +1,6 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 
 import java.util.List;
@@ -25,15 +25,15 @@ public class BollingerBandsCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<StockData> stockDataList) {
+    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
         double sum = 0;
-        for (StockData data : stockDataList) {
+        for (DailyStockPrice data : dailyStockPriceList) {
             sum += data.getClosePrice();
         }
         double middle = sum / PERIOD;
 
         double varianceSum = 0;
-        for (StockData data : stockDataList) {
+        for (DailyStockPrice data : dailyStockPriceList) {
             double diff = data.getClosePrice() - middle;
             varianceSum += diff * diff;
         }

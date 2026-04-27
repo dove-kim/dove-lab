@@ -1,9 +1,14 @@
 #!/bin/bash
 
-# Kafka 메시지 발행 스크립트
+# Kafka 메시지 발행 (대화형). 종료는 q.
+#
 # 사용법:
-#   로컬:  ./message_publish.sh                (기본값: kafka-broker / kafka:29092)
-#   운영:  ./message_publish.sh prod-broker localhost:9092
+#   ./message_publish.sh                            # 로컬 기본
+#   ./message_publish.sh <컨테이너명> <브로커주소> # 운영
+#
+# 인자 (기본값):
+#   $1 KAFKA_CONTAINER   (kafka-broker)   Docker 컨테이너명
+#   $2 BOOTSTRAP_SERVER  (kafka:29092)    컨테이너 내부 브로커 주소
 
 # Windows Git Bash(MSYS2) 경로 자동 변환 방지 (리눅스에서는 무시됨)
 export MSYS_NO_PATHCONV=1
@@ -37,17 +42,9 @@ publish_single_date() {
 
     message="{\"eventVersion\":1,\"marketType\":\"$market_type\",\"baseDate\":\"$base_date\"}"
 
-    echo ""
-    echo "발행할 메시지: $message"
-    echo "토픽: KRX_STOCK_PRICE_QUERY"
-
-    read -p "메시지를 발행하시겠습니까? (y/n): " confirm
-    if [[ $confirm == "y" || $confirm == "Y" ]]; then
-        publish_message "KRX_STOCK_PRICE_QUERY" "${base_date}-${market_type}" "$message"
-        echo "메시지 발행 완료!"
-    else
-        echo "메시지 발행을 취소했습니다."
-    fi
+    echo "발행: $message"
+    publish_message "STOCK_PRICE_QUERY" "${base_date}-${market_type}" "$message"
+    echo "완료"
 }
 
 publish_date_range() {
@@ -101,32 +98,25 @@ publish_date_range() {
     fi
 
     echo ""
-    read -p "모든 메시지를 발행하시겠습니까? (y/n): " confirm
-    if [[ $confirm == "y" || $confirm == "Y" ]]; then
-        echo ""
-        echo "=== 메시지 발행 중... ==="
+    echo "=== 메시지 발행 중... ==="
 
-        current_timestamp=$start_timestamp
-        sent_count=0
+    current_timestamp=$start_timestamp
+    sent_count=0
 
-        while [[ $current_timestamp -le $end_timestamp ]]; do
-            current_date=$(date -d "@$current_timestamp" '+%Y%m%d')
-            message="{\"eventVersion\":1,\"marketType\":\"$market_type\",\"baseDate\":\"$current_date\"}"
+    while [[ $current_timestamp -le $end_timestamp ]]; do
+        current_date=$(date -d "@$current_timestamp" '+%Y%m%d')
+        message="{\"eventVersion\":1,\"marketType\":\"$market_type\",\"baseDate\":\"$current_date\"}"
 
-            publish_message "KRX_STOCK_PRICE_QUERY" "${current_date}-${market_type}" "$message"
+        publish_message "STOCK_PRICE_QUERY" "${current_date}-${market_type}" "$message"
 
-            sent_count=$(( sent_count + 1 ))
-            echo "[$sent_count/$total_days] $current_date 발행 완료"
+        sent_count=$(( sent_count + 1 ))
+        echo "[$sent_count/$total_days] $current_date 발행 완료"
 
-            current_timestamp=$(( current_timestamp + 86400 ))
-            sleep 0.1
-        done
+        current_timestamp=$(( current_timestamp + 86400 ))
+    done
 
-        echo ""
-        echo "총 ${sent_count}개의 메시지 발행이 완료되었습니다!"
-    else
-        echo "메시지 발행을 취소했습니다."
-    fi
+    echo ""
+    echo "총 ${sent_count}개의 메시지 발행이 완료되었습니다!"
 }
 
 handle_krx_publish() {

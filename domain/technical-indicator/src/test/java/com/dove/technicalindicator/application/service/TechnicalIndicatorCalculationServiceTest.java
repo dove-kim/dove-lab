@@ -1,8 +1,8 @@
 package com.dove.technicalindicator.application.service;
 
-import com.dove.stockdata.domain.entity.StockData;
-import com.dove.stockdata.domain.enums.MarketType;
-import com.dove.stockdata.domain.repository.StockDataQueryRepository;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
+import com.dove.market.domain.enums.MarketType;
+import com.dove.stockprice.application.service.DailyStockPriceQueryService;
 import com.dove.technicalindicator.domain.calculator.TechnicalIndicatorCalculator;
 import com.dove.technicalindicator.domain.entity.TechnicalIndicator;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
@@ -28,7 +28,7 @@ import static org.mockito.Mockito.*;
 class TechnicalIndicatorCalculationServiceTest {
 
     @Mock
-    private StockDataQueryRepository stockDataQueryRepository;
+    private DailyStockPriceQueryService dailyStockPriceQueryService;
 
     @Mock
     private TechnicalIndicatorRepository technicalIndicatorRepository;
@@ -45,11 +45,11 @@ class TechnicalIndicatorCalculationServiceTest {
     @BeforeEach
     void setUp() {
         service = new TechnicalIndicatorCalculationService(
-                stockDataQueryRepository, technicalIndicatorRepository, List.of(calculator));
+                dailyStockPriceQueryService, technicalIndicatorRepository, List.of(calculator));
     }
 
-    private StockData createStockData(LocalDate date, long closePrice) {
-        return new StockData(MarketType.KOSPI, stockCode, date,
+    private DailyStockPrice createDailyStockPrice(LocalDate date, long closePrice) {
+        return new DailyStockPrice(MarketType.KOSPI, stockCode, date,
                 1000L, 100L, closePrice, 90L, 110L);
     }
 
@@ -59,14 +59,14 @@ class TechnicalIndicatorCalculationServiceTest {
         // Given
         when(calculator.requiredDataSize()).thenReturn(5);
 
-        List<StockData> recentData = List.of(
-                createStockData(LocalDate.of(2024, 1, 15), 500),
-                createStockData(LocalDate.of(2024, 1, 14), 400),
-                createStockData(LocalDate.of(2024, 1, 13), 300),
-                createStockData(LocalDate.of(2024, 1, 12), 200),
-                createStockData(LocalDate.of(2024, 1, 11), 100));
+        List<DailyStockPrice> recentData = List.of(
+                createDailyStockPrice(LocalDate.of(2024, 1, 15), 500),
+                createDailyStockPrice(LocalDate.of(2024, 1, 14), 400),
+                createDailyStockPrice(LocalDate.of(2024, 1, 13), 300),
+                createDailyStockPrice(LocalDate.of(2024, 1, 12), 200),
+                createDailyStockPrice(LocalDate.of(2024, 1, 11), 100));
 
-        when(stockDataQueryRepository.findRecentStockData(
+        when(dailyStockPriceQueryService.findRecentDailyStockPrice(
                 eq(marketType), eq(stockCode), eq(tradeDate), eq(5)))
                 .thenReturn(recentData);
 
@@ -90,11 +90,11 @@ class TechnicalIndicatorCalculationServiceTest {
         // Given
         when(calculator.requiredDataSize()).thenReturn(5);
 
-        List<StockData> insufficientData = List.of(
-                createStockData(LocalDate.of(2024, 1, 15), 500),
-                createStockData(LocalDate.of(2024, 1, 14), 400));
+        List<DailyStockPrice> insufficientData = List.of(
+                createDailyStockPrice(LocalDate.of(2024, 1, 15), 500),
+                createDailyStockPrice(LocalDate.of(2024, 1, 14), 400));
 
-        when(stockDataQueryRepository.findRecentStockData(
+        when(dailyStockPriceQueryService.findRecentDailyStockPrice(
                 eq(marketType), eq(stockCode), eq(tradeDate), eq(5)))
                 .thenReturn(insufficientData);
 
@@ -114,21 +114,21 @@ class TechnicalIndicatorCalculationServiceTest {
         TechnicalIndicatorCalculator succeedingCalc = mock(TechnicalIndicatorCalculator.class);
 
         TechnicalIndicatorCalculationService svc = new TechnicalIndicatorCalculationService(
-                stockDataQueryRepository, technicalIndicatorRepository,
+                dailyStockPriceQueryService, technicalIndicatorRepository,
                 List.of(failingCalc, succeedingCalc));
 
-        List<StockData> data = List.of(
-                createStockData(LocalDate.of(2024, 1, 15), 500),
-                createStockData(LocalDate.of(2024, 1, 14), 400),
-                createStockData(LocalDate.of(2024, 1, 13), 300),
-                createStockData(LocalDate.of(2024, 1, 12), 200),
-                createStockData(LocalDate.of(2024, 1, 11), 100));
+        List<DailyStockPrice> data = List.of(
+                createDailyStockPrice(LocalDate.of(2024, 1, 15), 500),
+                createDailyStockPrice(LocalDate.of(2024, 1, 14), 400),
+                createDailyStockPrice(LocalDate.of(2024, 1, 13), 300),
+                createDailyStockPrice(LocalDate.of(2024, 1, 12), 200),
+                createDailyStockPrice(LocalDate.of(2024, 1, 11), 100));
 
         when(failingCalc.requiredDataSize()).thenReturn(5);
         when(failingCalc.getName()).thenReturn("FAILING");
         when(succeedingCalc.requiredDataSize()).thenReturn(5);
 
-        when(stockDataQueryRepository.findRecentStockData(any(), any(), any(), anyInt()))
+        when(dailyStockPriceQueryService.findRecentDailyStockPrice(any(), any(), any(), anyInt()))
                 .thenReturn(data);
         when(failingCalc.calculate(any())).thenThrow(new RuntimeException("계산 오류"));
         when(succeedingCalc.calculate(any())).thenReturn(Map.of(IndicatorType.SMA_5, 300.0));
@@ -148,12 +148,12 @@ class TechnicalIndicatorCalculationServiceTest {
         // Given
         when(calculator.requiredDataSize()).thenReturn(3);
 
-        List<StockData> descData = List.of(
-                createStockData(LocalDate.of(2024, 1, 15), 300),
-                createStockData(LocalDate.of(2024, 1, 14), 200),
-                createStockData(LocalDate.of(2024, 1, 13), 100));
+        List<DailyStockPrice> descData = List.of(
+                createDailyStockPrice(LocalDate.of(2024, 1, 15), 300),
+                createDailyStockPrice(LocalDate.of(2024, 1, 14), 200),
+                createDailyStockPrice(LocalDate.of(2024, 1, 13), 100));
 
-        when(stockDataQueryRepository.findRecentStockData(any(), any(), any(), anyInt()))
+        when(dailyStockPriceQueryService.findRecentDailyStockPrice(any(), any(), any(), anyInt()))
                 .thenReturn(descData);
         when(calculator.calculate(any())).thenReturn(Map.of(IndicatorType.SMA_5, 200.0));
 
@@ -161,10 +161,10 @@ class TechnicalIndicatorCalculationServiceTest {
         service.calculateForStock(marketType, stockCode, tradeDate);
 
         // Then
-        ArgumentCaptor<List<StockData>> captor = ArgumentCaptor.forClass(List.class);
+        ArgumentCaptor<List<DailyStockPrice>> captor = ArgumentCaptor.forClass(List.class);
         verify(calculator).calculate(captor.capture());
 
-        List<StockData> passedData = captor.getValue();
+        List<DailyStockPrice> passedData = captor.getValue();
         assertThat(passedData.get(0).getId().getTradeDate()).isEqualTo(LocalDate.of(2024, 1, 13));
         assertThat(passedData.get(1).getId().getTradeDate()).isEqualTo(LocalDate.of(2024, 1, 14));
         assertThat(passedData.get(2).getId().getTradeDate()).isEqualTo(LocalDate.of(2024, 1, 15));
@@ -178,23 +178,23 @@ class TechnicalIndicatorCalculationServiceTest {
         LocalDate oct2 = LocalDate.of(2024, 10, 2);
         LocalDate oct3 = LocalDate.of(2024, 10, 3);
 
-        when(stockDataQueryRepository.findTradeDatesAfter(marketType, stockCode, oct1))
+        when(dailyStockPriceQueryService.findTradeDatesAfter(marketType, stockCode, oct1))
                 .thenReturn(List.of(oct2, oct3));
 
         when(calculator.requiredDataSize()).thenReturn(2);
 
-        List<StockData> dataForOct1 = List.of(
-                createStockData(oct1, 100), createStockData(LocalDate.of(2024, 9, 30), 90));
-        List<StockData> dataForOct2 = List.of(
-                createStockData(oct2, 110), createStockData(oct1, 100));
-        List<StockData> dataForOct3 = List.of(
-                createStockData(oct3, 120), createStockData(oct2, 110));
+        List<DailyStockPrice> dataForOct1 = List.of(
+                createDailyStockPrice(oct1, 100), createDailyStockPrice(LocalDate.of(2024, 9, 30), 90));
+        List<DailyStockPrice> dataForOct2 = List.of(
+                createDailyStockPrice(oct2, 110), createDailyStockPrice(oct1, 100));
+        List<DailyStockPrice> dataForOct3 = List.of(
+                createDailyStockPrice(oct3, 120), createDailyStockPrice(oct2, 110));
 
-        when(stockDataQueryRepository.findRecentStockData(eq(marketType), eq(stockCode), eq(oct1), anyInt()))
+        when(dailyStockPriceQueryService.findRecentDailyStockPrice(eq(marketType), eq(stockCode), eq(oct1), anyInt()))
                 .thenReturn(dataForOct1);
-        when(stockDataQueryRepository.findRecentStockData(eq(marketType), eq(stockCode), eq(oct2), anyInt()))
+        when(dailyStockPriceQueryService.findRecentDailyStockPrice(eq(marketType), eq(stockCode), eq(oct2), anyInt()))
                 .thenReturn(dataForOct2);
-        when(stockDataQueryRepository.findRecentStockData(eq(marketType), eq(stockCode), eq(oct3), anyInt()))
+        when(dailyStockPriceQueryService.findRecentDailyStockPrice(eq(marketType), eq(stockCode), eq(oct3), anyInt()))
                 .thenReturn(dataForOct3);
 
         when(calculator.calculate(any())).thenReturn(Map.of(IndicatorType.SMA_5, 100.0));
@@ -211,16 +211,16 @@ class TechnicalIndicatorCalculationServiceTest {
     @DisplayName("후속 날짜가 없으면 해당 날짜만 계산한다")
     void shouldOnlyCalculateCurrentDateWhenNoFutureDates() {
         // Given
-        when(stockDataQueryRepository.findTradeDatesAfter(marketType, stockCode, tradeDate))
+        when(dailyStockPriceQueryService.findTradeDatesAfter(marketType, stockCode, tradeDate))
                 .thenReturn(List.of());
 
         when(calculator.requiredDataSize()).thenReturn(2);
 
-        List<StockData> data = List.of(
-                createStockData(tradeDate, 100),
-                createStockData(tradeDate.minusDays(1), 90));
+        List<DailyStockPrice> data = List.of(
+                createDailyStockPrice(tradeDate, 100),
+                createDailyStockPrice(tradeDate.minusDays(1), 90));
 
-        when(stockDataQueryRepository.findRecentStockData(any(), any(), any(), anyInt()))
+        when(dailyStockPriceQueryService.findRecentDailyStockPrice(any(), any(), any(), anyInt()))
                 .thenReturn(data);
         when(calculator.calculate(any())).thenReturn(Map.of(IndicatorType.SMA_5, 95.0));
 
