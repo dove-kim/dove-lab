@@ -23,17 +23,17 @@ import java.time.LocalDate;
 @Service
 @RequiredArgsConstructor
 public class SaveDailyMarketDataService {
-    private final ObjectMapper objectMapper;
-    private final Clock clock;
-
     private final DailyPriceFetcher dailyPriceFetcher;
     private final DailyStockPriceSaveService dailyStockPriceSaveService;
     private final MarketCalendarCommandService marketCalendarCommandService;
 
-    private final StockDataChangeCommandService stockDataChangeCommandService;
-
     private final PendingEventRetryCommandService pendingEventRetryCommandService;
     private final FailedEventCommandService failedEventCommandService;
+
+    private final StockDataChangeCommandService stockDataChangeCommandService;
+
+    private final ObjectMapper objectMapper;
+    private final Clock clock;
 
     @Transactional
     public void saveDailyMarketDataByMarket(LocalDate targetDate, MarketType marketType) {
