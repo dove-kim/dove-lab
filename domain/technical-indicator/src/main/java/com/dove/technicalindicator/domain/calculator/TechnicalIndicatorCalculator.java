@@ -1,6 +1,6 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 
 import java.util.List;
@@ -16,5 +16,5 @@ public interface TechnicalIndicatorCalculator {
 
     int requiredDataSize();
 
-    Map<IndicatorType, Double> calculate(List<StockData> stockDataList);
+    Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList);
 }

@@ -1,6 +1,6 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 
 import java.util.List;
@@ -24,12 +24,12 @@ public class RsiCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<StockData> stockDataList) {
+    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
         double gainSum = 0;
         double lossSum = 0;
 
         for (int i = 1; i <= PERIOD; i++) {
-            double change = stockDataList.get(i).getClosePrice() - stockDataList.get(i - 1).getClosePrice();
+            double change = dailyStockPriceList.get(i).getClosePrice() - dailyStockPriceList.get(i - 1).getClosePrice();
             if (change > 0) {
                 gainSum += change;
             } else {

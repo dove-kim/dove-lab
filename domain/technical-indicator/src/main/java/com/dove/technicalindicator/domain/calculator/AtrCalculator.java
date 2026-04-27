@@ -1,6 +1,6 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 
 import java.util.List;
@@ -24,12 +24,12 @@ public class AtrCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<StockData> stockDataList) {
-        double[] trueRanges = new double[stockDataList.size() - 1];
+    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+        double[] trueRanges = new double[dailyStockPriceList.size() - 1];
 
-        for (int i = 1; i < stockDataList.size(); i++) {
-            StockData current = stockDataList.get(i);
-            StockData previous = stockDataList.get(i - 1);
+        for (int i = 1; i < dailyStockPriceList.size(); i++) {
+            DailyStockPrice current = dailyStockPriceList.get(i);
+            DailyStockPrice previous = dailyStockPriceList.get(i - 1);
 
             double hl = current.getHighPrice() - current.getLowPrice();
             double hc = Math.abs(current.getHighPrice() - previous.getClosePrice());

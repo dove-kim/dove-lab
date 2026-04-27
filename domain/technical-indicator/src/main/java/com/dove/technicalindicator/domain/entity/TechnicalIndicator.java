@@ -1,10 +1,11 @@
 package com.dove.technicalindicator.domain.entity;
 
-import com.dove.stockdata.domain.enums.MarketType;
+import com.dove.market.domain.enums.MarketType;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -18,7 +19,8 @@ import java.time.LocalDateTime;
  */
 @Getter
 @Entity
-@Table(name = "TECHNICAL_INDICATOR")
+@Table(name = "TECHNICAL_INDICATOR",
+        indexes = @Index(name = "IDX_TECHNICAL_INDICATOR_CALCULATED_AT", columnList = "CALCULATED_AT"))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class TechnicalIndicator {
 

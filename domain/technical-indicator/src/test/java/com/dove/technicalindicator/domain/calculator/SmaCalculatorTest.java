@@ -1,7 +1,7 @@
 package com.dove.technicalindicator.domain.calculator;
 
-import com.dove.stockdata.domain.entity.StockData;
-import com.dove.stockdata.domain.enums.MarketType;
+import com.dove.stockprice.domain.entity.DailyStockPrice;
+import com.dove.market.domain.enums.MarketType;
 import com.dove.technicalindicator.domain.calculator.SmaCalculator;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
 import org.junit.jupiter.api.DisplayName;
@@ -19,8 +19,8 @@ class SmaCalculatorTest {
 
     private final SmaCalculator sma5Calculator = new SmaCalculator(5, IndicatorType.SMA_5);
 
-    private StockData createStockData(LocalDate date, long closePrice) {
-        return new StockData(MarketType.KOSPI, "005930", date,
+    private DailyStockPrice createDailyStockPrice(LocalDate date, long closePrice) {
+        return new DailyStockPrice(MarketType.KOSPI, "005930", date,
                 1000L, 100L, closePrice, 90L, 110L);
     }
 
@@ -28,12 +28,12 @@ class SmaCalculatorTest {
     @DisplayName("5일 종가 [100,200,300,400,500]의 SMA는 300.0이다")
     void shouldCalculateSma5FromFiveDataPoints() {
         // Given
-        List<StockData> data = List.of(
-                createStockData(LocalDate.of(2024, 1, 1), 100),
-                createStockData(LocalDate.of(2024, 1, 2), 200),
-                createStockData(LocalDate.of(2024, 1, 3), 300),
-                createStockData(LocalDate.of(2024, 1, 4), 400),
-                createStockData(LocalDate.of(2024, 1, 5), 500));
+        List<DailyStockPrice> data = List.of(
+                createDailyStockPrice(LocalDate.of(2024, 1, 1), 100),
+                createDailyStockPrice(LocalDate.of(2024, 1, 2), 200),
+                createDailyStockPrice(LocalDate.of(2024, 1, 3), 300),
+                createDailyStockPrice(LocalDate.of(2024, 1, 4), 400),
+                createDailyStockPrice(LocalDate.of(2024, 1, 5), 500));
 
         // When
         Map<IndicatorType, Double> result = sma5Calculator.calculate(data);
@@ -61,16 +61,16 @@ class SmaCalculatorTest {
     @DisplayName("closePrice만 사용하여 계산한다")
     void shouldUseClosePrice() {
         // Given - openPrice, highPrice, lowPrice가 다르지만 closePrice만 사용
-        List<StockData> data = List.of(
-                new StockData(MarketType.KOSPI, "005930", LocalDate.of(2024, 1, 1),
+        List<DailyStockPrice> data = List.of(
+                new DailyStockPrice(MarketType.KOSPI, "005930", LocalDate.of(2024, 1, 1),
                         9999L, 9999L, 100L, 1L, 9999L),
-                new StockData(MarketType.KOSPI, "005930", LocalDate.of(2024, 1, 2),
+                new DailyStockPrice(MarketType.KOSPI, "005930", LocalDate.of(2024, 1, 2),
                         9999L, 9999L, 100L, 1L, 9999L),
-                new StockData(MarketType.KOSPI, "005930", LocalDate.of(2024, 1, 3),
+                new DailyStockPrice(MarketType.KOSPI, "005930", LocalDate.of(2024, 1, 3),
                         9999L, 9999L, 100L, 1L, 9999L),
-                new StockData(MarketType.KOSPI, "005930", LocalDate.of(2024, 1, 4),
+                new DailyStockPrice(MarketType.KOSPI, "005930", LocalDate.of(2024, 1, 4),
                         9999L, 9999L, 100L, 1L, 9999L),
-                new StockData(MarketType.KOSPI, "005930", LocalDate.of(2024, 1, 5),
+                new DailyStockPrice(MarketType.KOSPI, "005930", LocalDate.of(2024, 1, 5),
                         9999L, 9999L, 100L, 1L, 9999L));
 
         // When
@@ -85,8 +85,8 @@ class SmaCalculatorTest {
     void shouldHandleSma20() {
         // Given
         SmaCalculator sma20 = new SmaCalculator(20, IndicatorType.SMA_20);
-        List<StockData> data = IntStream.rangeClosed(1, 20)
-                .mapToObj(i -> createStockData(LocalDate.of(2024, 1, i), 1000))
+        List<DailyStockPrice> data = IntStream.rangeClosed(1, 20)
+                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, i), 1000))
                 .toList();
 
         // When

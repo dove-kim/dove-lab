@@ -1,6 +1,6 @@
 package com.dove.technicalindicator.application.dto;
 
-import com.dove.stockdata.domain.enums.MarketType;
+import com.dove.market.domain.enums.MarketType;
 import com.fasterxml.jackson.annotation.JsonFormat;
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
