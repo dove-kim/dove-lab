@@ -25,6 +25,11 @@ public class CciCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
+    public IndicatorType cursorType() {
+        return IndicatorType.CCI;
+    }
+
+    @Override
     public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
         double[] typicalPrices = new double[dailyStockPriceList.size()];
         for (int i = 0; i < dailyStockPriceList.size(); i++) {

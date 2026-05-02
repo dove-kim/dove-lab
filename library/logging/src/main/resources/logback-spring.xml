@@ -16,6 +16,12 @@
     <springProfile name="file">
         <include resource="logback/basic_rolling_appender.xml"/>
         <include resource="logback/error_rolling_appender.xml"/>
+        <include resource="logback/completion_appender.xml"/>
+
+        <logger name="com.dove.stockbatch.producer.IndicatorCompletionCheckScheduler"
+                level="INFO" additivity="false">
+            <appender-ref ref="COMPLETION_FILE"/>
+        </logger>
 
         <root level="${LOG_LEVEL}">
             <appender-ref ref="CONSOLE"/>

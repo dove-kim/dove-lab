@@ -24,6 +24,11 @@ public class MfiCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
+    public IndicatorType cursorType() {
+        return IndicatorType.MFI;
+    }
+
+    @Override
     public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
         double positiveFlow = 0;
         double negativeFlow = 0;

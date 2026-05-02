@@ -81,6 +81,12 @@ class SmaCalculatorTest {
     }
 
     @Test
+    @DisplayName("cursorType()은 SMA_5를 반환한다")
+    void shouldReturnSma5AsCursorType() {
+        assertThat(sma5Calculator.cursorType()).isEqualTo(IndicatorType.SMA_5);
+    }
+
+    @Test
     @DisplayName("20일 이동평균을 계산한다")
     void shouldHandleSma20() {
         // Given

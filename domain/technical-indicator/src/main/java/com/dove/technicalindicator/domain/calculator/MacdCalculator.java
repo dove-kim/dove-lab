@@ -14,7 +14,7 @@ public class MacdCalculator implements TechnicalIndicatorCalculator {
     private static final int SHORT_PERIOD = 12;
     private static final int LONG_PERIOD = 26;
     private static final int SIGNAL_PERIOD = 9;
-    private static final int REQUIRED_SIZE = LONG_PERIOD + SIGNAL_PERIOD;
+    private static final int REQUIRED_SIZE = 130;
 
     @Override
     public String getName() {
@@ -24,6 +24,11 @@ public class MacdCalculator implements TechnicalIndicatorCalculator {
     @Override
     public int requiredDataSize() {
         return REQUIRED_SIZE;
+    }
+
+    @Override
+    public IndicatorType cursorType() {
+        return IndicatorType.MACD_LINE;
     }
 
     @Override

@@ -27,31 +27,27 @@ class AtrCalculatorTest {
     @Test
     @DisplayName("알려진 값으로 ATR(14)를 검증한다")
     void shouldCalculateAtrFromKnownValues() {
-        // Given - 15개 데이터, 고가-저가 = 20 일정
-        List<DailyStockPrice> data = IntStream.range(0, 15)
+        List<DailyStockPrice> data = IntStream.range(0, 70)
                 .mapToObj(i -> createDailyStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         110, 90, 100))
                 .toList();
 
-        // When
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
-        // Then - TR = 20 일정하므로 ATR = 20
         assertThat(result.get(IndicatorType.ATR)).isCloseTo(20.0, within(0.01));
     }
 
     @Test
-    @DisplayName("15개 데이터 포인트가 필요하다")
-    void shouldRequire15DataPoints() {
-        assertThat(calculator.requiredDataSize()).isEqualTo(15);
+    @DisplayName("70개 데이터 포인트가 필요하다")
+    void shouldRequire70DataPoints() {
+        assertThat(calculator.requiredDataSize()).isEqualTo(70);
     }
 
     @Test
     @DisplayName("갭 상승 시 True Range를 정확히 계산한다")
     void shouldHandleGapUp() {
-        // Given - 전일 종가 100, 당일 고가 120 저가 115 → TR = max(5, 20, 15) = 20
-        List<DailyStockPrice> data = IntStream.range(0, 15)
+        List<DailyStockPrice> data = IntStream.range(0, 70)
                 .mapToObj(i -> {
                     if (i == 0) {
                         return createDailyStockPrice(LocalDate.of(2024, 1, 1), 105, 95, 100);
@@ -62,10 +58,14 @@ class AtrCalculatorTest {
                 })
                 .toList();
 
-        // When
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
-        // Then - 갭 상승이 반영된 ATR > 단순 고저차(5)
         assertThat(result.get(IndicatorType.ATR)).isGreaterThan(5.0);
+    }
+
+    @Test
+    @DisplayName("cursorType()은 ATR을 반환한다")
+    void shouldReturnAtrAsCursorType() {
+        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.ATR);
     }
 }
