@@ -75,4 +75,10 @@ class WilliamsRCalculatorTest {
         // Then
         assertThat(result.get(IndicatorType.WILLIAMS_R)).isCloseTo(-100.0, within(0.01));
     }
+
+    @Test
+    @DisplayName("cursorType()은 WILLIAMS_R을 반환한다")
+    void shouldReturnWilliamsRAsCursorType() {
+        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.WILLIAMS_R);
+    }
 }

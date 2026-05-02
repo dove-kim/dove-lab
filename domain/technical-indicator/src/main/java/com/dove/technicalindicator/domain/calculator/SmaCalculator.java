@@ -30,6 +30,11 @@ public class SmaCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
+    public IndicatorType cursorType() {
+        return indicatorType;
+    }
+
+    @Override
     public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
         double sum = dailyStockPriceList.stream()
                 .mapToLong(DailyStockPrice::getClosePrice)

@@ -6,9 +6,6 @@ import com.dove.technicalindicator.domain.enums.IndicatorType;
 import java.util.List;
 import java.util.Map;
 
-/**
- * OBV(On Balance Volume) 계산기. 종가 상승 시 거래량을 누적하여 매집/분산을 추적한다.
- */
 public class ObvCalculator implements TechnicalIndicatorCalculator {
 
     @Override
@@ -22,13 +19,23 @@ public class ObvCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
-        long obv = 0;
+    public IndicatorType cursorType() {
+        return IndicatorType.OBV;
+    }
 
-        for (int i = 1; i < dailyStockPriceList.size(); i++) {
-            long currentClose = dailyStockPriceList.get(i).getClosePrice();
-            long previousClose = dailyStockPriceList.get(i - 1).getClosePrice();
-            long volume = dailyStockPriceList.get(i).getVolume();
+    @Override
+    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+        return calculateWithSeed(dailyStockPriceList, 0.0);
+    }
+
+    @Override
+    public Map<IndicatorType, Double> calculateWithSeed(List<DailyStockPrice> pool, double seed) {
+        double obv = seed;
+
+        for (int i = 1; i < pool.size(); i++) {
+            long currentClose = pool.get(i).getClosePrice();
+            long previousClose = pool.get(i - 1).getClosePrice();
+            long volume = pool.get(i).getVolume();
 
             if (currentClose > previousClose) {
                 obv += volume;
@@ -37,6 +44,6 @@ public class ObvCalculator implements TechnicalIndicatorCalculator {
             }
         }
 
-        return Map.of(IndicatorType.OBV, (double) obv);
+        return Map.of(IndicatorType.OBV, obv);
     }
 }

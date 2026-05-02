@@ -26,47 +26,80 @@ class ObvCalculatorTest {
     @Test
     @DisplayName("알려진 값으로 OBV를 검증한다")
     void shouldCalculateObvFromKnownValues() {
-        // Given - 상승(+1000), 하락(-500), 상승(+2000) → OBV = 2500
         List<DailyStockPrice> data = List.of(
                 createDailyStockPrice(LocalDate.of(2024, 1, 1), 100, 1000),
                 createDailyStockPrice(LocalDate.of(2024, 1, 2), 110, 1000),
                 createDailyStockPrice(LocalDate.of(2024, 1, 3), 105, 500),
                 createDailyStockPrice(LocalDate.of(2024, 1, 4), 120, 2000));
 
-        // When
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
-        // Then
         assertThat(result.get(IndicatorType.OBV)).isCloseTo(2500.0, within(0.01));
     }
 
     @Test
     @DisplayName("상승일에는 거래량을 더한다")
     void shouldAddVolumeOnUpDay() {
-        // Given
         List<DailyStockPrice> data = List.of(
                 createDailyStockPrice(LocalDate.of(2024, 1, 1), 100, 1000),
                 createDailyStockPrice(LocalDate.of(2024, 1, 2), 110, 5000));
 
-        // When
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
-        // Then
         assertThat(result.get(IndicatorType.OBV)).isCloseTo(5000.0, within(0.01));
     }
 
     @Test
     @DisplayName("하락일에는 거래량을 뺀다")
     void shouldSubtractVolumeOnDownDay() {
-        // Given
         List<DailyStockPrice> data = List.of(
                 createDailyStockPrice(LocalDate.of(2024, 1, 1), 110, 1000),
                 createDailyStockPrice(LocalDate.of(2024, 1, 2), 100, 5000));
 
-        // When
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
-        // Then
         assertThat(result.get(IndicatorType.OBV)).isCloseTo(-5000.0, within(0.01));
+    }
+
+    @Test
+    @DisplayName("cursorType()은 OBV를 반환한다")
+    void shouldReturnObvAsCursorType() {
+        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.OBV);
+    }
+
+    @Test
+    @DisplayName("seed가 주어지면 seed부터 누적한다")
+    void shouldAccumulateFromSeedWhenSeedProvided() {
+        List<DailyStockPrice> pool = List.of(
+                createDailyStockPrice(LocalDate.of(2024, 1, 1), 100, 3000),
+                createDailyStockPrice(LocalDate.of(2024, 1, 2), 110, 5000));
+
+        Map<IndicatorType, Double> result = calculator.calculateWithSeed(pool, 100.0);
+
+        assertThat(result.get(IndicatorType.OBV)).isCloseTo(5100.0, within(0.01));
+    }
+
+    @Test
+    @DisplayName("기존 calculate() 호출 시 seed=0으로 동작한다")
+    void shouldUseZeroSeedWhenCalculateCalledDirectly() {
+        List<DailyStockPrice> data = List.of(
+                createDailyStockPrice(LocalDate.of(2024, 1, 1), 100, 1000),
+                createDailyStockPrice(LocalDate.of(2024, 1, 2), 110, 4000));
+
+        Map<IndicatorType, Double> result = calculator.calculate(data);
+
+        assertThat(result.get(IndicatorType.OBV)).isCloseTo(4000.0, within(0.01));
+    }
+
+    @Test
+    @DisplayName("가격 하락 시 seed에서 volume만큼 감소한다")
+    void shouldReturnNegativeObvWhenPriceFalls() {
+        List<DailyStockPrice> pool = List.of(
+                createDailyStockPrice(LocalDate.of(2024, 1, 1), 110, 1000),
+                createDailyStockPrice(LocalDate.of(2024, 1, 2), 100, 3000));
+
+        Map<IndicatorType, Double> result = calculator.calculateWithSeed(pool, 200.0);
+
+        assertThat(result.get(IndicatorType.OBV)).isCloseTo(-2800.0, within(0.01));
     }
 }

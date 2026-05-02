@@ -62,4 +62,10 @@ class VolumeRatioCalculatorTest {
         // Then
         assertThat(result.get(IndicatorType.VOLUME_RATIO)).isCloseTo(100.0, within(0.01));
     }
+
+    @Test
+    @DisplayName("cursorType()은 VOLUME_RATIO를 반환한다")
+    void shouldReturnVolumeRatioAsCursorType() {
+        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.VOLUME_RATIO);
+    }
 }

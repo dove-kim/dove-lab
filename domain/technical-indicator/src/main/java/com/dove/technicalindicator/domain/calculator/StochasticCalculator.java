@@ -26,6 +26,11 @@ public class StochasticCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
+    public IndicatorType cursorType() {
+        return IndicatorType.STOCHASTIC_K;
+    }
+
+    @Override
     public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
         int totalSize = dailyStockPriceList.size();
         int kCount = totalSize - K_PERIOD + 1;

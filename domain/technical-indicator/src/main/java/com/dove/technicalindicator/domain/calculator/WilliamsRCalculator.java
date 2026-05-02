@@ -24,6 +24,11 @@ public class WilliamsRCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
+    public IndicatorType cursorType() {
+        return IndicatorType.WILLIAMS_R;
+    }
+
+    @Override
     public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
         long highestHigh = Long.MIN_VALUE;
         long lowestLow = Long.MAX_VALUE;

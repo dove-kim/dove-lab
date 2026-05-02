@@ -93,4 +93,10 @@ class StochasticCalculatorTest {
         // Then
         assertThat(result.get(IndicatorType.STOCHASTIC_K)).isCloseTo(0.0, within(0.01));
     }
+
+    @Test
+    @DisplayName("cursorType()은 STOCHASTIC_K를 반환한다")
+    void shouldReturnStochasticKAsCursorType() {
+        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.STOCHASTIC_K);
+    }
 }
