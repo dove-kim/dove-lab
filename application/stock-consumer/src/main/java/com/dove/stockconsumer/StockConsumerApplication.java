@@ -8,7 +8,6 @@ import org.springframework.context.annotation.ComponentScan;
 import java.time.Clock;
 import java.time.ZoneId;
 
-/** 주식 컨슈머 애플리케이션. Kafka 구독 기반 처리. */
 @SpringBootApplication
 @ComponentScan(basePackages = {"com.dove"})
 public class StockConsumerApplication {

@@ -27,34 +27,28 @@ class MacdCalculatorTest {
     @Test
     @DisplayName("알려진 값으로 MACD Line을 검증한다")
     void shouldCalculateMacdLineFromKnownValues() {
-        // Given - 35개 데이터 포인트 (상승 추세)
-        List<DailyStockPrice> data = IntStream.range(0, 35)
+        List<DailyStockPrice> data = IntStream.range(0, 130)
                 .mapToObj(i -> createDailyStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         10000 + i * 50))
                 .toList();
 
-        // When
         Map<IndicatorType, Double> result = macdCalculator.calculate(data);
 
-        // Then - 상승 추세에서 MACD Line은 양수
         assertThat(result.get(IndicatorType.MACD_LINE)).isGreaterThan(0);
     }
 
     @Test
     @DisplayName("Signal Line을 계산한다")
     void shouldCalculateSignalLine() {
-        // Given
-        List<DailyStockPrice> data = IntStream.range(0, 35)
+        List<DailyStockPrice> data = IntStream.range(0, 130)
                 .mapToObj(i -> createDailyStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         10000 + i * 50))
                 .toList();
 
-        // When
         Map<IndicatorType, Double> result = macdCalculator.calculate(data);
 
-        // Then
         assertThat(result).containsKey(IndicatorType.MACD_SIGNAL);
         assertThat(result.get(IndicatorType.MACD_SIGNAL)).isNotNull();
     }
@@ -62,17 +56,14 @@ class MacdCalculatorTest {
     @Test
     @DisplayName("Histogram은 MACD Line - Signal Line이다")
     void shouldCalculateHistogram() {
-        // Given
-        List<DailyStockPrice> data = IntStream.range(0, 35)
+        List<DailyStockPrice> data = IntStream.range(0, 130)
                 .mapToObj(i -> createDailyStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         10000 + i * 50))
                 .toList();
 
-        // When
         Map<IndicatorType, Double> result = macdCalculator.calculate(data);
 
-        // Then
         double macdLine = result.get(IndicatorType.MACD_LINE);
         double signal = result.get(IndicatorType.MACD_SIGNAL);
         double histogram = result.get(IndicatorType.MACD_HISTOGRAM);
@@ -82,16 +73,13 @@ class MacdCalculatorTest {
     @Test
     @DisplayName("3개 엔트리(MACD_LINE, SIGNAL, HISTOGRAM)를 반환한다")
     void shouldReturnThreeEntryMap() {
-        // Given
-        List<DailyStockPrice> data = IntStream.range(0, 35)
+        List<DailyStockPrice> data = IntStream.range(0, 130)
                 .mapToObj(i -> createDailyStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i), 10000))
                 .toList();
 
-        // When
         Map<IndicatorType, Double> result = macdCalculator.calculate(data);
 
-        // Then
         assertThat(result).hasSize(3);
         assertThat(result).containsKeys(
                 IndicatorType.MACD_LINE,
@@ -100,8 +88,14 @@ class MacdCalculatorTest {
     }
 
     @Test
-    @DisplayName("35개 데이터 포인트가 필요하다")
-    void shouldRequire35DataPoints() {
-        assertThat(macdCalculator.requiredDataSize()).isEqualTo(35);
+    @DisplayName("130개 데이터 포인트가 필요하다")
+    void shouldRequire130DataPoints() {
+        assertThat(macdCalculator.requiredDataSize()).isEqualTo(130);
+    }
+
+    @Test
+    @DisplayName("cursorType()은 MACD_LINE을 반환한다")
+    void shouldReturnMacdLineAsCursorType() {
+        assertThat(macdCalculator.cursorType()).isEqualTo(IndicatorType.MACD_LINE);
     }
 }

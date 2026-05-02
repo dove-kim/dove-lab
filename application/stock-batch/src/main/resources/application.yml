@@ -1,6 +1,3 @@
-server:
-  port: ${SERVER_PORT:28180}
-
 spring:
   application:
     name: stock-batch
@@ -28,6 +25,19 @@ spring:
 
 krx:
   target-markets: ${KRX_TARGET_MARKETS:KOSPI,KOSDAQ}
+
+indicator:
+  cursor:
+    initial-date: "2010-01-01"
+    gap-fill-cron: "0 0 0 * * ?"
+
+stock:
+  listing:
+    initial-date: "2010-01-01"
+    middle-gap-lookback-days: 365
+  price:
+    initial-date: "2010-01-01"
+    middle-gap-lookback-days: 365
 
 logging:
   level:

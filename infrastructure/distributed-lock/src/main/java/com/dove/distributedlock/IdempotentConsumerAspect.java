@@ -22,15 +22,10 @@ import java.lang.reflect.Method;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 
-/**
- * {@link IdempotentConsumer} 어노테이션이 적용된 메서드에 분산락과 멱등성 가드를 제공하는 AOP Aspect.
- * Redisson 분산락으로 동시 실행을 방지하고, Redis 키로 중복 처리를 차단한다.
- */
 @Slf4j
 @Aspect
 @Component
 @RequiredArgsConstructor
-@EnableConfigurationProperties(DistributedLockProperties.class)
 @ConditionalOnProperty(name = "distributed-lock.enabled", havingValue = "true", matchIfMissing = true)
 public class IdempotentConsumerAspect {
 

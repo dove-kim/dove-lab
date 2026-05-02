@@ -1,11 +1,18 @@
 package com.dove.stockprice.domain.repository;
 
+import com.dove.market.domain.enums.MarketType;
 import com.dove.stockprice.domain.entity.DailyStockPrice;
 import com.dove.stockprice.domain.entity.DailyStockPriceId;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
-/** 일별 주가 데이터 저장 리포지토리. */
+import java.time.LocalDate;
+import java.util.Optional;
+
 @Repository
 public interface DailyStockPriceRepository extends JpaRepository<DailyStockPrice, DailyStockPriceId> {
+
+    boolean existsById_MarketTypeAndId_TradeDate(MarketType marketType, LocalDate tradeDate);
+
+    Optional<DailyStockPrice> findFirstById_MarketTypeOrderById_TradeDateDesc(MarketType marketType);
 }

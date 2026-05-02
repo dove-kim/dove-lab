@@ -2,21 +2,24 @@ package com.dove.technicalindicator.infrastructure.config;
 
 import com.dove.technicalindicator.domain.calculator.*;
 import com.dove.technicalindicator.domain.enums.IndicatorType;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
 import java.util.List;
 
-/**
- * 기술적 지표 계산기 빈 등록 설정.
- * SMA(5/20/50/60/120/200), RSI, MACD, 볼린저밴드, 스토캐스틱, ADX, VR, OBV, ATR, MFI, CCI, Williams %R을 등록한다.
- */
 @Configuration
+@EnableConfigurationProperties(IndicatorCursorProperties.class)
 public class TechnicalIndicatorConfig {
 
     @Bean
     public SmaCalculator sma5Calculator() {
         return new SmaCalculator(5, IndicatorType.SMA_5);
+    }
+
+    @Bean
+    public SmaCalculator sma10Calculator() {
+        return new SmaCalculator(10, IndicatorType.SMA_10);
     }
 
     @Bean
@@ -45,8 +48,18 @@ public class TechnicalIndicatorConfig {
     }
 
     @Bean
-    public RsiCalculator rsiCalculator() {
-        return new RsiCalculator();
+    public RsiCalculator rsi9Calculator() {
+        return new RsiCalculator(9, IndicatorType.RSI_9);
+    }
+
+    @Bean
+    public RsiCalculator rsi14Calculator() {
+        return new RsiCalculator(14, IndicatorType.RSI_14);
+    }
+
+    @Bean
+    public RsiCalculator rsi21Calculator() {
+        return new RsiCalculator(21, IndicatorType.RSI_21);
     }
 
     @Bean
@@ -100,14 +113,57 @@ public class TechnicalIndicatorConfig {
     }
 
     @Bean
+    public ReturnCalculator returnCalculator() {
+        return new ReturnCalculator();
+    }
+
+    @Bean
+    public VolatilityCalculator volatilityCalculator() {
+        return new VolatilityCalculator();
+    }
+
+    @Bean
+    public MaDeviationCalculator maDeviationCalculator() {
+        return new MaDeviationCalculator();
+    }
+
+    @Bean
+    public MaRatioCalculator maRatioCalculator() {
+        return new MaRatioCalculator();
+    }
+
+    @Bean
+    public NewHighLowFlagCalculator newHighLowFlagCalculator() {
+        return new NewHighLowFlagCalculator();
+    }
+
+    @Bean
+    public PriceRangeRatioCalculator priceRangeRatioCalculator() {
+        return new PriceRangeRatioCalculator();
+    }
+
+    @Bean
+    public VolumeMa20RatioCalculator volumeMa20RatioCalculator() {
+        return new VolumeMa20RatioCalculator();
+    }
+
+    @Bean
+    public GapOpenCalculator gapOpenCalculator() {
+        return new GapOpenCalculator();
+    }
+
+    @Bean
     public List<TechnicalIndicatorCalculator> technicalIndicatorCalculators(
             SmaCalculator sma5Calculator,
+            SmaCalculator sma10Calculator,
             SmaCalculator sma20Calculator,
             SmaCalculator sma50Calculator,
             SmaCalculator sma60Calculator,
             SmaCalculator sma120Calculator,
             SmaCalculator sma200Calculator,
-            RsiCalculator rsiCalculator,
+            RsiCalculator rsi9Calculator,
+            RsiCalculator rsi14Calculator,
+            RsiCalculator rsi21Calculator,
             MacdCalculator macdCalculator,
             BollingerBandsCalculator bollingerBandsCalculator,
             StochasticCalculator stochasticCalculator,
@@ -117,14 +173,27 @@ public class TechnicalIndicatorConfig {
             AtrCalculator atrCalculator,
             MfiCalculator mfiCalculator,
             CciCalculator cciCalculator,
-            WilliamsRCalculator williamsRCalculator) {
+            WilliamsRCalculator williamsRCalculator,
+            ReturnCalculator returnCalculator,
+            VolatilityCalculator volatilityCalculator,
+            MaDeviationCalculator maDeviationCalculator,
+            MaRatioCalculator maRatioCalculator,
+            NewHighLowFlagCalculator newHighLowFlagCalculator,
+            PriceRangeRatioCalculator priceRangeRatioCalculator,
+            VolumeMa20RatioCalculator volumeMa20RatioCalculator,
+            GapOpenCalculator gapOpenCalculator) {
         return List.of(
-                sma5Calculator, sma20Calculator, sma50Calculator,
+                sma5Calculator, sma10Calculator, sma20Calculator, sma50Calculator,
                 sma60Calculator, sma120Calculator, sma200Calculator,
-                rsiCalculator, macdCalculator, bollingerBandsCalculator,
+                rsi9Calculator, rsi14Calculator, rsi21Calculator,
+                macdCalculator, bollingerBandsCalculator,
                 stochasticCalculator, adxCalculator,
                 volumeRatioCalculator, obvCalculator,
-                atrCalculator, mfiCalculator, cciCalculator, williamsRCalculator
+                atrCalculator, mfiCalculator, cciCalculator, williamsRCalculator,
+                returnCalculator, volatilityCalculator,
+                maDeviationCalculator, maRatioCalculator,
+                newHighLowFlagCalculator,
+                priceRangeRatioCalculator, volumeMa20RatioCalculator, gapOpenCalculator
         );
     }
 }

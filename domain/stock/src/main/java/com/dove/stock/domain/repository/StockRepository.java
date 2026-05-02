@@ -10,7 +10,6 @@ import org.springframework.stereotype.Repository;
 import java.util.List;
 import java.util.Optional;
 
-/** 종목 마스터 리포지토리. */
 @Repository
 public interface StockRepository extends JpaRepository<Stock, StockId> {
     Optional<Stock> findById_MarketTypeAndId_Code(MarketType marketType, String code);
@@ -19,12 +18,9 @@ public interface StockRepository extends JpaRepository<Stock, StockId> {
         return findById_MarketTypeAndId_Code(marketType, code);
     }
 
-    /** 현재 거래 상태가 지정 값인 종목 전체. */
     List<Stock> findAllByTradingStatus(TradingStatus tradingStatus);
 
-    /** 시장별 거래 상태 필터. */
     List<Stock> findAllByTradingStatusAndId_MarketType(TradingStatus tradingStatus, MarketType marketType);
 
-    /** 시장별 종목 전체. */
     List<Stock> findAllById_MarketType(MarketType marketType);
 }

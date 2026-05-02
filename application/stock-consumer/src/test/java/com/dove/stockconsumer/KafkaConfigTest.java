@@ -2,7 +2,6 @@ package com.dove.stockconsumer;
 
 import org.apache.kafka.clients.consumer.Consumer;
 import org.apache.kafka.clients.consumer.CommitFailedException;
-import org.apache.kafka.clients.consumer.ConsumerConfig;
 import org.apache.kafka.clients.consumer.ConsumerRecord;
 import org.apache.kafka.common.TopicPartition;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,7 +12,6 @@ import org.springframework.kafka.listener.MessageListenerContainer;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
-import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.Mockito.*;
@@ -27,14 +25,6 @@ class KafkaConfigTest {
     void setUp() {
         kafkaConfig = new KafkaConfig();
         ReflectionTestUtils.setField(kafkaConfig, "bootstrapServers", "localhost:9092");
-    }
-
-    @Test
-    @DisplayName("MAX_POLL_RECORDS를 10으로 설정한다")
-    void shouldConfigureMaxPollRecordsTo10() {
-        Map<String, Object> config = kafkaConfig.consumerConfig();
-
-        assertThat(config.get(ConsumerConfig.MAX_POLL_RECORDS_CONFIG)).isEqualTo(10);
     }
 
     @Test

@@ -25,6 +25,11 @@ public class VolumeRatioCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
+    public IndicatorType cursorType() {
+        return IndicatorType.VOLUME_RATIO;
+    }
+
+    @Override
     public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
         long upVolume = 0;
         long downVolume = 0;

@@ -13,7 +13,6 @@ import java.time.Instant;
 @RequiredArgsConstructor
 public class FailedEventCommandService {
 
-    /** 재시도 한계(횟수/기간) 초과로 승격한 건. PendingEventRetryProcessor가 사용. */
     public static final String REASON_RETRY_LIMIT_EXCEEDED = "RETRY_LIMIT_EXCEEDED";
 
     private final FailedEventRepository failedEventRepository;

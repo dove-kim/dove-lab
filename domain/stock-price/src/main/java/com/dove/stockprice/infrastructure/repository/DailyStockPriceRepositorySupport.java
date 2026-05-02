@@ -2,8 +2,9 @@ package com.dove.stockprice.infrastructure.repository;
 
 import com.dove.market.domain.enums.MarketType;
 import com.dove.stockprice.domain.entity.DailyStockPrice;
-import com.dove.stockprice.domain.entity.QDailyStockPrice;
 import com.querydsl.jpa.impl.JPAQueryFactory;
+
+import static com.dove.stockprice.domain.entity.QDailyStockPrice.dailyStockPrice;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
 
@@ -16,8 +17,6 @@ import java.util.List;
 public class DailyStockPriceRepositorySupport {
 
     private final JPAQueryFactory queryFactory;
-
-    private static final QDailyStockPrice dailyStockPrice = QDailyStockPrice.dailyStockPrice;
 
     public List<DailyStockPrice> findRecentDailyStockPrice(MarketType marketType, String stockCode,
                                                            LocalDate tradeDate, int limit) {
@@ -44,29 +43,15 @@ public class DailyStockPriceRepositorySupport {
                 .fetch();
     }
 
-    public List<LocalDate> findTradeDatesAfter(MarketType marketType, String stockCode, LocalDate tradeDate) {
+    public List<LocalDate> findDistinctTradeDatesInRange(MarketType marketType, LocalDate from, LocalDate to) {
         return queryFactory
                 .selectDistinct(dailyStockPrice.id.tradeDate)
                 .from(dailyStockPrice)
                 .where(
                         dailyStockPrice.id.marketType.eq(marketType),
-                        dailyStockPrice.id.stockCode.eq(stockCode),
-                        dailyStockPrice.id.tradeDate.gt(tradeDate)
+                        dailyStockPrice.id.tradeDate.between(from, to)
                 )
-                .orderBy(dailyStockPrice.id.tradeDate.asc())
                 .fetch();
     }
 
-    public List<LocalDate> findTradeDatesFrom(MarketType marketType, String stockCode, LocalDate fromDate) {
-        return queryFactory
-                .selectDistinct(dailyStockPrice.id.tradeDate)
-                .from(dailyStockPrice)
-                .where(
-                        dailyStockPrice.id.marketType.eq(marketType),
-                        dailyStockPrice.id.stockCode.eq(stockCode),
-                        dailyStockPrice.id.tradeDate.goe(fromDate)
-                )
-                .orderBy(dailyStockPrice.id.tradeDate.asc())
-                .fetch();
-    }
 }
