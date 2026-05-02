@@ -24,3 +24,9 @@ dependencies {
     testImplementation 'com.h2database:h2'
 }
 
+dependencyManagement {
+    imports {
+        mavenBom "org.springframework.cloud:spring-cloud-dependencies:${springCloudVersion}"
+    }
+}
+
