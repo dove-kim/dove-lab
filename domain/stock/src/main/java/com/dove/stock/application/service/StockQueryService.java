@@ -11,7 +11,6 @@ import org.springframework.transaction.annotation.Transactional;
 import java.util.List;
 import java.util.Optional;
 
-/** 종목 마스터 조회 전용 서비스. */
 @Service
 @RequiredArgsConstructor
 public class StockQueryService {

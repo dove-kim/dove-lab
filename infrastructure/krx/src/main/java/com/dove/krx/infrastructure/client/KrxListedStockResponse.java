@@ -8,10 +8,7 @@ import lombok.NoArgsConstructor;
 
 import java.util.List;
 
-/**
- * KRX 상장 종목 조회 응답 DTO.
- * 본 plan이 사용하는 필드(ISU_CD, ISU_NM)만 매핑. 나머지는 Jackson이 무시.
- */
+/** KRX 상장 종목 조회 응답 DTO. ISU_CD, ISU_NM만 매핑. */
 @Getter
 @NoArgsConstructor
 @AllArgsConstructor

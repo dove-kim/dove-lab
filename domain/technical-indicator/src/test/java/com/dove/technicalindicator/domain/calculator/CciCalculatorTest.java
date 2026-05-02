@@ -63,4 +63,10 @@ class CciCalculatorTest {
     void shouldRequire20DataPoints() {
         assertThat(calculator.requiredDataSize()).isEqualTo(20);
     }
+
+    @Test
+    @DisplayName("cursorType()은 CCI를 반환한다")
+    void shouldReturnCciAsCursorType() {
+        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.CCI);
+    }
 }

@@ -11,7 +11,6 @@ public class KrxDailyStockPriceTranslator {
         return new StockInfo(
                 data.getBaseDate(),
                 marketType,
-                data.getStockName(),
                 data.getStockCode(),
                 data.getTradingVolume(),
                 data.getOpeningPrice(),

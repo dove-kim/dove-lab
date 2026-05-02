@@ -12,6 +12,7 @@ import java.util.Map;
 public class AtrCalculator implements TechnicalIndicatorCalculator {
 
     private static final int PERIOD = 14;
+    private static final int REQUIRED_SIZE = 70;
 
     @Override
     public String getName() {
@@ -20,7 +21,12 @@ public class AtrCalculator implements TechnicalIndicatorCalculator {
 
     @Override
     public int requiredDataSize() {
-        return PERIOD + 1;
+        return REQUIRED_SIZE;
+    }
+
+    @Override
+    public IndicatorType cursorType() {
+        return IndicatorType.ATR;
     }
 
     @Override

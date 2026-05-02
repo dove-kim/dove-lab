@@ -21,6 +21,11 @@ spring:
   kafka:
     bootstrap-servers: ${KAFKA_HOST:localhost}:${KAFKA_PORT:9092}
 
+indicator:
+  cursor:
+    initial-date: ${INDICATOR_CURSOR_INITIAL_DATE:2010-01-01}
+    sweep-cron: ${INDICATOR_CURSOR_SWEEP_CRON:"0 0 3 * * ?"}
+
   jpa:
     hibernate:
       naming:

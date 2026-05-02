@@ -119,6 +119,32 @@ publish_date_range() {
     echo "총 ${sent_count}개의 메시지 발행이 완료되었습니다!"
 }
 
+publish_indicator_advance() {
+    echo "시장 타입을 선택하세요:"
+    echo "1) KOSPI"
+    echo "2) KOSDAQ"
+    echo "3) KONEX"
+    read -p "시장 타입 번호: " market_choice
+
+    case $market_choice in
+        1) market_type="KOSPI" ;;
+        2) market_type="KOSDAQ" ;;
+        3) market_type="KONEX" ;;
+        *) echo "잘못된 선택입니다."; return ;;
+    esac
+
+    read -p "종목 코드 (예: 005930): " stock_code
+    if [[ -z "$stock_code" ]]; then
+        echo "종목 코드를 입력해야 합니다."
+        return
+    fi
+
+    message="{\"eventVersion\":1,\"marketType\":\"$market_type\",\"stockCode\":\"$stock_code\"}"
+    echo "발행: $message"
+    publish_message "INDICATOR_CALC_REQUESTED" "$stock_code" "$message"
+    echo "완료"
+}
+
 handle_krx_publish() {
     echo "시장 타입을 선택하세요:"
     echo "1) KOSPI"
@@ -155,6 +181,7 @@ while true; do
     echo "----------------------------------------"
     echo "1. 토픽 목록 조회"
     echo "2. KRX 데이터 요청 메시지 발행"
+    echo "3. INDICATOR_CALC_REQUESTED 수동 발행"
     echo "q. 종료"
     read -p "> " choice
 
@@ -165,6 +192,9 @@ while true; do
             ;;
         2)
             handle_krx_publish
+            ;;
+        3)
+            publish_indicator_advance
             ;;
         q|Q)
             echo "종료합니다."

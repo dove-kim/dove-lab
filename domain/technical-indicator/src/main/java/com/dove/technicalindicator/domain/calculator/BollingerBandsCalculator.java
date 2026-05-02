@@ -6,9 +6,6 @@ import com.dove.technicalindicator.domain.enums.IndicatorType;
 import java.util.List;
 import java.util.Map;
 
-/**
- * 볼린저 밴드 계산기. 20일 SMA를 중심으로 표준편차 x2 상/하단 밴드를 산출한다.
- */
 public class BollingerBandsCalculator implements TechnicalIndicatorCalculator {
 
     private static final int PERIOD = 20;
@@ -22,6 +19,11 @@ public class BollingerBandsCalculator implements TechnicalIndicatorCalculator {
     @Override
     public int requiredDataSize() {
         return PERIOD;
+    }
+
+    @Override
+    public IndicatorType cursorType() {
+        return IndicatorType.BB_UPPER;
     }
 
     @Override
@@ -42,10 +44,17 @@ public class BollingerBandsCalculator implements TechnicalIndicatorCalculator {
         double upper = middle + MULTIPLIER * stdDev;
         double lower = middle - MULTIPLIER * stdDev;
 
+        double close = dailyStockPriceList.get(dailyStockPriceList.size() - 1).getClosePrice();
+        double bandWidth = upper - lower;
+        double percentB = bandWidth == 0.0 ? 0.0 : (close - lower) / bandWidth;
+        double bbWidth = bandWidth / middle;
+
         return Map.of(
                 IndicatorType.BB_UPPER, upper,
                 IndicatorType.BB_MIDDLE, middle,
-                IndicatorType.BB_LOWER, lower
+                IndicatorType.BB_LOWER, lower,
+                IndicatorType.BB_PERCENT_B, percentB,
+                IndicatorType.BB_WIDTH, bbWidth
         );
     }
 }

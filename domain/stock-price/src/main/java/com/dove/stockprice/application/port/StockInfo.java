@@ -8,7 +8,6 @@ import java.time.LocalDate;
 public record StockInfo(
         LocalDate tradingDate,
         MarketType marketType,
-        String stockName,
         String stockCode,
         Long tradingVolume,
         Long openingPrice,

@@ -4,7 +4,7 @@
 
 ## 시스템 구조
 ![img.png](./doc/system.png)
-1. **stock-batch**: @Scheduled 기반 주가/상장 조회 요청을 Kafka에 발행 + 재시도 큐 주기 스캔
+1. **stock-batch**: @Scheduled 기반 주가/상장 조회 요청을 Kafka에 발행 + 재시도 큐 주기 스캔 + 지표 커서 스윕 (INDICATOR_ADVANCE 발행)
 2. **stock-consumer**: Kafka 메시지 수신 → KRX API 호출 → DB 저장. 실패 outcome은 이벤트 재시도 큐/DLQ로 관리
 3. **stock-api** *(예정)*: 주식 데이터 조회/업데이트 API
 4. **stock-app** *(예정)*: 주식 데이터 UI
@@ -24,8 +24,8 @@ application/                Driver adapter — Spring Boot 실행 단위
 domain/                     Aggregate 단위 도메인 모듈 (entity + repository + JPA/QueryDSL + CQRS service)
   market                    MarketType, MarketCalendar
   stock                     Stock, StockListedDate, TradingStatus + StockListingFetcher port
-  stock-price               DailyStockPrice, StockDataChange + DailyPriceFetcher port + StockInfo
-  technical-indicator       TechnicalIndicator + 지표 계산기
+  stock-price               DailyStockPrice + DailyPriceFetcher port + StockInfo
+  technical-indicator       TechnicalIndicator, IndicatorCursor + 지표 계산기
   krx-call-log              KrxDailyData (KRX API 호출 이력 + 감사용 audit log)
   event-retry               PendingEventRetry (재시도 큐) + FailedEvent (DLQ)
 
@@ -65,6 +65,27 @@ Batch (PendingEventRetryProcessor, 매 10분)
 ```
 
 키는 `(eventType, eventKey)` 단위로 멱등 유지. `stringKafkaTemplate`(StringSerializer)을 통해 저장된 JSON payload를 재직렬화 없이 그대로 발행.
+
+### 기술적 지표 계산 흐름 (커서 체이닝)
+
+`IndicatorCursor`가 calculator별·종목별 마지막 계산일을 추적. 주가 저장 시 커서를 되감고 `INDICATOR_ADVANCE`를 발행해 체이닝을 시작한다.
+
+```
+SaveDailyMarketDataService (STOCK_PRICE_QUERY 수신, Success 시)
+  → IndicatorCursorCommandService.rewindIfBefore(market, code, date)  -- 커서 되감기
+  → KafkaTemplate.send(INDICATOR_ADVANCE, code, payload)              -- 체이닝 시작
+
+IndicatorAdvanceListener (INDICATOR_ADVANCE 수신)
+  → IndicatorCursor 조회 → 다음 미계산일 결정
+  → 지표 계산 + TechnicalIndicator 저장 + IndicatorCursor 전진
+  → 더 계산할 날짜가 있으면 → INDICATOR_ADVANCE 재발행 (자기 자신에게 체이닝)
+
+Batch (IndicatorCursorSweepScheduler, 매일 03:00 KST)
+  latestTradingDate = MarketCalendar 최신 거래일
+  stale codes = INDICATOR_CURSOR ⨝ STOCK (ACTIVE/SUSPENDED)
+                where lastCalculatedDate < latestTradingDate
+  → 각 code마다 INDICATOR_ADVANCE 발행 (누락 체이닝 복구)
+```
 
 ## 환경변수
 

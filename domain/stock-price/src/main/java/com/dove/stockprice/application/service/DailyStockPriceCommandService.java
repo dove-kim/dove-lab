@@ -6,7 +6,6 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-/** 주가 데이터 변경 전용 서비스. */
 @Service
 @RequiredArgsConstructor
 public class DailyStockPriceCommandService {

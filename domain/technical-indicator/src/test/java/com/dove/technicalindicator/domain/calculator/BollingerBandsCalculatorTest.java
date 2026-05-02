@@ -96,4 +96,62 @@ class BollingerBandsCalculatorTest {
         assertThat(result.get(IndicatorType.BB_MIDDLE)).isCloseTo(5000.0, within(0.01));
         assertThat(result.get(IndicatorType.BB_LOWER)).isCloseTo(5000.0, within(0.01));
     }
+
+    @Test
+    @DisplayName("cursorType()은 BB_UPPER를 반환한다")
+    void shouldReturnBbUpperAsCursorType() {
+        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.BB_UPPER);
+    }
+
+    @Test
+    @DisplayName("%B는 (close - lower) / (upper - lower) 수식으로 계산된다")
+    void shouldCalculateBbPercentBCorrectly() {
+        List<DailyStockPrice> prices = IntStream.rangeClosed(1, 20)
+                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, i), 1000 + i * 10))
+                .toList();
+        double sumOfPrices = IntStream.rangeClosed(1, 20).mapToDouble(i -> 1000 + i * 10).sum();
+        double sma = sumOfPrices / 20;
+        double lastClose = 1000 + 20 * 10;
+        double varianceSum = IntStream.rangeClosed(1, 20)
+                .mapToDouble(i -> Math.pow((1000 + i * 10) - sma, 2))
+                .sum();
+        double stdDev = Math.sqrt(varianceSum / 20);
+        double upper = sma + 2 * stdDev;
+        double lower = sma - 2 * stdDev;
+        double expectedPercentB = (lastClose - lower) / (upper - lower);
+
+        Map<IndicatorType, Double> result = calculator.calculate(prices);
+
+        assertThat(result.get(IndicatorType.BB_PERCENT_B)).isCloseTo(expectedPercentB, within(0.0001));
+        assertThat(result.get(IndicatorType.BB_PERCENT_B)).isGreaterThan(0.5);
+    }
+
+    @Test
+    @DisplayName("밴드 폭이 0이면 %B는 0.0이다")
+    void shouldReturnZeroPercentBWhenBandWidthIsZero() {
+        List<DailyStockPrice> data = IntStream.rangeClosed(1, 20)
+                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, i), 5000))
+                .toList();
+
+        Map<IndicatorType, Double> result = calculator.calculate(data);
+
+        assertThat(result.get(IndicatorType.BB_PERCENT_B)).isCloseTo(0.0, within(0.0001));
+    }
+
+    @Test
+    @DisplayName("BB_WIDTH는 (upper - lower) / middle이다")
+    void shouldCalculateBbWidthCorrectly() {
+        List<DailyStockPrice> data = IntStream.rangeClosed(1, 20)
+                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, i), 1000 + i * 10))
+                .toList();
+
+        Map<IndicatorType, Double> result = calculator.calculate(data);
+
+        double upper = result.get(IndicatorType.BB_UPPER);
+        double lower = result.get(IndicatorType.BB_LOWER);
+        double middle = result.get(IndicatorType.BB_MIDDLE);
+        double expectedWidth = (upper - lower) / middle;
+        assertThat(result.get(IndicatorType.BB_WIDTH)).isCloseTo(expectedWidth, within(0.0001));
+        assertThat(result.get(IndicatorType.BB_WIDTH)).isGreaterThan(0.0);
+    }
 }

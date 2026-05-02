@@ -12,7 +12,7 @@ import java.util.Map;
 public class AdxCalculator implements TechnicalIndicatorCalculator {
 
     private static final int PERIOD = 14;
-    private static final int REQUIRED_SIZE = PERIOD * 2;
+    private static final int REQUIRED_SIZE = 100;
 
     @Override
     public String getName() {
@@ -22,6 +22,11 @@ public class AdxCalculator implements TechnicalIndicatorCalculator {
     @Override
     public int requiredDataSize() {
         return REQUIRED_SIZE;
+    }
+
+    @Override
+    public IndicatorType cursorType() {
+        return IndicatorType.ADX;
     }
 
     @Override

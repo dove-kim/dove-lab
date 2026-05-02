@@ -74,4 +74,10 @@ class MfiCalculatorTest {
         // Then
         assertThat(result.get(IndicatorType.MFI)).isCloseTo(0.0, within(0.01));
     }
+
+    @Test
+    @DisplayName("cursorType()은 MFI를 반환한다")
+    void shouldReturnMfiAsCursorType() {
+        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.MFI);
+    }
 }
