@@ -47,3 +47,12 @@ graph.md
 /container
 
 settings.local.json
+
+### Next.js ###
+web/.next/
+web/node_modules/
+web/.env.local
+web/.env*.local
+
+### Docker ###
+docker-compose.prod.yml

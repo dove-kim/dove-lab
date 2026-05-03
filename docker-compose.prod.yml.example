@@ -41,3 +41,27 @@ services:
     volumes:
       - ./logs/consumer:/logs
     network_mode: "host"
+
+  stock-api:
+    image: ghcr.io/dove-kim/stock-ledger-system/stock-api:latest
+    container_name: stock-api
+    restart: unless-stopped
+    environment:
+      SERVER_PORT: ${API_PORT:-8081}
+      DB_HOST: <DB 호스트>
+      DB_PORT: <DB 포트>
+      DB_USERNAME: <DB 사용자명>
+      DB_PASSWORD: <DB 비밀번호>
+      LOG_LEVEL: INFO
+    volumes:
+      - ./logs/api:/logs
+    network_mode: "host"
+
+  stock-web:
+    image: ghcr.io/dove-kim/stock-ledger-system/stock-web:latest
+    container_name: stock-web
+    restart: unless-stopped
+    environment:
+      PORT: ${WEB_PORT:-3000}
+      INTERNAL_API_URL: http://localhost:${API_PORT:-8081}
+    network_mode: "host"
