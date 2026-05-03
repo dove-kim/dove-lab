@@ -1,0 +1,42 @@
+server:
+  port: ${SERVER_PORT:8081}
+
+spring:
+  application:
+    name: stock-api
+  mvc:
+    problemdetails:
+      enabled: true
+
+  datasource:
+    driver-class-name: com.mysql.cj.jdbc.Driver
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:13306}/DOVE_STOCK?serverTimezone=Asia/Seoul&characterEncoding=UTF-8
+    username: ${DB_USERNAME:dove_local_test}
+    password: ${DB_PASSWORD:dove1234}
+    hikari:
+      maximum-pool-size: 10
+      minimum-idle: 5
+      idle-timeout: 300000
+      connection-timeout: 20000
+      max-lifetime: 1200000
+      auto-commit: true
+
+  jpa:
+    hibernate:
+      ddl-auto: none
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+    open-in-view: false
+
+jwt:
+  secret: ${JWT_SECRET:stock-ledger-local-dev-secret-key-minimum-32-characters}
+  expiration-ms: ${JWT_EXPIRATION_MS:3600000}
+  remember-me-expiration-ms: ${JWT_REMEMBER_ME_EXPIRATION_MS:2592000000}
+
+logging:
+  level:
+    root: INFO
+    com.dove: INFO
+    org.hibernate.SQL: WARN
+    org.hibernate.type.descriptor.sql: WARN
+    com.zaxxer.hikari: INFO

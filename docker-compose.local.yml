@@ -74,6 +74,7 @@ services:
     volumes:
       - ./container/mysql_data:/var/lib/mysql
       - ./init.sql:/docker-entrypoint-initdb.d/init.sql
+      - ./init_data.sql:/docker-entrypoint-initdb.d/init_data.sql
 
 networks:
   stock-project-network:
