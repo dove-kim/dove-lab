@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify(body),
   });
 
-  const data = await parseJsonSafely(apiRes) as { detail?: string; username?: string; name?: string; role?: string };
+  const data = await parseJsonSafely(apiRes) as { detail?: string; username?: string; name?: string; role?: string; accessToken?: string };
 
   if (!apiRes.ok) {
     return NextResponse.json(
@@ -20,7 +20,7 @@ export async function POST(req: NextRequest) {
   }
 
   const response = NextResponse.json({ username: data.username, name: data.name, role: data.role }, { status: 201 });
-  response.cookies.set("token", data.accessToken, {
+  response.cookies.set("token", data.accessToken!, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
