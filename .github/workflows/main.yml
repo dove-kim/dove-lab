@@ -22,15 +22,19 @@ jobs:
         include:
           - app: stock-api
             dir: application/stock-api
+            image: stock-ledger-api
             java: true
           - app: stock-batch
             dir: application/stock-batch
+            image: stock-ledger-batch
             java: true
           - app: stock-consumer
             dir: application/stock-consumer
+            image: stock-ledger-consumer
             java: true
           - app: web
             dir: web
+            image: stock-ledger-web
             java: false
     steps:
       - uses: actions/checkout@v4
@@ -74,5 +78,5 @@ jobs:
           file: ${{ matrix.dir }}/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ env.DOCKER_APP_NAME }}/${{ matrix.app }}:${{ env.IMAGE_TAG }}
-            ghcr.io/${{ env.DOCKER_APP_NAME }}/${{ matrix.app }}:${{ github.sha }}
+            ghcr.io/${{ env.DOCKER_APP_NAME }}/${{ matrix.image }}:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ env.DOCKER_APP_NAME }}/${{ matrix.image }}:${{ github.sha }}
