@@ -5,7 +5,7 @@ version: '3.8'
 
 services:
   stock-batch:
-    image: ghcr.io/dove-kim/stock-ledger-system/stock-batch:latest
+    image: ghcr.io/dove-kim/stock-ledger-system/stock-ledger-batch:latest
     container_name: stock-batch
     restart: unless-stopped
     environment:
@@ -23,7 +23,7 @@ services:
     network_mode: "host"
 
   stock-consumer:
-    image: ghcr.io/dove-kim/stock-ledger-system/stock-consumer:latest
+    image: ghcr.io/dove-kim/stock-ledger-system/stock-ledger-consumer:latest
     container_name: stock-consumer
     restart: unless-stopped
     environment:
@@ -43,7 +43,7 @@ services:
     network_mode: "host"
 
   stock-api:
-    image: ghcr.io/dove-kim/stock-ledger-system/stock-api:latest
+    image: ghcr.io/dove-kim/stock-ledger-system/stock-ledger-api:latest
     container_name: stock-api
     restart: unless-stopped
     environment:
@@ -58,7 +58,7 @@ services:
     network_mode: "host"
 
   stock-web:
-    image: ghcr.io/dove-kim/stock-ledger-system/stock-web:latest
+    image: ghcr.io/dove-kim/stock-ledger-system/stock-ledger-web:latest
     container_name: stock-web
     restart: unless-stopped
     environment:

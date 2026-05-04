@@ -6,8 +6,8 @@
 ![img.png](./doc/system.png)
 1. **stock-batch**: @Scheduled 기반 주가/상장 조회 요청을 Kafka에 발행 + 재시도 큐 주기 스캔 + 지표 커서 스윕 (INDICATOR_ADVANCE 발행)
 2. **stock-consumer**: Kafka 메시지 수신 → KRX API 호출 → DB 저장. 실패 outcome은 이벤트 재시도 큐/DLQ로 관리
-3. **stock-api** *(예정)*: 주식 데이터 조회/업데이트 API
-4. **stock-app** *(예정)*: 주식 데이터 UI
+3. **stock-api**: 주식 데이터 조회/업데이트 REST API + 회원 인증
+4. **web**: Next.js 기반 주식 데이터 UI (stock-ledger-web)
 
 ## 프로젝트 구성
 
@@ -19,6 +19,7 @@ Spring Boot 3 / Java 21.
 application/                Driver adapter — Spring Boot 실행 단위
   stock-batch           @Scheduled 진입점 (producer/*)
   stock-consumer        @KafkaListener 진입점 (listener/*)
+  stock-api             REST API 서버 (회원 인증 + 주식 데이터 조회)
     └── service/            조합 유스케이스 — 도메인 CQRS service + port만 주입 (repository 직접 주입 금지)
 
 domain/                     Aggregate 단위 도메인 모듈 (entity + repository + JPA/QueryDSL + CQRS service)
@@ -99,9 +100,9 @@ Batch (IndicatorCursorSweepScheduler, 매일 03:00 KST)
 | `DB_PASSWORD` | DB 비밀번호 | `dove1234` | 운영 시 반드시 변경 |
 | `KAFKA_HOST` | Kafka 브로커 호스트 | `localhost` | |
 | `KAFKA_PORT` | Kafka 브로커 포트 | `9092` | |
-| `KRX_API_AUTH_KEY` | 한국거래소 API 인증키 | (없음) | stock-consumer에서 필수 |
-| `KRX_TARGET_MARKETS` | 스케줄러가 조회할 시장 (CSV) | `KOSPI,KOSDAQ` | stock-batch에서만 사용. 허용 값: `KOSPI`, `KOSDAQ`, `KONEX` |
-| `REDIS_HOST` | Redis 호스트 | `localhost` | stock-consumer에서 사용 |
+| `KRX_API_AUTH_KEY` | 한국거래소 API 인증키 | (없음) | stock-ledger-consumer에서 필수 |
+| `KRX_TARGET_MARKETS` | 스케줄러가 조회할 시장 (CSV) | `KOSPI,KOSDAQ` | stock-ledger-batch에서만 사용. 허용 값: `KOSPI`, `KOSDAQ`, `KONEX` |
+| `REDIS_HOST` | Redis 호스트 | `localhost` | stock-ledger-consumer에서 사용 |
 | `REDIS_PORT` | Redis 포트 | `6379` | |
 | `DISTRIBUTED_LOCK_WAIT_TIME` | 분산락 대기 시간 (초) | `5` | |
 | `DISTRIBUTED_LOCK_LEASE_TIME` | 분산락 임대 시간 (초) | `60` | |
@@ -118,7 +119,7 @@ Batch (IndicatorCursorSweepScheduler, 매일 03:00 KST)
 # 1. 인프라 실행 (Kafka 토픽은 kafka-init 컨테이너가 자동 생성)
 docker compose -f docker-compose.local.yml up -d
 
-# 2. stock-batch / stock-consumer 실행
+# 2. stock-ledger-batch / stock-ledger-consumer 실행
 DB_HOST=127.0.0.1 DB_PORT=13306 \
 DB_USERNAME=dove_local_test DB_PASSWORD=dove1234 \
 KAFKA_HOST=localhost KAFKA_PORT=9092 \
