@@ -2,8 +2,10 @@ rootProject.name = 'stock-ledger-system'
 
 include 'stock-batch'
 include 'stock-consumer'
+include 'stock-api'
 project(':stock-batch').projectDir = file('application/stock-batch')
 project(':stock-consumer').projectDir = file('application/stock-consumer')
+project(':stock-api').projectDir = file('application/stock-api')
 
 include 'krx-call-log'
 include 'krx'
@@ -22,6 +24,8 @@ project(':event-retry').projectDir = file('domain/event-retry')
 
 include 'logging'
 include 'jpa'
+include 'member'
+project(':member').projectDir = file('domain/member')
 include 'redis'
 project(':logging').projectDir = file('library/logging')
 project(':jpa').projectDir = file('library/jpa')
