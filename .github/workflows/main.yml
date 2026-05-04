@@ -1,5 +1,4 @@
-# This workflow builds and pushes Docker images for all 'app-*' directories
-# to the GitHub Container Registry (GHCR).
+# Push to main or tag: detect changed modules, build only those Docker images.
 
 name: Docker Build & Push to GHCR
 
@@ -14,23 +13,46 @@ env:
   DOCKER_APP_NAME: ${{ github.repository }}
 
 jobs:
-  find_apps:
+  detect_changes:
     runs-on: ubuntu-latest
     outputs:
-      app_dirs: ${{ steps.find_dirs.outputs.app_dirs }}
+      apps: ${{ steps.filter.outputs.changes }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 2
 
-      - name: Find all 'app-*' directories
-        id: find_dirs
-        run: |
-          JSON_ARRAY=$(find ./app -maxdepth 1 -type d -name "app-*" | sed 's/.\///' | jq -Rcs 'split("\n") | map(select(length > 0))')
-          echo "app_dirs=$JSON_ARRAY" >> "$GITHUB_OUTPUT"
-        shell: bash
+      - uses: dorny/paths-filter@v3
+        id: filter
+        with:
+          filters: |
+            stock-api:
+              - 'application/stock-api/**'
+              - 'domain/**'
+              - 'infrastructure/**'
+              - 'library/**'
+              - 'build.gradle'
+              - 'settings.gradle'
+            stock-batch:
+              - 'application/stock-batch/**'
+              - 'domain/**'
+              - 'infrastructure/**'
+              - 'library/**'
+              - 'build.gradle'
+              - 'settings.gradle'
+            stock-consumer:
+              - 'application/stock-consumer/**'
+              - 'domain/**'
+              - 'infrastructure/**'
+              - 'library/**'
+              - 'build.gradle'
+              - 'settings.gradle'
+            web:
+              - 'web/**'
 
   build_and_push:
-    needs: find_apps
+    needs: detect_changes
+    if: ${{ needs.detect_changes.outputs.apps != '[]' && needs.detect_changes.outputs.apps != '' }}
     runs-on: ubuntu-latest
     permissions:
       contents: read
@@ -38,23 +60,34 @@ jobs:
     strategy:
       fail-fast: false
       matrix:
-        app_dir: ${{ fromJson(needs.find_apps.outputs.app_dirs) }}
+        app: ${{ fromJson(needs.detect_changes.outputs.apps) }}
     steps:
-      - name: Checkout Repository
-        uses: actions/checkout@v4
+      - uses: actions/checkout@v4
+
+      - name: Set app directory
+        id: app_dir
+        run: |
+          if [[ "${{ matrix.app }}" == "web" ]]; then
+            echo "dir=web" >> "$GITHUB_OUTPUT"
+          else
+            echo "dir=application/${{ matrix.app }}" >> "$GITHUB_OUTPUT"
+          fi
 
       - name: Set up JDK 21
-        uses: actions/setup-java@v3
+        if: matrix.app != 'web'
+        uses: actions/setup-java@v4
         with:
           java-version: '21'
-          distribution: 'temurin'
+          distribution: 'corretto'
           cache: 'gradle'
 
       - name: Grant execute permission for gradlew
+        if: matrix.app != 'web'
         run: chmod +x ./gradlew
 
       - name: Build with Gradle
-        run: ./gradlew build
+        if: matrix.app != 'web'
+        run: ./gradlew :${{ matrix.app }}:build -x test
 
       - name: Set up Docker Buildx
         uses: docker/setup-buildx-action@v3
@@ -66,8 +99,7 @@ jobs:
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
 
-      - name: Set image tag dynamically
-        id: set_tag
+      - name: Set image tag
         run: |
           if [[ "${{ github.ref }}" == "refs/heads/main" ]]; then
             echo "IMAGE_TAG=latest" >> "$GITHUB_ENV"
@@ -75,16 +107,12 @@ jobs:
             echo "IMAGE_TAG=${{ github.ref_name }}" >> "$GITHUB_ENV"
           fi
 
-      - name: Extract app name
-        id: app_name
-        run: echo "name=$(basename ${{ matrix.app_dir }})" >> "$GITHUB_OUTPUT"
-
       - name: Build and Push Docker image
         uses: docker/build-push-action@v5
         with:
-          context: ${{ matrix.app_dir }}
-          file: ${{ matrix.app_dir }}/Dockerfile
+          context: ${{ steps.app_dir.outputs.dir }}
+          file: ${{ steps.app_dir.outputs.dir }}/Dockerfile
           push: true
           tags: |
-            ghcr.io/${{ env.DOCKER_APP_NAME }}/${{ steps.app_name.outputs.name }}:${{ env.IMAGE_TAG }}
-            ghcr.io/${{ env.DOCKER_APP_NAME }}/${{ steps.app_name.outputs.name }}:${{ github.sha }}
+            ghcr.io/${{ env.DOCKER_APP_NAME }}/${{ matrix.app }}:${{ env.IMAGE_TAG }}
+            ghcr.io/${{ env.DOCKER_APP_NAME }}/${{ matrix.app }}:${{ github.sha }}
