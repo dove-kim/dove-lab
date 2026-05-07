@@ -26,7 +26,7 @@ public class VolumeRatioCalculator implements TechnicalIndicatorCalculator {
 
     @Override
     public IndicatorType cursorType() {
-        return IndicatorType.VOLUME_RATIO;
+        return IndicatorType.VOLUME_RATIO_20;
     }
 
     @Override
@@ -51,10 +51,10 @@ public class VolumeRatioCalculator implements TechnicalIndicatorCalculator {
 
         double denominator = downVolume + unchangedVolume / 2.0;
         if (denominator == 0) {
-            return Map.of(IndicatorType.VOLUME_RATIO, 0.0);
+            return Map.of(IndicatorType.VOLUME_RATIO_20, 0.0);
         }
 
         double volumeRatio = (upVolume + unchangedVolume / 2.0) / denominator * 100;
-        return Map.of(IndicatorType.VOLUME_RATIO, volumeRatio);
+        return Map.of(IndicatorType.VOLUME_RATIO_20, volumeRatio);
     }
 }

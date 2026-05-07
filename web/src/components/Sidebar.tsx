@@ -30,8 +30,8 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    href: "/stocks",
-    label: "종목",
+    href: "/stock-search",
+    label: "종목 검색",
     icon: (
       <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -39,13 +39,25 @@ const NAV_ITEMS: NavItem[] = [
     ),
   },
   {
-    href: "/filters",
-    label: "필터 관리",
+    href: "/search-filters",
+    label: "검색 필터 관리",
     icon: (
       <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <line x1="4" y1="6" x2="20" y2="6" />
         <line x1="8" y1="12" x2="16" y2="12" />
         <line x1="11" y1="18" x2="13" y2="18" />
+      </svg>
+    ),
+  },
+  {
+    href: "/stock-sets",
+    label: "종목 필터 관리",
+    icon: (
+      <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="2" />
+        <line x1="9" y1="9" x2="15" y2="9" />
+        <line x1="9" y1="12" x2="15" y2="12" />
+        <line x1="9" y1="15" x2="12" y2="15" />
       </svg>
     ),
   },
@@ -64,14 +76,29 @@ const ADMIN_ITEMS: NavItem[] = [
   },
 ];
 
+const STORAGE_KEY = "sidebar-collapsed";
+
 export default function Sidebar({ role, mobileOpen, onMobileClose }: Props) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const isAdmin = role === "ADMIN";
 
   useEffect(() => {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored !== null) setCollapsed(stored === "true");
+  }, []);
+
+  useEffect(() => {
     onMobileClose();
   }, [pathname]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  function toggleCollapsed() {
+    setCollapsed((v) => {
+      const next = !v;
+      localStorage.setItem(STORAGE_KEY, String(next));
+      return next;
+    });
+  }
 
   return (
     <aside
@@ -100,7 +127,7 @@ export default function Sidebar({ role, mobileOpen, onMobileClose }: Props) {
 
         {/* 데스크탑: 접기/펼치기 버튼 */}
         <button
-          onClick={() => setCollapsed((v) => !v)}
+          onClick={toggleCollapsed}
           className="hidden lg:flex items-center justify-center w-9 h-9 rounded-lg text-slate-400 hover:text-white hover:bg-white/8 transition cursor-pointer"
           title={collapsed ? "메뉴 펼치기" : "메뉴 접기"}
         >

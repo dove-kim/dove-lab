@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
 
@@ -52,5 +53,26 @@ public class DailyStockPriceQueryService {
     @Transactional(readOnly = true)
     public Set<LocalDate> findExistingTradeDatesInRange(MarketType marketType, LocalDate from, LocalDate to) {
         return new HashSet<>(dailyStockPriceQueryRepository.findDistinctTradeDatesInRange(marketType, from, to));
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<LocalDate> findLatestTradeDate(List<MarketType> markets) {
+        return dailyStockPriceQueryRepository.findLatestTradeDate(markets);
+    }
+
+    @Transactional(readOnly = true)
+    public Optional<LocalDate> findNthRecentTradeDate(List<MarketType> markets, LocalDate reference,
+                                                       boolean inclusive, long offset) {
+        return dailyStockPriceQueryRepository.findNthRecentTradeDate(markets, reference, inclusive, offset);
+    }
+
+    @Transactional(readOnly = true)
+    public List<LocalDate> findRecentTradeDates(List<MarketType> markets, LocalDate to, int limit) {
+        return dailyStockPriceQueryRepository.findRecentTradeDates(markets, to, limit);
+    }
+
+    @Transactional(readOnly = true)
+    public Map<String, DailyStockPrice> findAllByMarketsAndDate(List<MarketType> markets, LocalDate date) {
+        return dailyStockPriceQueryRepository.findAllByMarketsAndDate(markets, date);
     }
 }

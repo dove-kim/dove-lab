@@ -39,7 +39,7 @@ class StochasticCalculatorTest {
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
         // Then - %K는 0~100 범위
-        assertThat(result.get(IndicatorType.STOCHASTIC_K)).isBetween(0.0, 100.0);
+        assertThat(result.get(IndicatorType.STOCHASTIC_K_14_7)).isBetween(0.0, 100.0);
     }
 
     @Test
@@ -56,8 +56,8 @@ class StochasticCalculatorTest {
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
         // Then
-        assertThat(result).containsKeys(IndicatorType.STOCHASTIC_K, IndicatorType.STOCHASTIC_D);
-        assertThat(result.get(IndicatorType.STOCHASTIC_D)).isBetween(0.0, 100.0);
+        assertThat(result).containsKeys(IndicatorType.STOCHASTIC_K_14_7, IndicatorType.STOCHASTIC_D_14_7);
+        assertThat(result.get(IndicatorType.STOCHASTIC_D_14_7)).isBetween(0.0, 100.0);
     }
 
     @Test
@@ -74,7 +74,7 @@ class StochasticCalculatorTest {
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
         // Then
-        assertThat(result.get(IndicatorType.STOCHASTIC_K)).isCloseTo(100.0, within(0.01));
+        assertThat(result.get(IndicatorType.STOCHASTIC_K_14_7)).isCloseTo(100.0, within(0.01));
     }
 
     @Test
@@ -91,12 +91,12 @@ class StochasticCalculatorTest {
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
         // Then
-        assertThat(result.get(IndicatorType.STOCHASTIC_K)).isCloseTo(0.0, within(0.01));
+        assertThat(result.get(IndicatorType.STOCHASTIC_K_14_7)).isCloseTo(0.0, within(0.01));
     }
 
     @Test
-    @DisplayName("cursorType()은 STOCHASTIC_K를 반환한다")
+    @DisplayName("cursorType()은 STOCHASTIC_K_14_7를 반환한다")
     void shouldReturnStochasticKAsCursorType() {
-        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.STOCHASTIC_K);
+        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.STOCHASTIC_K_14_7);
     }
 }

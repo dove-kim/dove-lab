@@ -37,8 +37,8 @@ class AdxCalculatorTest {
 
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
-        assertThat(result.get(IndicatorType.ADX)).isGreaterThan(0);
-        assertThat(result).containsKeys(IndicatorType.ADX, IndicatorType.PLUS_DI, IndicatorType.MINUS_DI);
+        assertThat(result.get(IndicatorType.ADX_14)).isGreaterThan(0);
+        assertThat(result).containsKeys(IndicatorType.ADX_14, IndicatorType.PLUS_DI_14, IndicatorType.MINUS_DI_14);
     }
 
     @Test
@@ -52,7 +52,7 @@ class AdxCalculatorTest {
 
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
-        assertThat(result.get(IndicatorType.PLUS_DI)).isGreaterThan(result.get(IndicatorType.MINUS_DI));
+        assertThat(result.get(IndicatorType.PLUS_DI_14)).isGreaterThan(result.get(IndicatorType.MINUS_DI_14));
     }
 
     @Test
@@ -66,7 +66,7 @@ class AdxCalculatorTest {
 
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
-        assertThat(result.get(IndicatorType.MINUS_DI)).isGreaterThan(result.get(IndicatorType.PLUS_DI));
+        assertThat(result.get(IndicatorType.MINUS_DI_14)).isGreaterThan(result.get(IndicatorType.PLUS_DI_14));
     }
 
     @Test
@@ -82,9 +82,9 @@ class AdxCalculatorTest {
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
         // Then
-        assertThat(result.get(IndicatorType.ADX)).isCloseTo(0.0, within(0.01));
-        assertThat(result.get(IndicatorType.PLUS_DI)).isCloseTo(0.0, within(0.01));
-        assertThat(result.get(IndicatorType.MINUS_DI)).isCloseTo(0.0, within(0.01));
+        assertThat(result.get(IndicatorType.ADX_14)).isCloseTo(0.0, within(0.01));
+        assertThat(result.get(IndicatorType.PLUS_DI_14)).isCloseTo(0.0, within(0.01));
+        assertThat(result.get(IndicatorType.MINUS_DI_14)).isCloseTo(0.0, within(0.01));
     }
 
     @Test
@@ -94,8 +94,8 @@ class AdxCalculatorTest {
     }
 
     @Test
-    @DisplayName("cursorType()은 ADX를 반환한다")
+    @DisplayName("cursorType()은 ADX_14를 반환한다")
     void shouldReturnAdxAsCursorType() {
-        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.ADX);
+        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.ADX_14);
     }
 }

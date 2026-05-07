@@ -23,7 +23,7 @@ public class BollingerBandsCalculator implements TechnicalIndicatorCalculator {
 
     @Override
     public IndicatorType cursorType() {
-        return IndicatorType.BB_UPPER;
+        return IndicatorType.BB_UPPER_20;
     }
 
     @Override
@@ -50,11 +50,11 @@ public class BollingerBandsCalculator implements TechnicalIndicatorCalculator {
         double bbWidth = bandWidth / middle;
 
         return Map.of(
-                IndicatorType.BB_UPPER, upper,
-                IndicatorType.BB_MIDDLE, middle,
-                IndicatorType.BB_LOWER, lower,
-                IndicatorType.BB_PERCENT_B, percentB,
-                IndicatorType.BB_WIDTH, bbWidth
+                IndicatorType.BB_UPPER_20, upper,
+                IndicatorType.BB_MIDDLE_20, middle,
+                IndicatorType.BB_LOWER_20, lower,
+                IndicatorType.BB_PERCENT_B_20, percentB,
+                IndicatorType.BB_WIDTH_20, bbWidth
         );
     }
 }
