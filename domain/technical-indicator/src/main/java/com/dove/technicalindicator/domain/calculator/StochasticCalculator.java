@@ -27,7 +27,7 @@ public class StochasticCalculator implements TechnicalIndicatorCalculator {
 
     @Override
     public IndicatorType cursorType() {
-        return IndicatorType.STOCHASTIC_K;
+        return IndicatorType.STOCHASTIC_K_14_7;
     }
 
     @Override
@@ -64,8 +64,8 @@ public class StochasticCalculator implements TechnicalIndicatorCalculator {
         double percentD = dSum / D_PERIOD;
 
         return Map.of(
-                IndicatorType.STOCHASTIC_K, percentK,
-                IndicatorType.STOCHASTIC_D, percentD
+                IndicatorType.STOCHASTIC_K_14_7, percentK,
+                IndicatorType.STOCHASTIC_D_14_7, percentD
         );
     }
 }

@@ -8,6 +8,7 @@ import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
+import java.time.LocalDate;
 import java.util.List;
 
 import static org.assertj.core.api.Assertions.assertThat;
@@ -18,13 +19,15 @@ class StockRepositoryTest {
     @Autowired
     private StockRepository repository;
 
+    private static final LocalDate LISTING_DATE = LocalDate.of(2000, 1, 2);
+
     @Test
     @DisplayName("findAllByTradingStatus — ACTIVE만 반환, SUSPENDED/DELISTED 제외")
     void shouldFindOnlyActiveStocks() {
-        repository.save(new Stock(MarketType.KOSPI, "005930", "삼성전자", TradingStatus.ACTIVE));
-        repository.save(new Stock(MarketType.KOSPI, "000660", "SK하이닉스", TradingStatus.SUSPENDED));
-        repository.save(new Stock(MarketType.KOSDAQ, "035420", "네이버", TradingStatus.DELISTED));
-        repository.save(new Stock(MarketType.KOSDAQ, "035720", "카카오", TradingStatus.ACTIVE));
+        repository.save(new Stock(MarketType.KOSPI, "005930", "삼성전자", TradingStatus.ACTIVE, LISTING_DATE));
+        repository.save(new Stock(MarketType.KOSPI, "000660", "SK하이닉스", TradingStatus.SUSPENDED, LISTING_DATE));
+        repository.save(new Stock(MarketType.KOSDAQ, "035420", "네이버", TradingStatus.DELISTED, LISTING_DATE));
+        repository.save(new Stock(MarketType.KOSDAQ, "035720", "카카오", TradingStatus.ACTIVE, LISTING_DATE));
 
         List<Stock> active = repository.findAllByTradingStatus(TradingStatus.ACTIVE);
 
@@ -36,9 +39,9 @@ class StockRepositoryTest {
     @Test
     @DisplayName("findAllByTradingStatusAndId_MarketType — 시장 필터 적용")
     void shouldFilterByTradingStatusAndMarket() {
-        repository.save(new Stock(MarketType.KOSPI, "005930", "삼성전자", TradingStatus.ACTIVE));
-        repository.save(new Stock(MarketType.KOSDAQ, "035720", "카카오", TradingStatus.ACTIVE));
-        repository.save(new Stock(MarketType.KOSPI, "000660", "SK하이닉스", TradingStatus.SUSPENDED));
+        repository.save(new Stock(MarketType.KOSPI, "005930", "삼성전자", TradingStatus.ACTIVE, LISTING_DATE));
+        repository.save(new Stock(MarketType.KOSDAQ, "035720", "카카오", TradingStatus.ACTIVE, LISTING_DATE));
+        repository.save(new Stock(MarketType.KOSPI, "000660", "SK하이닉스", TradingStatus.SUSPENDED, LISTING_DATE));
 
         List<Stock> activeKospi = repository.findAllByTradingStatusAndId_MarketType(
                 TradingStatus.ACTIVE, MarketType.KOSPI);

@@ -26,7 +26,7 @@ public class AdxCalculator implements TechnicalIndicatorCalculator {
 
     @Override
     public IndicatorType cursorType() {
-        return IndicatorType.ADX;
+        return IndicatorType.ADX_14;
     }
 
     @Override
@@ -88,9 +88,9 @@ public class AdxCalculator implements TechnicalIndicatorCalculator {
         double adx = adxSum / dx.length;
 
         return Map.of(
-                IndicatorType.ADX, adx,
-                IndicatorType.PLUS_DI, plusDi,
-                IndicatorType.MINUS_DI, minusDi
+                IndicatorType.ADX_14, adx,
+                IndicatorType.PLUS_DI_14, plusDi,
+                IndicatorType.MINUS_DI_14, minusDi
         );
     }
 }

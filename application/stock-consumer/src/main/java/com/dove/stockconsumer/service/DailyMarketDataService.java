@@ -68,7 +68,7 @@ public class DailyMarketDataService {
         boolean isOpen = !prices.isEmpty();
 
         if (!listingStocks.isEmpty()) {
-            insertNewStocks(market, listingStocks);
+            insertNewStocks(market, date, listingStocks);
             insertListedDates(market, date, listingStocks);
         }
         for (StockInfo info : prices) {
@@ -128,13 +128,13 @@ public class DailyMarketDataService {
         };
     }
 
-    private void insertNewStocks(MarketType market, Map<String, String> listingStocks) {
+    private void insertNewStocks(MarketType market, LocalDate date, Map<String, String> listingStocks) {
         Set<String> existing = stockQueryService.findAllByMarket(market).stream()
                 .map(s -> s.getId().getCode())
                 .collect(Collectors.toSet());
         List<Stock> toInsert = listingStocks.entrySet().stream()
                 .filter(e -> !existing.contains(e.getKey()))
-                .map(e -> new Stock(market, e.getKey(), e.getValue(), TradingStatus.ACTIVE))
+                .map(e -> new Stock(market, e.getKey(), e.getValue(), TradingStatus.ACTIVE, date))
                 .toList();
         if (!toInsert.isEmpty()) {
             stockCommandService.saveAll(toInsert);

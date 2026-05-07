@@ -1,21 +1,11 @@
 import { cookies } from "next/headers";
 import { logout } from "@/actions/auth";
 import MobileMenuButton from "./MobileMenuButton";
-
-interface JwtPayload {
-  sub: string;
-  name: string;
-  role: string;
-}
-
-function decodeTokenPayload(token: string): JwtPayload {
-  const payload = token.split(".")[1];
-  return JSON.parse(Buffer.from(payload, "base64url").toString());
-}
+import { decodeJwtPayload } from "@/utils/jwt";
 
 export default async function Header() {
   const token = (await cookies()).get("token")?.value;
-  const user = token ? decodeTokenPayload(token) : null;
+  const user = token ? decodeJwtPayload(token) : null;
 
   return (
     <header className="w-full px-6 py-4 bg-slate-900/80 backdrop-blur-md border-b border-white/10 flex items-center justify-between">

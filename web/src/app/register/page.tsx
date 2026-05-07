@@ -1,6 +1,7 @@
 "use client";
 
 import { Suspense, useState } from "react";
+import { cx } from "@/utils/cx";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -39,7 +40,7 @@ function RegisterForm() {
       });
       if (!res.ok) {
         const data = await res.json();
-        setError(ERROR_MESSAGES[data.code] ?? "회원가입에 실패했습니다.");
+        setError(ERROR_MESSAGES[data.code] ?? "서버에 오류가 발생했습니다.");
         return;
       }
       router.push("/");
@@ -69,7 +70,7 @@ function RegisterForm() {
                 onChange={handleChange}
                 placeholder="초대 코드를 입력하세요"
                 required
-                className="px-4 py-2.5 rounded-lg bg-white/8 border border-white/15 text-white placeholder-white/25 outline-none focus:ring-2 focus:ring-indigo-400/50 focus:border-transparent transition text-sm"
+                className={cx.input}
               />
             </div>
 
@@ -80,10 +81,10 @@ function RegisterForm() {
                 name="username"
                 value={form.username}
                 onChange={handleChange}
-                placeholder="영어 소문자, 숫자 (3자 이상)"
+                placeholder="영문 소문자, 숫자 (3자 이상)"
                 required
                 minLength={3}
-                className="px-4 py-2.5 rounded-lg bg-white/8 border border-white/15 text-white placeholder-white/25 outline-none focus:ring-2 focus:ring-indigo-400/50 focus:border-transparent transition text-sm"
+                className={cx.input}
               />
             </div>
 
@@ -99,7 +100,7 @@ function RegisterForm() {
                   placeholder="4자 이상"
                   required
                   minLength={4}
-                  className="w-full px-4 py-2.5 pr-10 rounded-lg bg-white/8 border border-white/15 text-white placeholder-white/25 outline-none focus:ring-2 focus:ring-indigo-400/50 focus:border-transparent transition text-sm"
+                  className={`pr-10 ${cx.input}`}
                 />
                 <button
                   type="button"
@@ -132,7 +133,7 @@ function RegisterForm() {
                 onChange={handleChange}
                 placeholder="example@email.com"
                 required
-                className="px-4 py-2.5 rounded-lg bg-white/8 border border-white/15 text-white placeholder-white/25 outline-none focus:ring-2 focus:ring-indigo-400/50 focus:border-transparent transition text-sm"
+                className={cx.input}
               />
             </div>
 
@@ -145,7 +146,7 @@ function RegisterForm() {
                 onChange={handleChange}
                 placeholder="표시될 이름"
                 required
-                className="px-4 py-2.5 rounded-lg bg-white/8 border border-white/15 text-white placeholder-white/25 outline-none focus:ring-2 focus:ring-indigo-400/50 focus:border-transparent transition text-sm"
+                className={cx.input}
               />
             </div>
 
@@ -154,14 +155,14 @@ function RegisterForm() {
             <button
               type="submit"
               disabled={loading}
-              className="mt-2 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 text-white font-medium text-sm transition disabled:opacity-50 cursor-pointer"
+              className={`w-full ${cx.btnPrimary}`}
             >
-              {loading ? "처리 중..." : "가입하기"}
+              {loading ? "가입 중..." : "가입하기"}
             </button>
           </form>
 
           <p className="text-center text-slate-500 text-xs mt-5">
-            이미 계정이 있으신가요?{" "}
+            이미 계정이 있나요?{" "}
             <Link href="/login" className="text-indigo-400 hover:text-indigo-300 transition">
               로그인
             </Link>

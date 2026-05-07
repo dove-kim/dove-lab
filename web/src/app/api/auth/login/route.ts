@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseJsonSafely } from "@/lib/api";
+import { safeJson } from "@/services/backend";
 
 const REMEMBER_ME_MAX_AGE = 60 * 60 * 24 * 30; // 30일
 
@@ -19,7 +19,7 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const data = await parseJsonSafely(apiRes) as { accessToken: string; username: string; name: string; role: string; rememberMe: boolean };
+  const data = await safeJson(apiRes) as { accessToken: string; username: string; name: string; role: string; rememberMe: boolean };
 
   const response = NextResponse.json({ username: data.username, name: data.name, role: data.role });
   response.cookies.set("token", data.accessToken, {
