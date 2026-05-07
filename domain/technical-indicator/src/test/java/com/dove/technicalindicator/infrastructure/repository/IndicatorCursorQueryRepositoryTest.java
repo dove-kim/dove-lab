@@ -35,7 +35,7 @@ class IndicatorCursorQueryRepositoryTest {
     private static final LocalDate LATEST = LocalDate.of(2026, 4, 17);
 
     private void saveStock(String code, TradingStatus status) {
-        em.persistAndFlush(new Stock(new StockId(MARKET, code), code + "종목", status));
+        em.persistAndFlush(new Stock(MARKET, code, code + "종목", status, LocalDate.of(2000, 1, 2)));
     }
 
     private void saveCursor(String code, IndicatorType type, LocalDate date) {

@@ -16,6 +16,7 @@ dependencies {
     implementation project(":stock-price")
     implementation project(":technical-indicator")
     implementation project(":member")
+    implementation project(":stock-filter")
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'

@@ -14,10 +14,11 @@ import lombok.AllArgsConstructor;
 import lombok.Getter;
 import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Comment;
+import org.hibernate.annotations.CreationTimestamp;
 
-/**
- * 종목 마스터 엔티티. 시장/종목코드를 기본키로 하고, 종목명과 현재 거래 상태를 관리한다.
- */
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
 @Getter
 @Entity
 @Table(name = "STOCK",
@@ -36,10 +37,20 @@ public class Stock {
     @Comment("현재 거래 상태 (ACTIVE/SUSPENDED/DELISTED)")
     private TradingStatus tradingStatus;
 
-    public Stock(MarketType marketType, String code, String name, TradingStatus tradingStatus) {
+    @CreationTimestamp
+    @Column(name = "CREATED_AT", nullable = false, updatable = false)
+    @Comment("DB 최초 등록 일시")
+    private LocalDateTime createdAt;
+
+    @Column(name = "LISTING_DATE", nullable = false, updatable = false)
+    @Comment("최초 상장일 (KRX 최초 등록 기준)")
+    private LocalDate listingDate;
+
+    public Stock(MarketType marketType, String code, String name, TradingStatus tradingStatus, LocalDate listingDate) {
         this.id = new StockId(marketType, code);
         this.name = name;
         this.tradingStatus = tradingStatus;
+        this.listingDate = listingDate;
     }
 
     public Stock updateName(String name) {

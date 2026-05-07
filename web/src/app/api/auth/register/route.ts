@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { parseJsonSafely } from "@/lib/api";
+import { safeJson } from "@/services/backend";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -10,7 +10,7 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify(body),
   });
 
-  const data = await parseJsonSafely(apiRes) as { detail?: string; username?: string; name?: string; role?: string; accessToken?: string };
+  const data = await safeJson(apiRes) as { detail?: string; username?: string; name?: string; role?: string; accessToken?: string };
 
   if (!apiRes.ok) {
     return NextResponse.json(
