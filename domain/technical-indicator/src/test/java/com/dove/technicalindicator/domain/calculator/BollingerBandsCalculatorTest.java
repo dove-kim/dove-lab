@@ -40,7 +40,7 @@ class BollingerBandsCalculatorTest {
                 .mapToDouble(i -> 1000 + i * 10)
                 .average()
                 .orElse(0);
-        assertThat(result.get(IndicatorType.BB_MIDDLE)).isCloseTo(expectedSma, within(0.01));
+        assertThat(result.get(IndicatorType.BB_MIDDLE_20)).isCloseTo(expectedSma, within(0.01));
     }
 
     @Test
@@ -55,8 +55,8 @@ class BollingerBandsCalculatorTest {
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
         // Then
-        double middle = result.get(IndicatorType.BB_MIDDLE);
-        double upper = result.get(IndicatorType.BB_UPPER);
+        double middle = result.get(IndicatorType.BB_MIDDLE_20);
+        double upper = result.get(IndicatorType.BB_UPPER_20);
         assertThat(upper).isGreaterThan(middle);
     }
 
@@ -72,11 +72,11 @@ class BollingerBandsCalculatorTest {
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
         // Then
-        double middle = result.get(IndicatorType.BB_MIDDLE);
-        double lower = result.get(IndicatorType.BB_LOWER);
+        double middle = result.get(IndicatorType.BB_MIDDLE_20);
+        double lower = result.get(IndicatorType.BB_LOWER_20);
         assertThat(lower).isLessThan(middle);
 
-        double upper = result.get(IndicatorType.BB_UPPER);
+        double upper = result.get(IndicatorType.BB_UPPER_20);
         assertThat(upper - middle).isCloseTo(middle - lower, within(0.01));
     }
 
@@ -92,15 +92,15 @@ class BollingerBandsCalculatorTest {
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
         // Then
-        assertThat(result.get(IndicatorType.BB_UPPER)).isCloseTo(5000.0, within(0.01));
-        assertThat(result.get(IndicatorType.BB_MIDDLE)).isCloseTo(5000.0, within(0.01));
-        assertThat(result.get(IndicatorType.BB_LOWER)).isCloseTo(5000.0, within(0.01));
+        assertThat(result.get(IndicatorType.BB_UPPER_20)).isCloseTo(5000.0, within(0.01));
+        assertThat(result.get(IndicatorType.BB_MIDDLE_20)).isCloseTo(5000.0, within(0.01));
+        assertThat(result.get(IndicatorType.BB_LOWER_20)).isCloseTo(5000.0, within(0.01));
     }
 
     @Test
-    @DisplayName("cursorType()은 BB_UPPER를 반환한다")
+    @DisplayName("cursorType()은 BB_UPPER_20를 반환한다")
     void shouldReturnBbUpperAsCursorType() {
-        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.BB_UPPER);
+        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.BB_UPPER_20);
     }
 
     @Test
@@ -122,8 +122,8 @@ class BollingerBandsCalculatorTest {
 
         Map<IndicatorType, Double> result = calculator.calculate(prices);
 
-        assertThat(result.get(IndicatorType.BB_PERCENT_B)).isCloseTo(expectedPercentB, within(0.0001));
-        assertThat(result.get(IndicatorType.BB_PERCENT_B)).isGreaterThan(0.5);
+        assertThat(result.get(IndicatorType.BB_PERCENT_B_20)).isCloseTo(expectedPercentB, within(0.0001));
+        assertThat(result.get(IndicatorType.BB_PERCENT_B_20)).isGreaterThan(0.5);
     }
 
     @Test
@@ -135,11 +135,11 @@ class BollingerBandsCalculatorTest {
 
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
-        assertThat(result.get(IndicatorType.BB_PERCENT_B)).isCloseTo(0.0, within(0.0001));
+        assertThat(result.get(IndicatorType.BB_PERCENT_B_20)).isCloseTo(0.0, within(0.0001));
     }
 
     @Test
-    @DisplayName("BB_WIDTH는 (upper - lower) / middle이다")
+    @DisplayName("BB_WIDTH_20는 (upper - lower) / middle이다")
     void shouldCalculateBbWidthCorrectly() {
         List<DailyStockPrice> data = IntStream.rangeClosed(1, 20)
                 .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, i), 1000 + i * 10))
@@ -147,11 +147,11 @@ class BollingerBandsCalculatorTest {
 
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
-        double upper = result.get(IndicatorType.BB_UPPER);
-        double lower = result.get(IndicatorType.BB_LOWER);
-        double middle = result.get(IndicatorType.BB_MIDDLE);
+        double upper = result.get(IndicatorType.BB_UPPER_20);
+        double lower = result.get(IndicatorType.BB_LOWER_20);
+        double middle = result.get(IndicatorType.BB_MIDDLE_20);
         double expectedWidth = (upper - lower) / middle;
-        assertThat(result.get(IndicatorType.BB_WIDTH)).isCloseTo(expectedWidth, within(0.0001));
-        assertThat(result.get(IndicatorType.BB_WIDTH)).isGreaterThan(0.0);
+        assertThat(result.get(IndicatorType.BB_WIDTH_20)).isCloseTo(expectedWidth, within(0.0001));
+        assertThat(result.get(IndicatorType.BB_WIDTH_20)).isGreaterThan(0.0);
     }
 }

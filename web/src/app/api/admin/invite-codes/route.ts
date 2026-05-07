@@ -1,28 +1,32 @@
-import { NextRequest, NextResponse } from "next/server";
-import { parseJsonSafely } from "@/lib/api";
+﻿import { NextRequest, NextResponse } from "next/server";
+import { cookies } from "next/headers";
+import { backendFetch, unauthorized, safeJson } from "@/services/backend";
+import { decodeJwtPayload } from "@/utils/jwt";
 
-function authHeaders(req: NextRequest) {
-  const token = req.cookies.get("token")?.value;
-  return {
-    "Content-Type": "application/json",
-    ...(token ? { Authorization: `Bearer ${token}` } : {}),
-  };
+async function requireAdmin(): Promise<NextResponse | null> {
+  const token = (await cookies()).get("token")?.value;
+  if (!token || decodeJwtPayload(token)?.role !== "ADMIN") {
+    return NextResponse.json({ error: "FORBIDDEN" }, { status: 403 });
+  }
+  return null;
 }
 
-export async function GET(req: NextRequest) {
-  const apiRes = await fetch(`${process.env.INTERNAL_API_URL}/api/admin/invite-codes`, {
-    headers: authHeaders(req),
-    cache: "no-store",
-  });
-  return NextResponse.json(await parseJsonSafely(apiRes), { status: apiRes.status });
+export async function GET() {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+  const res = await backendFetch("/api/admin/invite-codes");
+  if (!res) return unauthorized();
+  return NextResponse.json(await safeJson(res), { status: res.status });
 }
 
 export async function POST(req: NextRequest) {
-  const body = await req.json();
-  const apiRes = await fetch(`${process.env.INTERNAL_API_URL}/api/admin/invite-codes`, {
+  const denied = await requireAdmin();
+  if (denied) return denied;
+  const res = await backendFetch("/api/admin/invite-codes", {
     method: "POST",
-    headers: authHeaders(req),
-    body: JSON.stringify(body),
+    headers: { "Content-Type": "application/json" },
+    body: JSON.stringify(await req.json()),
   });
-  return NextResponse.json(await parseJsonSafely(apiRes), { status: apiRes.status });
+  if (!res) return unauthorized();
+  return NextResponse.json(await safeJson(res), { status: res.status });
 }

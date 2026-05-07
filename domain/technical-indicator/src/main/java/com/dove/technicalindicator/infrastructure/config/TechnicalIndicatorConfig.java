@@ -48,6 +48,36 @@ public class TechnicalIndicatorConfig {
     }
 
     @Bean
+    public EmaCalculator ema5Calculator() {
+        return new EmaCalculator(5, IndicatorType.EMA_5);
+    }
+
+    @Bean
+    public EmaCalculator ema10Calculator() {
+        return new EmaCalculator(10, IndicatorType.EMA_10);
+    }
+
+    @Bean
+    public EmaCalculator ema20Calculator() {
+        return new EmaCalculator(20, IndicatorType.EMA_20);
+    }
+
+    @Bean
+    public EmaCalculator ema60Calculator() {
+        return new EmaCalculator(60, IndicatorType.EMA_60);
+    }
+
+    @Bean
+    public EmaCalculator ema120Calculator() {
+        return new EmaCalculator(120, IndicatorType.EMA_120);
+    }
+
+    @Bean
+    public EmaCalculator ema200Calculator() {
+        return new EmaCalculator(200, IndicatorType.EMA_200);
+    }
+
+    @Bean
     public RsiCalculator rsi9Calculator() {
         return new RsiCalculator(9, IndicatorType.RSI_9);
     }
@@ -113,23 +143,8 @@ public class TechnicalIndicatorConfig {
     }
 
     @Bean
-    public ReturnCalculator returnCalculator() {
-        return new ReturnCalculator();
-    }
-
-    @Bean
     public VolatilityCalculator volatilityCalculator() {
         return new VolatilityCalculator();
-    }
-
-    @Bean
-    public MaDeviationCalculator maDeviationCalculator() {
-        return new MaDeviationCalculator();
-    }
-
-    @Bean
-    public MaRatioCalculator maRatioCalculator() {
-        return new MaRatioCalculator();
     }
 
     @Bean
@@ -161,6 +176,12 @@ public class TechnicalIndicatorConfig {
             SmaCalculator sma60Calculator,
             SmaCalculator sma120Calculator,
             SmaCalculator sma200Calculator,
+            EmaCalculator ema5Calculator,
+            EmaCalculator ema10Calculator,
+            EmaCalculator ema20Calculator,
+            EmaCalculator ema60Calculator,
+            EmaCalculator ema120Calculator,
+            EmaCalculator ema200Calculator,
             RsiCalculator rsi9Calculator,
             RsiCalculator rsi14Calculator,
             RsiCalculator rsi21Calculator,
@@ -174,10 +195,7 @@ public class TechnicalIndicatorConfig {
             MfiCalculator mfiCalculator,
             CciCalculator cciCalculator,
             WilliamsRCalculator williamsRCalculator,
-            ReturnCalculator returnCalculator,
             VolatilityCalculator volatilityCalculator,
-            MaDeviationCalculator maDeviationCalculator,
-            MaRatioCalculator maRatioCalculator,
             NewHighLowFlagCalculator newHighLowFlagCalculator,
             PriceRangeRatioCalculator priceRangeRatioCalculator,
             VolumeMa20RatioCalculator volumeMa20RatioCalculator,
@@ -185,13 +203,14 @@ public class TechnicalIndicatorConfig {
         return List.of(
                 sma5Calculator, sma10Calculator, sma20Calculator, sma50Calculator,
                 sma60Calculator, sma120Calculator, sma200Calculator,
+                ema5Calculator, ema10Calculator, ema20Calculator,
+                ema60Calculator, ema120Calculator, ema200Calculator,
                 rsi9Calculator, rsi14Calculator, rsi21Calculator,
                 macdCalculator, bollingerBandsCalculator,
                 stochasticCalculator, adxCalculator,
                 volumeRatioCalculator, obvCalculator,
                 atrCalculator, mfiCalculator, cciCalculator, williamsRCalculator,
-                returnCalculator, volatilityCalculator,
-                maDeviationCalculator, maRatioCalculator,
+                volatilityCalculator,
                 newHighLowFlagCalculator,
                 priceRangeRatioCalculator, volumeMa20RatioCalculator, gapOpenCalculator
         );

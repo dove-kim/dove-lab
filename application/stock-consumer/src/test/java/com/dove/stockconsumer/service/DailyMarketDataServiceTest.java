@@ -196,7 +196,7 @@ class DailyMarketDataServiceTest {
         when(dailyPriceFetcher.fetchDailyMarketData(market, date))
                 .thenReturn(new DailyPriceFetcher.Outcome.Success(List.of(stockInfo("005930"))));
         when(stockQueryService.findAllByMarket(market)).thenReturn(
-                List.of(new Stock(market, "005930", "삼성전자", TradingStatus.ACTIVE)));
+                List.of(new Stock(market, "005930", "삼성전자", TradingStatus.ACTIVE, LocalDate.of(2000, 1, 2))));
         when(stockListedDateQueryService.findAllByMarketAndDate(market, date)).thenReturn(List.of());
 
         service.process(market, date);
@@ -210,7 +210,7 @@ class DailyMarketDataServiceTest {
     @DisplayName("개장일 — 거래 안 된 종목(SUSPENDED)은 트리거 대상 제외, 거래된 종목만 발행")
     void shouldOnlyPublishForTradedStocksNotSuspended() {
         // 005930 거래 있음, 000660 종목 목록에는 있지만 주가 없음(SUSPENDED)
-        Stock suspendedStock = new Stock(market, "000660", "SK하이닉스", TradingStatus.ACTIVE);
+        Stock suspendedStock = new Stock(market, "000660", "SK하이닉스", TradingStatus.ACTIVE, LocalDate.of(2000, 1, 2));
         when(stockListingFetcher.fetch(market, date))
                 .thenReturn(new StockListingFetcher.Outcome.Success(
                         Map.of("000660", "SK하이닉스", "005930", "삼성전자")));
@@ -229,7 +229,7 @@ class DailyMarketDataServiceTest {
     @Test
     @DisplayName("개장일 — 상태 변경 없는 기존 ACTIVE 종목도 거래됐으면 트리거 발행")
     void shouldPublishForTradedStockEvenWithNoStatusChange() {
-        Stock stock = new Stock(market, "005930", "삼성전자", TradingStatus.ACTIVE);
+        Stock stock = new Stock(market, "005930", "삼성전자", TradingStatus.ACTIVE, LocalDate.of(2000, 1, 2));
         when(stockListingFetcher.fetch(market, date))
                 .thenReturn(new StockListingFetcher.Outcome.Success(Map.of("005930", "삼성전자")));
         when(dailyPriceFetcher.fetchDailyMarketData(market, date))

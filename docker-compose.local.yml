@@ -22,7 +22,7 @@ services:
       CLUSTER_ID: "S8m4E7uS9K2lC6jR4tP0Q" # 고유 클러스터 ID
 
     volumes:
-      - ./container/kafka_data:/var/lib/kafka/data
+      - kafka_data:/var/lib/kafka/data
 
   kafka-init:
     image: apache/kafka:3.9.1
@@ -72,9 +72,14 @@ services:
       MYSQL_USER: dove_local_test
       MYSQL_PASSWORD: dove1234
     volumes:
-      - ./container/mysql_data:/var/lib/mysql
-      - ./init.sql:/docker-entrypoint-initdb.d/init.sql
-      - ./init_data.sql:/docker-entrypoint-initdb.d/init_data.sql
+      - mysql_data:/var/lib/mysql
+      - ./init.sql:/docker-entrypoint-initdb.d/01_init.sql
+      - ./init_data.sql:/docker-entrypoint-initdb.d/02_init_data.sql
+      - ./init_indicator_data.sql:/docker-entrypoint-initdb.d/03_init_indicator_data.sql
+
+volumes:
+  kafka_data:
+  mysql_data:
 
 networks:
   stock-project-network:

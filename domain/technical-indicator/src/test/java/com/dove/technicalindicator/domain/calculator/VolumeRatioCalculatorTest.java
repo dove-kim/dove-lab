@@ -42,7 +42,7 @@ class VolumeRatioCalculatorTest {
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
         // Then
-        assertThat(result.get(IndicatorType.VOLUME_RATIO)).isCloseTo(200.0, within(0.01));
+        assertThat(result.get(IndicatorType.VOLUME_RATIO_20)).isCloseTo(200.0, within(0.01));
     }
 
     @Test
@@ -60,12 +60,12 @@ class VolumeRatioCalculatorTest {
         Map<IndicatorType, Double> result = calculator.calculate(data);
 
         // Then
-        assertThat(result.get(IndicatorType.VOLUME_RATIO)).isCloseTo(100.0, within(0.01));
+        assertThat(result.get(IndicatorType.VOLUME_RATIO_20)).isCloseTo(100.0, within(0.01));
     }
 
     @Test
-    @DisplayName("cursorType()은 VOLUME_RATIO를 반환한다")
+    @DisplayName("cursorType()은 VOLUME_RATIO_20를 반환한다")
     void shouldReturnVolumeRatioAsCursorType() {
-        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.VOLUME_RATIO);
+        assertThat(calculator.cursorType()).isEqualTo(IndicatorType.VOLUME_RATIO_20);
     }
 }

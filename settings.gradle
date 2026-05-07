@@ -26,6 +26,8 @@ include 'logging'
 include 'jpa'
 include 'member'
 project(':member').projectDir = file('domain/member')
+include 'stock-filter'
+project(':stock-filter').projectDir = file('domain/stock-filter')
 include 'redis'
 project(':logging').projectDir = file('library/logging')
 project(':jpa').projectDir = file('library/jpa')

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import { cx } from "@/utils/cx";
 
 function EyeIcon() {
   return (
@@ -74,10 +75,10 @@ export default function LoginPage() {
               type="text"
               value={username}
               onChange={handleUsernameChange}
-              placeholder="영어 소문자, 숫자만 입력"
+              placeholder="영문 소문자, 숫자만 입력"
               required
               autoComplete="username"
-              className="px-4 py-2.5 rounded-lg bg-white/8 border border-white/15 text-white placeholder-white/25 outline-none focus:ring-2 focus:ring-indigo-400/50 focus:border-transparent transition"
+              className={cx.input}
             />
           </div>
 
@@ -91,7 +92,7 @@ export default function LoginPage() {
                 placeholder="비밀번호를 입력하세요"
                 required
                 autoComplete="current-password"
-                className="w-full px-4 py-2.5 pr-10 rounded-lg bg-white/8 border border-white/15 text-white placeholder-white/25 outline-none focus:ring-2 focus:ring-indigo-400/50 focus:border-transparent transition"
+                className={`pr-10 ${cx.input}`}
               />
               <button
                 type="button"
@@ -132,7 +133,7 @@ export default function LoginPage() {
           <button
             type="submit"
             disabled={loading}
-            className="mt-1 py-2.5 rounded-lg bg-indigo-600 hover:bg-indigo-500 disabled:bg-slate-700 disabled:text-white/30 text-white font-medium transition cursor-pointer"
+            className={`w-full ${cx.btnPrimary}`}
           >
             {loading ? "로그인 중..." : "로그인"}
           </button>
