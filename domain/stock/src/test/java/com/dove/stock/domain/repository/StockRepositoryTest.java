@@ -2,7 +2,6 @@ package com.dove.stock.domain.repository;
 
 import com.dove.market.domain.enums.MarketType;
 import com.dove.stock.domain.entity.Stock;
-import com.dove.stock.domain.enums.TradingStatus;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -10,6 +9,7 @@ import org.springframework.boot.test.autoconfigure.orm.jpa.DataJpaTest;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 
@@ -22,31 +22,50 @@ class StockRepositoryTest {
     private static final LocalDate LISTING_DATE = LocalDate.of(2000, 1, 2);
 
     @Test
-    @DisplayName("findAllByTradingStatus — ACTIVE만 반환, SUSPENDED/DELISTED 제외")
-    void shouldFindOnlyActiveStocks() {
-        repository.save(new Stock(MarketType.KOSPI, "005930", "삼성전자", TradingStatus.ACTIVE, LISTING_DATE));
-        repository.save(new Stock(MarketType.KOSPI, "000660", "SK하이닉스", TradingStatus.SUSPENDED, LISTING_DATE));
-        repository.save(new Stock(MarketType.KOSDAQ, "035420", "네이버", TradingStatus.DELISTED, LISTING_DATE));
-        repository.save(new Stock(MarketType.KOSDAQ, "035720", "카카오", TradingStatus.ACTIVE, LISTING_DATE));
+    @DisplayName("findAllById_MarketType — 시장별 종목 반환")
+    void shouldFindAllByMarketType() {
+        repository.save(new Stock(MarketType.KOSPI, "005930", "삼성전자", LISTING_DATE, null));
+        repository.save(new Stock(MarketType.KOSPI, "000660", "SK하이닉스", LISTING_DATE, null));
+        repository.save(new Stock(MarketType.KOSDAQ, "035420", "네이버", LISTING_DATE, null));
 
-        List<Stock> active = repository.findAllByTradingStatus(TradingStatus.ACTIVE);
+        List<Stock> kospi = repository.findAllById_MarketType(MarketType.KOSPI);
 
-        assertThat(active).hasSize(2);
-        assertThat(active).extracting(s -> s.getId().getCode())
-                .containsExactlyInAnyOrder("005930", "035720");
+        assertThat(kospi).hasSize(2);
+        assertThat(kospi).extracting(s -> s.getId().getCode())
+                .containsExactlyInAnyOrder("005930", "000660");
     }
 
     @Test
-    @DisplayName("findAllByTradingStatusAndId_MarketType — 시장 필터 적용")
-    void shouldFilterByTradingStatusAndMarket() {
-        repository.save(new Stock(MarketType.KOSPI, "005930", "삼성전자", TradingStatus.ACTIVE, LISTING_DATE));
-        repository.save(new Stock(MarketType.KOSDAQ, "035720", "카카오", TradingStatus.ACTIVE, LISTING_DATE));
-        repository.save(new Stock(MarketType.KOSPI, "000660", "SK하이닉스", TradingStatus.SUSPENDED, LISTING_DATE));
+    @DisplayName("findByMarketTypeAndCode — 특정 종목 조회")
+    void shouldFindByMarketTypeAndCode() {
+        repository.save(new Stock(MarketType.KOSPI, "005930", "삼성전자", LISTING_DATE, "KR7005930003"));
 
-        List<Stock> activeKospi = repository.findAllByTradingStatusAndId_MarketType(
-                TradingStatus.ACTIVE, MarketType.KOSPI);
+        Optional<Stock> result = repository.findByMarketTypeAndCode(MarketType.KOSPI, "005930");
 
-        assertThat(activeKospi).hasSize(1);
-        assertThat(activeKospi.get(0).getId().getCode()).isEqualTo("005930");
+        assertThat(result).isPresent();
+        assertThat(result.get().getName()).isEqualTo("삼성전자");
+        assertThat(result.get().getIsinCode()).isEqualTo("KR7005930003");
+    }
+
+    @Test
+    @DisplayName("findByMarketTypeAndCode — 없으면 empty 반환")
+    void shouldReturnEmptyWhenNotFound() {
+        Optional<Stock> result = repository.findByMarketTypeAndCode(MarketType.KOSPI, "999999");
+
+        assertThat(result).isEmpty();
+    }
+
+    @Test
+    @DisplayName("findAllByCodeIn — 코드 목록으로 종목 조회")
+    void shouldFindAllByCodeIn() {
+        repository.save(new Stock(MarketType.KOSPI, "005930", "삼성전자", LISTING_DATE, null));
+        repository.save(new Stock(MarketType.KOSDAQ, "035720", "카카오", LISTING_DATE, null));
+        repository.save(new Stock(MarketType.KOSPI, "000660", "SK하이닉스", LISTING_DATE, null));
+
+        List<Stock> result = repository.findAllByCodeIn(List.of("005930", "035720"));
+
+        assertThat(result).hasSize(2);
+        assertThat(result).extracting(s -> s.getId().getCode())
+                .containsExactlyInAnyOrder("005930", "035720");
     }
 }

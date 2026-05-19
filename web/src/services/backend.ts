@@ -1,7 +1,7 @@
 import { cookies } from "next/headers";
 import { NextResponse } from "next/server";
 
-const BASE = process.env.INTERNAL_API_URL ?? "";
+const BASE = process.env.INTERNAL_API_URL ?? "http://localhost:8081";
 
 export async function backendFetch(
   path: string,

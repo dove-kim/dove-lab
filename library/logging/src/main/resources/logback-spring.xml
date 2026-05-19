@@ -18,7 +18,7 @@
         <include resource="logback/error_rolling_appender.xml"/>
         <include resource="logback/completion_appender.xml"/>
 
-        <logger name="com.dove.stockbatch.producer.IndicatorCompletionCheckScheduler"
+        <logger name="com.dove.scheduler.producer.IndicatorCompletionCheckScheduler"
                 level="INFO" additivity="false">
             <appender-ref ref="COMPLETION_FILE"/>
         </logger>

@@ -4,7 +4,7 @@ import { safeJson } from "@/services/backend";
 export async function POST(req: NextRequest) {
   const body = await req.json();
 
-  const apiRes = await fetch(`${process.env.INTERNAL_API_URL}/api/auth/register`, {
+  const apiRes = await fetch(`${process.env.INTERNAL_API_URL ?? "http://localhost:8081"}/auth/register`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

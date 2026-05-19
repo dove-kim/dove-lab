@@ -3,7 +3,7 @@ import { backendFetch, unauthorized, safeJson } from "@/services/backend";
 
 export async function GET(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const res = await backendFetch(`/api/filters/${id}`);
+  const res = await backendFetch(`/filters/${id}`);
   if (!res) return unauthorized();
   if (res.status === 404) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   return NextResponse.json(await safeJson(res), { status: res.status });
@@ -11,7 +11,7 @@ export async function GET(_req: NextRequest, { params }: { params: Promise<{ id:
 
 export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const res = await backendFetch(`/api/filters/${id}`, {
+  const res = await backendFetch(`/filters/${id}`, {
     method: "PUT",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(await req.json()),
@@ -24,7 +24,7 @@ export async function PUT(req: NextRequest, { params }: { params: Promise<{ id: 
 
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
-  const res = await backendFetch(`/api/filters/${id}`, { method: "DELETE" });
+  const res = await backendFetch(`/filters/${id}`, { method: "DELETE" });
   if (!res) return unauthorized();
   if (res.status === 404) return NextResponse.json({ error: "NOT_FOUND" }, { status: 404 });
   if (!res.ok) return NextResponse.json({ error: "SERVER_ERROR" }, { status: res.status });
