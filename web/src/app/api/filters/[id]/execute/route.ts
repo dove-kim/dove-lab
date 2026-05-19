@@ -4,7 +4,7 @@ import { backendFetch, unauthorized, safeJson } from "@/services/backend";
 export async function POST(req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const { id } = await params;
   const body = await req.json().catch(() => ({}));
-  const res = await backendFetch(`/api/filters/${id}/execute`, {
+  const res = await backendFetch(`/filters/${id}/execute`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

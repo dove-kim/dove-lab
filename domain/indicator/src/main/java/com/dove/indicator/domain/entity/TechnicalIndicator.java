@@ -1,0 +1,47 @@
+package com.dove.indicator.domain.entity;
+
+import com.dove.market.domain.enums.MarketType;
+import com.dove.indicator.domain.enums.IndicatorType;
+import jakarta.persistence.Column;
+import jakarta.persistence.EmbeddedId;
+import jakarta.persistence.Entity;
+import jakarta.persistence.Index;
+import jakarta.persistence.Table;
+import lombok.AccessLevel;
+import lombok.Getter;
+import lombok.NoArgsConstructor;
+
+import java.time.LocalDate;
+import java.time.LocalDateTime;
+
+/**
+ * 기술적 지표 엔티티. 종목별 거래일의 지표 유형과 계산 값을 저장한다.
+ */
+@Getter
+@Entity
+@Table(name = "TECHNICAL_INDICATOR",
+        indexes = {
+                @Index(name = "IDX_TECHNICAL_INDICATOR_CALCULATED_AT",  columnList = "CALCULATED_AT"),
+                @Index(name = "IDX_TI_MARKET_INDICATOR_DATE",           columnList = "MARKET_TYPE, INDICATOR_NAME, TRADE_DATE"),
+                @Index(name = "IDX_TI_MARKET_DATE",                     columnList = "MARKET_TYPE, TRADE_DATE"),
+        })
+@NoArgsConstructor(access = AccessLevel.PROTECTED)
+public class TechnicalIndicator {
+
+    @EmbeddedId
+    private TechnicalIndicatorId id;
+
+    @Column(name = "INDICATOR_VALUE", nullable = false)
+    private Double indicatorValue;
+
+    @Column(name = "CALCULATED_AT", nullable = false)
+    private LocalDateTime calculatedAt;
+
+    public TechnicalIndicator(MarketType marketType, String stockCode,
+                              LocalDate tradeDate, IndicatorType indicatorName,
+                              Double indicatorValue) {
+        this.id = new TechnicalIndicatorId(marketType, stockCode, tradeDate, indicatorName);
+        this.indicatorValue = indicatorValue;
+        this.calculatedAt = LocalDateTime.now();
+    }
+}

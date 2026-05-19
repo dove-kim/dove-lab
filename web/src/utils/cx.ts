@@ -1,4 +1,4 @@
-export const cx = {
+﻿export const cx = {
   input:
     "w-full bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-white placeholder-white/25 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition",
   inputNumber:
@@ -24,3 +24,4 @@ export const cx = {
     td: "px-4 py-2.5 text-slate-300",
   },
 };
+

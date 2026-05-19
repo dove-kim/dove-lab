@@ -2,13 +2,17 @@
 
 import { useState, useCallback, useEffect } from "react";
 import Sidebar from "./Sidebar";
+import ForcePasswordChangeModal from "./ForcePasswordChangeModal";
+import type { UserMenu } from "@/types/user";
 
 interface Props {
   role: string;
+  menu: UserMenu;
+  mustChangePassword?: boolean;
   children: React.ReactNode;
 }
 
-export default function ContentLayout({ role, children }: Props) {
+export default function ContentLayout({ role, menu, mustChangePassword = false, children }: Props) {
   const [mobileOpen, setMobileOpen] = useState(false);
   const closeMobile = useCallback(() => setMobileOpen(false), []);
 
@@ -20,6 +24,7 @@ export default function ContentLayout({ role, children }: Props) {
 
   return (
     <div className="flex flex-1 overflow-hidden">
+      {mustChangePassword && <ForcePasswordChangeModal />}
       {mobileOpen && (
         <div
           className="fixed inset-0 bg-black/60 backdrop-blur-sm z-20 lg:hidden"
@@ -27,7 +32,7 @@ export default function ContentLayout({ role, children }: Props) {
         />
       )}
 
-      <Sidebar role={role} mobileOpen={mobileOpen} onMobileClose={closeMobile} />
+      <Sidebar role={role} menu={menu} mobileOpen={mobileOpen} onMobileClose={closeMobile} />
 
       <div className="flex flex-col flex-1 overflow-hidden min-w-0">
         {children}

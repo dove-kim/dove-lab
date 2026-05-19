@@ -2,14 +2,16 @@ import { useEffect, useRef } from "react";
 import { PAD, MAX_BAR_SLOT, MAX_VISIBLE, PRICE_BOT, clamp } from "./chartConstants";
 
 interface Params {
-  containerRef:    React.RefObject<HTMLDivElement | null>;
-  vcRef:           React.MutableRefObject<number>;
-  riRef:           React.MutableRefObject<number>;
-  widthRef:        React.MutableRefObject<number>;
-  totalRef:        React.MutableRefObject<number>;
-  setVisibleCount: (n: number) => void;
-  setRightIndex:   (n: number) => void;
-  setHoverIdx:     (n: number | null) => void;
+  containerRef:        React.RefObject<HTMLDivElement | null>;
+  vcRef:               React.MutableRefObject<number>;
+  riRef:               React.MutableRefObject<number>;
+  widthRef:            React.MutableRefObject<number>;
+  totalRef:            React.MutableRefObject<number>;
+  setVisibleCount:     (n: number) => void;
+  setRightIndex:       (n: number) => void;
+  setHoverIdx:         (n: number | null) => void;
+  /** 스크롤/줌 중 React 리렌더 없이 canvas를 직접 다시 그리는 트리거 */
+  triggerStaticDrawRef: React.MutableRefObject<() => void>;
 }
 
 type TouchMode = "undecided" | "pan" | "crosshair" | "two-finger";
@@ -26,9 +28,25 @@ interface TouchState {
 
 export function useChartInteraction({
   containerRef, vcRef, riRef, widthRef, totalRef,
-  setVisibleCount, setRightIndex, setHoverIdx,
+  setVisibleCount, setRightIndex, setHoverIdx, triggerStaticDrawRef,
 }: Params) {
-  const touchRef  = useRef<TouchState | null>(null);
+  const touchRef   = useRef<TouchState | null>(null);
+  // rAF 핸들 — 스크롤/줌 시 중복 draw 방지
+  const drawRafRef = useRef(0);
+
+  /** ref 갱신 후 React 리렌더 없이 직접 canvas를 다시 그린다 */
+  function scheduleDraw() {
+    cancelAnimationFrame(drawRafRef.current);
+    drawRafRef.current = requestAnimationFrame(() => {
+      triggerStaticDrawRef.current();
+    });
+  }
+
+  /** touchEnd / 휠 완료 시 스크롤바 등 React 상태를 한 번만 동기화한다 */
+  function syncReactState() {
+    setRightIndex(riRef.current);
+    setVisibleCount(vcRef.current);
+  }
 
   function xToBarIdx(clientX: number): number | null {
     const rect = containerRef.current?.getBoundingClientRect();
@@ -60,17 +78,19 @@ export function useChartInteraction({
       if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
         const step  = Math.max(1, Math.round(vc * 0.08));
         const newRi = clamp(ri + Math.sign(e.deltaX) * step, vc - 1, total - 1);
-        setRightIndex(newRi); riRef.current = newRi;
+        riRef.current = newRi;
       } else {
         const plotW      = widthRef.current - PAD.left - PAD.right;
         const minVisible = Math.max(2, Math.ceil(plotW / MAX_BAR_SLOT));
         const factor     = e.deltaY > 0 ? 1.15 : 0.87;
         const newVc      = clamp(Math.round(vc * factor), minVisible, Math.min(total, MAX_VISIBLE));
         if (newVc === vc) return;
-        const newRi = clamp(ri, newVc - 1, total - 1);
-        setVisibleCount(newVc); vcRef.current = newVc;
-        setRightIndex(newRi);   riRef.current = newRi;
+        vcRef.current = newVc;
+        riRef.current = clamp(riRef.current, newVc - 1, total - 1);
       }
+      scheduleDraw();
+      // 휠은 터치보다 빈도가 낮으므로 즉시 상태 동기화 (스크롤바 업데이트)
+      syncReactState();
     };
     el.addEventListener("wheel", onWheel, { passive: false });
     return () => el.removeEventListener("wheel", onWheel);
@@ -126,7 +146,9 @@ export function useChartInteraction({
       const plotW = widthRef.current - PAD.left - PAD.right;
       const delta = Math.round((dx * vcRef.current) / plotW);
       const newRi = clamp(ts.startRi - delta, vcRef.current - 1, total - 1);
-      setRightIndex(newRi); riRef.current = newRi;
+      // ★ React 상태 업데이트 없음 — ref만 갱신 후 직접 draw
+      riRef.current = newRi;
+      scheduleDraw();
       return;
     }
 
@@ -146,20 +168,21 @@ export function useChartInteraction({
       const minVisible = Math.max(2, Math.ceil(plotW / MAX_BAR_SLOT));
       const newVc      = clamp(Math.round(vcRef.current * scale), minVisible, Math.min(total, MAX_VISIBLE));
       if (newVc !== vcRef.current) {
-        const newRi = clamp(riRef.current, newVc - 1, total - 1);
-        setVisibleCount(newVc); vcRef.current = newVc;
-        setRightIndex(newRi);   riRef.current = newRi;
+        vcRef.current = newVc;
+        riRef.current = clamp(riRef.current, newVc - 1, total - 1);
       }
 
       const dmidX = newMidX - ts.prevMidX;
       const delta  = Math.round((dmidX * vcRef.current) / plotW);
       if (delta !== 0) {
-        const newRi = clamp(riRef.current - delta, vcRef.current - 1, total - 1);
-        setRightIndex(newRi); riRef.current = newRi;
+        riRef.current = clamp(riRef.current - delta, vcRef.current - 1, total - 1);
       }
 
       ts.prevDist = newDist;
       ts.prevMidX = newMidX;
+
+      // ★ React 상태 업데이트 없음 — ref만 갱신 후 직접 draw
+      scheduleDraw();
     }
   }
 
@@ -167,6 +190,8 @@ export function useChartInteraction({
     if (touchRef.current?.timer) clearTimeout(touchRef.current.timer);
     touchRef.current = null;
     setHoverIdx(null);
+    // ★ 제스처 완료 후 한 번만 React 상태 동기화 (스크롤바 위치 업데이트)
+    syncReactState();
   }
 
   // 마우스 / 스타일러스 펜 호버

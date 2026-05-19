@@ -1,1 +1,45 @@
 @import "tailwindcss";
+
+/* ── 스크롤바 ───────────────────────────────────────────────────────────────────
+   트랙 너비(8px)는 고정해 레이아웃 시프트 방지.
+   thumb에 투명 border를 주면 시각적으로 얇아 보이고(~3px),
+   스크롤 중(.is-scrolling)이거나 hover/drag 시 border 줄어 두꺼워짐(~6px).
+   ─────────────────────────────────────────────────────────────────────────── */
+
+::-webkit-scrollbar              { width: 8px; height: 8px; }
+::-webkit-scrollbar-track        { background: transparent; }
+::-webkit-scrollbar-corner       { background: transparent; }
+
+::-webkit-scrollbar-thumb {
+  background:      rgba(148, 163, 184, 0.18);
+  border-radius:   4px;
+  /* 양쪽 2.5px 투명 border → 시각적 너비 ≈ 3px */
+  border:          2.5px solid transparent;
+  background-clip: content-box;
+}
+
+/* 스크롤 중 (ScrollWatcher가 <html>에 클래스 추가) */
+.is-scrolling ::-webkit-scrollbar-thumb {
+  background:      rgba(148, 163, 184, 0.50);
+  border-width:    1px;
+  border-color:    transparent;
+  background-clip: content-box;
+}
+
+/* 마우스 호버 */
+::-webkit-scrollbar-thumb:hover {
+  background:      rgba(148, 163, 184, 0.45);
+  border-width:    1px;
+  border-color:    transparent;
+  background-clip: content-box;
+}
+
+/* 드래그 */
+::-webkit-scrollbar-thumb:active {
+  background:      rgba(148, 163, 184, 0.65);
+  border-width:    0;
+  background-clip: content-box;
+}
+
+/* Firefox */
+* { scrollbar-width: thin; scrollbar-color: rgba(148,163,184,0.18) transparent; }

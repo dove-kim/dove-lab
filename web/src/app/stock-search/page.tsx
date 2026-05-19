@@ -1,7 +1,7 @@
 ﻿import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
-import StockSearchLayout from "@/containers/stock-search/StockSearchLayout";
+import StockSearchLayout from "@/containers/stock-search/main/StockSearchLayout";
 import { backendFetch } from "@/services/backend";
 import { SearchFilter } from "@/types/filter";
 
@@ -11,14 +11,14 @@ interface TradingDaysResponse {
 }
 
 async function fetchFilters(): Promise<SearchFilter[]> {
-  const res = await backendFetch("/api/filters");
+  const res = await backendFetch("/filters");
   if (!res || !res.ok) return [];
   return res.json();
 }
 
 async function fetchTradingDays(): Promise<TradingDaysResponse> {
   const fallback = { latestDate: new Date().toISOString().slice(0, 10), tradingDays: [] };
-  const res = await backendFetch("/api/market/trading-days?limit=500");
+  const res = await backendFetch("/market/trading-days?limit=500");
   if (!res || !res.ok) return fallback;
   return res.json();
 }

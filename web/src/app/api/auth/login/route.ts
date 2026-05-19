@@ -6,7 +6,7 @@ const REMEMBER_ME_MAX_AGE = 60 * 60 * 24 * 30; // 30일
 export async function POST(req: NextRequest) {
   const body = await req.json();
 
-  const apiRes = await fetch(`${process.env.INTERNAL_API_URL}/api/auth/login`, {
+  const apiRes = await fetch(`${process.env.INTERNAL_API_URL ?? "http://localhost:8081"}/auth/login`, {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

@@ -1,19 +1,19 @@
 import { cookies } from "next/headers";
 import { redirect, notFound } from "next/navigation";
 import AppShell from "@/components/AppShell";
-import StockSetEditorClient from "@/containers/stock-sets/StockSetEditorClient";
+import StockSetEditorClient from "@/containers/stock-search/stock-sets/StockSetEditorClient";
 import { backendFetch } from "@/services/backend";
 import { StockSet } from "@/types/filter";
 import { Stock } from "@/types/stock";
 
 async function fetchStockSet(id: string): Promise<StockSet | null> {
-  const res = await backendFetch(`/api/stock-filters/${id}`);
+  const res = await backendFetch(`/stock-sets/${id}`);
   if (!res || !res.ok) return null;
   return res.json();
 }
 
 async function fetchStocks(): Promise<Stock[]> {
-  const res = await backendFetch("/api/stocks");
+  const res = await backendFetch("/stocks");
   if (!res || !res.ok) return [];
   return res.json();
 }

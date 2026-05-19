@@ -1,140 +1,210 @@
-# 주식 데이터 시스템
-소소하게 매일 정리하는 주가 정보를 손으로 하기 너무 귀찮다.
-시스템이 알아서 해주면 좋겠다.
+# dove-lab
+
+다양한 기능의 집합체.
+귀찮은 무언가 있다면? 조금이라도 편해지고 싶다.
+
+한없이 게으른 자를 위한 프로젝트
 
 ## 시스템 구조
-![img.png](./doc/system.png)
-1. **stock-batch**: @Scheduled 기반 주가/상장 조회 요청을 Kafka에 발행 + 재시도 큐 주기 스캔 + 지표 커서 스윕 (INDICATOR_ADVANCE 발행)
-2. **stock-consumer**: Kafka 메시지 수신 → KRX API 호출 → DB 저장. 실패 outcome은 이벤트 재시도 큐/DLQ로 관리
-3. **stock-api**: 주식 데이터 조회/업데이트 REST API + 회원 인증
-4. **web**: Next.js 기반 주식 데이터 UI (stock-ledger-web)
+
+![system](./doc/system.svg)
+
+1. **scheduler**: 매일 08:05 KST에 KRX에서 종목·주가를 직접 수집하고 기술지표를 계산한다. 12:00에는 누락 데이터를 전체 이력 기준으로 보정한다.
+2. **api**: REST API 서버 — 회원 인증 + 주식 데이터 조회 + 사용자 기능 권한 관리
+3. **web**: Next.js 기반 UI
 
 ## 프로젝트 구성
 
-Spring Boot 3 / Java 21. 
-- **헥사고날(Ports & Adapters) 멀티모듈** 구조
-- 도메인 모델은 **DDD 전술 패턴**으로 설계.
+Spring Boot 3 / Java 21. 헥사고날(Ports & Adapters) 멀티모듈, DDD 전술 패턴.
 
 ```
 application/                Driver adapter — Spring Boot 실행 단위
-  stock-batch           @Scheduled 진입점 (producer/*)
-  stock-consumer        @KafkaListener 진입점 (listener/*)
-  stock-api             REST API 서버 (회원 인증 + 주식 데이터 조회)
-    └── service/            조합 유스케이스 — 도메인 CQRS service + port만 주입 (repository 직접 주입 금지)
+  scheduler                 @Scheduled 진입점 — 수집·지표 계산·보정 일괄 처리
+  api                       REST API 서버 (port 8081)
 
-domain/                     Aggregate 단위 도메인 모듈 (entity + repository + JPA/QueryDSL + CQRS service)
-  market                    MarketType, MarketCalendar
-  stock                     Stock, StockListedDate, TradingStatus + StockListingFetcher port
-  stock-price               DailyStockPrice + DailyPriceFetcher port + StockInfo
-  technical-indicator       TechnicalIndicator, IndicatorCursor + 지표 계산기
-  krx-call-log              KrxDailyData (KRX API 호출 이력 + 감사용 audit log)
-  event-retry               PendingEventRetry (재시도 큐) + FailedEvent (DLQ)
+domain/                     Aggregate 단위 모듈 (entity + repository + CQRS service)
+  auth                      Credential, InviteCode
+  user                      MemberProfile, MemberRole
+  user-feature              UserFeatureGrant, UserModuleDisplay, UserFeatureDisplay
+  market                    MarketType, MarketTradingDate
+  stock                     Stock, DailyStockPrice
+  indicator                 TechnicalIndicator + 지표 계산기
+  screening                 사용자 정의 종목 필터 + 종목 세트 + 지표 프리셋
 
-infrastructure/             Driven adapter — 외부 시스템 연결
-  krx                       KRX API 어댑터 (Feign 기반 DailyPriceFetcher / StockListingFetcher 포트 구현)
-  redis                     Redisson 클라이언트 설정 (외부 Redis 연결)
-  distributed-lock          Redisson 기반 분산락 + 멱등 가드 AOP
+infrastructure/             Driven adapter
+  krx                       KRX API 어댑터 (Feign) + DailyMarketData 타입
+  security                  JwtProvider, JwtFilter, AuthenticatedUser
 
-library/                    도메인 무관 공통 기술
-  jpa                       JpaConfig, QuerydslConfiguration, JPAQueryFactory 빈
-  logging                   로깅 공통 설정 (logback)
+library/
+  jpa                       JpaConfig, QuerydslConfiguration
+  logging                   logback 공통 설정
 ```
 
-### 계층 원칙
-
-- **application**: driver adapter (@KafkaListener, @Scheduled)만. 조합 유스케이스는 application의 `service/` 패키지에 두고 **repository 직접 주입 금지**. 도메인 모듈의 Query/Command service와 port만 주입.
-- **domain**: 각 aggregate가 entity + repository + QueryDSL 구현 + CQRS service(`*QueryService` / `*CommandService`)를 한 모듈에 응집.
-- **infrastructure**: 외부 시스템 어댑터 (KRX, Redis, 분산락).
-- **library**: 비즈니스 무관 기술 유틸.
-
-### 이벤트 재시도 흐름
-
-각 Fetcher 포트가 자기 `Outcome`을 nested로 소유 (Published Language). 두 소비자가 동일한 4-way 분기 패턴으로 실패 경로를 재시도 큐/DLQ에 통합. event-retry는 reason을 String으로 저장 (ACL).
+## 프론트엔드 구조 (Next.js App Router)
 
 ```
-Consumer (SaveDailyMarketDataService, StockListingSyncService)
-  switch (fetcher.fetch(...))
-  ├── Outcome.Success      → 도메인 저장 + 재시도 큐 정리
-  ├── Outcome.Holiday      → (가격) MarketCalendar HOLIDAY / (상장) no-op + 재시도 큐 정리
-  ├── Outcome.RetryLater   → PendingEventRetry enqueueOrUpdate (reason.name()으로 변환)
-  └── Outcome.PermanentFail → FailedEvent escalate (reason.name()으로 변환) + 재시도 큐 정리
-
-Batch (PendingEventRetryProcessor, 매 10분)
-  PendingEventRetry.findDueItems(now)
-    ├── retryCount < MAX + age < 14일 → stringKafkaTemplate.send (원본 payload 그대로 Kafka 재발행)
-    └── 초과                            → FailedEvent escalate + PendingEventRetry 삭제
+web/src/
+  app/           라우팅. Server Component로 데이터 fetch → containers에 props 전달
+  containers/    기능(메뉴) 단위 폴더
+    dashboard/
+    stock-search/
+      main/        /stock-search
+      filters/     /search-filters
+      stock-sets/  /stock-sets
+    settings/
+    admin/
+    root/
+  components/    공통 컴포넌트 (여러 기능에서 재사용)
+  app/api/       Next.js API 라우트 — JWT 쿠키를 Authorization 헤더로 변환하는 백엔드 프록시
+  services/      외부 통신 (backendFetch, clientFetch)
+  utils/         순수 함수 유틸 (cx, jwt, filter)
+  types/         타입 정의
 ```
 
-키는 `(eventType, eventKey)` 단위로 멱등 유지. `stringKafkaTemplate`(StringSerializer)을 통해 저장된 JSON payload를 재직렬화 없이 그대로 발행.
+## 애플리케이션별 문서
 
-### 기술적 지표 계산 흐름 (커서 체이닝)
+각 애플리케이션의 환경변수·로컬 실행·테스트 방법은 아래 README를 참고한다.
 
-`IndicatorCursor`가 calculator별·종목별 마지막 계산일을 추적. 주가 저장 시 커서를 되감고 `INDICATOR_ADVANCE`를 발행해 체이닝을 시작한다.
+| 앱 | 문서 |
+|---|---|
+| scheduler | [application/scheduler/README.md](./application/scheduler/README.md) |
+| api | [application/api/README.md](./application/api/README.md) |
 
-```
-SaveDailyMarketDataService (STOCK_PRICE_QUERY 수신, Success 시)
-  → IndicatorCursorCommandService.rewindIfBefore(market, code, date)  -- 커서 되감기
-  → KafkaTemplate.send(INDICATOR_ADVANCE, code, payload)              -- 체이닝 시작
+## 사전 준비
 
-IndicatorAdvanceListener (INDICATOR_ADVANCE 수신)
-  → IndicatorCursor 조회 → 다음 미계산일 결정
-  → 지표 계산 + TechnicalIndicator 저장 + IndicatorCursor 전진
-  → 더 계산할 날짜가 있으면 → INDICATOR_ADVANCE 재발행 (자기 자신에게 체이닝)
+### Java 21 설정
 
-Batch (IndicatorCursorSweepScheduler, 매일 03:00 KST)
-  latestTradingDate = MarketCalendar 최신 거래일
-  stale codes = INDICATOR_CURSOR ⨝ STOCK (ACTIVE/SUSPENDED)
-                where lastCalculatedDate < latestTradingDate
-  → 각 code마다 INDICATOR_ADVANCE 발행 (누락 체이닝 복구)
+Java가 여러 버전 설치된 경우 Gradle이 사용할 JDK 경로를 `gradle.properties`에 지정한다.
+
+```powershell
+cp gradle.properties.example gradle.properties
 ```
 
-## 환경변수
+`gradle.properties`를 열어 본인의 Java 21 경로를 입력한다.
 
-모든 설정은 환경변수로 주입하며, 기본값이 있어 로컬에서는 별도 설정 없이 실행 가능하다.
+```properties
+# Windows
+org.gradle.java.home=C:/Users/<username>/.jdks/corretto-21.x.x
 
-| 환경변수 | 설명 | 기본값 | 비고 |
-|---|---|---|---|
-| `DB_HOST` | MySQL 호스트 | `127.0.0.1` | |
-| `DB_PORT` | MySQL 포트 | `13306` | |
-| `DB_USERNAME` | DB 사용자명 | `dove_local_test` | |
-| `DB_PASSWORD` | DB 비밀번호 | `dove1234` | 운영 시 반드시 변경 |
-| `KAFKA_HOST` | Kafka 브로커 호스트 | `localhost` | |
-| `KAFKA_PORT` | Kafka 브로커 포트 | `9092` | |
-| `KRX_API_AUTH_KEY` | 한국거래소 API 인증키 | (없음) | stock-ledger-consumer에서 필수 |
-| `KRX_TARGET_MARKETS` | 스케줄러가 조회할 시장 (CSV) | `KOSPI,KOSDAQ` | stock-ledger-batch에서만 사용. 허용 값: `KOSPI`, `KOSDAQ`, `KONEX` |
-| `REDIS_HOST` | Redis 호스트 | `localhost` | stock-ledger-consumer에서 사용 |
-| `REDIS_PORT` | Redis 포트 | `6379` | |
-| `DISTRIBUTED_LOCK_WAIT_TIME` | 분산락 대기 시간 (초) | `5` | |
-| `DISTRIBUTED_LOCK_LEASE_TIME` | 분산락 임대 시간 (초) | `60` | |
-| `DISTRIBUTED_LOCK_TTL_SECONDS` | 멱등성 키 TTL (초) | `86400` | 기본 24시간 |
-| `LOG_LEVEL` | 로그 레벨 | `DEBUG` | DEBUG, INFO, WARN, ERROR |
-| `LOG_PATH` | 로그 파일 경로 | `./logs` | 파일 로깅 활성화 시 사용 |
-| `SPRING_PROFILES_INCLUDE` | 파일 로깅 활성화 | (없음) | `file` 설정 시 파일 로깅 추가 |
+# macOS / Linux
+org.gradle.java.home=/Users/<username>/.jdks/corretto-21.x.x
+```
 
-### 로컬 실행
+> `gradle.properties`는 `.gitignore`에 등록되어 레포에 올라가지 않는다.
 
-[docker-compose.local.yml](./docker-compose.local.yml)로 인프라를 띄우면 기본값으로 바로 실행된다.
+**빌드 실행**
 
 ```bash
-# 1. 인프라 실행 (Kafka 토픽은 kafka-init 컨테이너가 자동 생성)
-docker compose -f docker-compose.local.yml up -d
-
-# 2. stock-ledger-batch / stock-ledger-consumer 실행
-DB_HOST=127.0.0.1 DB_PORT=13306 \
-DB_USERNAME=dove_local_test DB_PASSWORD=dove1234 \
-KAFKA_HOST=localhost KAFKA_PORT=9092 \
-KRX_API_AUTH_KEY=<발급받은_인증키> \
-LOG_LEVEL=DEBUG \
-./gradlew :stock-batch:bootRun       # 또는 :stock-consumer:bootRun
+# Linux / macOS
+./gradlew clean build
 ```
 
-> 파일 로깅 활성화: `SPRING_PROFILES_INCLUDE=file LOG_PATH=./logs` 추가.
+```powershell
+# Windows — gradlew.bat 은 시스템 JAVA_HOME 만 읽으므로 gw.ps1 을 사용한다.
+# gw.ps1 은 gradle.properties 에서 경로를 읽어 JAVA_HOME 을 자동 설정한다.
 
-### 운영 실행
+# 최초 1회 — 스크립트 실행 권한 허용
+Set-ExecutionPolicy -Scope CurrentUser -ExecutionPolicy RemoteSigned
 
-[docker-compose.prod.yml.example](./docker-compose.prod.yml.example)을 복사·수정하여 사용. 환경변수는 위 표 참조.
+.\gw.ps1 clean build
+.\gw.ps1 :api:bootRun
+```
 
-## 쉘 스크립트
+## 로컬 실행
 
-- **`kafka-init.sh`** — Kafka 토픽 초기화. `docker-compose.local.yml`의 `kafka-init` 서비스가 자동 호출. 옵션은 스크립트 헤더 참조.
-- **`message_publish.sh`** — Kafka 메시지 발행 대화형 도구. `./message_publish.sh [컨테이너명] [브로커주소]`. 옵션은 스크립트 헤더 참조.
+### 1. 인프라 기동
+
+```bash
+# 기존 컨테이너·볼륨 정리 (최초 실행 또는 DB 초기화가 필요한 경우)
+docker compose -f docker-compose.local.yml down -v --remove-orphans
+
+# MySQL 기동
+docker compose -f docker-compose.local.yml up -d
+```
+
+> `-v` 플래그는 MySQL 데이터 볼륨까지 삭제한다.
+> DB는 유지하고 컨테이너만 재시작할 때는 `-v` 없이 실행.
+
+### 2. DB 초기 데이터
+
+`docker-entrypoint-initdb.d`는 볼륨이 비어 있을 때 한 번만 실행된다.
+`docker-compose.local.yml`에 마운트된 파일로 제어한다.
+
+| 파일 | 내용 | 기본 포함 |
+|---|---|---|
+| `scripts/init.sql` | 스키마 DDL | ✅ |
+| `scripts/init_data.sql` | 로컬 개발용 사용자 계정 (비밀번호: `1234`) | ✅ |
+| `scripts/init_stock_data.sql` | 종목·주가·기술지표 mock 데이터 | 주석 처리 시 제외 가능 |
+
+종목 데이터가 불필요하면 `docker-compose.local.yml`에서 `init_stock_data.sql` 마운트 줄을 주석 처리한다.
+
+**로컬 개발 계정 (비밀번호 공통: `1234`)**
+
+| username | name | role |
+|---|---|---|
+| `manager` | 관리자 | ADMIN |
+| `alice` | Alice | USER |
+| `bob` | Bob | USER |
+| `charlie` | Charlie | USER |
+
+### 3. 애플리케이션 실행
+
+각 앱의 상세 실행 방법은 앱별 README를 참고한다.
+
+```bash
+# Linux / macOS — api
+INIT_ADMIN_USERNAME=admin INIT_ADMIN_PASSWORD=<pw> ./gradlew :api:bootRun
+
+# Linux / macOS — scheduler (상세 옵션은 application/scheduler/README.md 참고)
+KRX_API_AUTH_KEY=<key> ./gradlew :scheduler:bootRun
+```
+
+```powershell
+# Windows — api
+$env:INIT_ADMIN_USERNAME="admin"; $env:INIT_ADMIN_PASSWORD="<pw>"; .\gw.ps1 :api:bootRun
+
+# Windows — scheduler (상세 옵션은 application/scheduler/README.md 참고)
+$env:KRX_API_AUTH_KEY="<key>"; .\gw.ps1 :scheduler:bootRun
+```
+
+### 4. web (Next.js)
+
+```bash
+cd web
+
+# 최초 실행 시 의존성 설치
+npm install
+
+# 환경변수 설정
+cp .env.example .env.local
+# INTERNAL_API_URL 기본값: http://localhost:8081
+
+# 개발 서버 실행 (http://localhost:3000)
+npm run dev
+```
+
+## 운영 배포
+
+[docker-compose.prod.yml.example](./docker-compose.prod.yml.example)을 복사하여
+`<...>` 자리에 실제 값을 채운다.
+
+```bash
+cp docker-compose.prod.yml.example docker-compose.prod.yml
+
+# 스키마 초기화 (최초 1회)
+mysql -u <user> -p <DB명> < scripts/init.sql
+
+# 서비스 기동
+docker compose -f docker-compose.prod.yml up -d
+```
+
+> 운영 DB에는 `init_data.sql`, `init_stock_data.sql`을 **실행하지 않는다.**
+> 스키마(`init.sql`)만 적용하고 데이터는 수집 파이프라인이 채운다.
+
+## scripts/
+
+| 파일 | 설명 |
+|---|---|
+| `init.sql` | 스키마 DDL (단일 진실 원천) |
+| `init_data.sql` | 로컬 개발용 사용자 시드 |
+| `init_stock_data.sql` | 로컬 개발용 종목·주가·기술지표 mock |
