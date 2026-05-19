@@ -29,6 +29,7 @@ subprojects {
     apply plugin: 'java'
     apply plugin: 'org.springframework.boot'
     apply plugin: 'io.spring.dependency-management'
+    apply plugin: 'jacoco'
 
     dependencies {
         implementation 'org.springframework.boot:spring-boot-starter'
@@ -44,5 +45,25 @@ subprojects {
 
     tasks.named('test') {
         useJUnitPlatform()
+        finalizedBy jacocoTestReport
+    }
+
+    jacocoTestReport {
+        dependsOn test
+        reports {
+            xml.required = true
+            html.required = true
+            csv.required = false
+        }
+        afterEvaluate {
+            classDirectories.setFrom(files(classDirectories.files.collect {
+                fileTree(dir: it, exclude: [
+                    '**/Q*.class',          // QueryDSL Q타입
+                    '**/*Application.class',
+                    '**/*Config.class',
+                    '**/*Configuration.class',
+                ])
+            }))
+        }
     }
 }

@@ -1,0 +1,37 @@
+spring:
+  main:
+    allow-bean-definition-overriding: true
+  datasource:
+    url: jdbc:h2:mem:testdb;MODE=MYSQL;DB_CLOSE_DELAY=-1;DB_CLOSE_ON_EXIT=FALSE;INIT=CREATE SCHEMA IF NOT EXISTS DOVE_STOCK
+    driver-class-name: org.h2.Driver
+    username: sa
+    password:
+
+  jpa:
+    hibernate:
+      ddl-auto: update
+      naming:
+        physical-strategy: org.hibernate.boot.model.naming.PhysicalNamingStrategyStandardImpl
+
+krx:
+  target-markets: KOSPI,KOSDAQ
+  api:
+    auth-key: test-key
+
+market:
+  data:
+    initial-date: 2020-01-01
+    cron: "-"
+
+completion:
+  scan:
+    cron: "-"
+
+scheduler:
+  thread-pool:
+    size: 2
+
+logging:
+  level:
+    root: WARN
+    com.dove: INFO

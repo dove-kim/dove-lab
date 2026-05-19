@@ -5,9 +5,6 @@ dependencies {
 
     implementation project(':jpa')
     implementation project(':market')
-    implementation project(':stock')
-    implementation project(':stock-price')
-    implementation project(':krx-call-log')
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'

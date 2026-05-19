@@ -1,11 +1,9 @@
 export type MarketType = "KOSPI" | "KOSDAQ" | "KONEX";
-export type TradingStatus = "ACTIVE" | "SUSPENDED" | "DELISTED";
 
 export interface Stock {
   code: string;
+  isinCode: string | null;
   name: string;
   marketType: MarketType;
-  tradingStatus: TradingStatus;
   listingDate: string;
 }
-

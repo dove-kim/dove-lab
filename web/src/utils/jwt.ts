@@ -3,6 +3,7 @@ export interface JwtPayload {
   name: string;
   role: string;
   exp: number;
+  mustChangePassword?: boolean;
 }
 
 export function decodeJwtPayload(token: string): JwtPayload | null {
