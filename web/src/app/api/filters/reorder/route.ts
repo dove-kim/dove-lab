@@ -3,7 +3,7 @@ import { backendFetch, unauthorized } from "@/services/backend";
 
 export async function PATCH(req: NextRequest) {
   const body = await req.json();
-  const res = await backendFetch("/api/filters/reorder", {
+  const res = await backendFetch("/filters/reorder", {
     method: "PATCH",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify(body),

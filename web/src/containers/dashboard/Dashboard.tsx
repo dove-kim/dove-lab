@@ -1,4 +1,4 @@
-function MarketStatusCard() {
+﻿function MarketStatusCard() {
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-5">
       <h3 className="text-slate-300 text-sm font-medium mb-4 flex items-center gap-2">
@@ -108,3 +108,4 @@ export default function Dashboard() {
     </div>
   );
 }
+

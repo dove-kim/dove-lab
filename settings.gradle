@@ -1,37 +1,34 @@
-rootProject.name = 'stock-ledger-system'
+rootProject.name = 'dove-lab'
 
-include 'stock-batch'
-include 'stock-consumer'
-include 'stock-api'
-project(':stock-batch').projectDir = file('application/stock-batch')
-project(':stock-consumer').projectDir = file('application/stock-consumer')
-project(':stock-api').projectDir = file('application/stock-api')
+include 'scheduler'
+include 'api'
+project(':scheduler').projectDir = file('application/scheduler')
+project(':api').projectDir = file('application/api')
 
-include 'krx-call-log'
 include 'krx'
-include 'technical-indicator'
+include 'indicator'
 include 'market'
 include 'stock'
-include 'stock-price'
-include 'event-retry'
-project(':krx-call-log').projectDir = file('domain/krx-call-log')
 project(':krx').projectDir = file('infrastructure/krx')
-project(':technical-indicator').projectDir = file('domain/technical-indicator')
+project(':indicator').projectDir = file('domain/indicator')
 project(':market').projectDir = file('domain/market')
 project(':stock').projectDir = file('domain/stock')
-project(':stock-price').projectDir = file('domain/stock-price')
-project(':event-retry').projectDir = file('domain/event-retry')
 
 include 'logging'
 include 'jpa'
-include 'member'
-project(':member').projectDir = file('domain/member')
-include 'stock-filter'
-project(':stock-filter').projectDir = file('domain/stock-filter')
-include 'redis'
+include 'screening'
+project(':screening').projectDir = file('domain/screening')
 project(':logging').projectDir = file('library/logging')
 project(':jpa').projectDir = file('library/jpa')
-project(':redis').projectDir = file('infrastructure/redis')
 
-include 'distributed-lock'
-project(':distributed-lock').projectDir = file('infrastructure/distributed-lock')
+include 'security'
+project(':security').projectDir = file('infrastructure/security')
+
+include 'user'
+project(':user').projectDir = file('domain/user')
+
+include 'auth'
+project(':auth').projectDir = file('domain/auth')
+
+include 'user-feature'
+project(':user-feature').projectDir = file('domain/user-feature')

@@ -1,12 +1,12 @@
 ﻿import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
-import FilterEditorClient from "@/containers/search-filters/FilterEditorClient";
+import FilterEditorClient from "@/containers/stock-search/filters/FilterEditorClient";
 import { backendFetch } from "@/services/backend";
 import { StockSet, StockSetSummary } from "@/types/filter";
 
 async function fetchStockSets(): Promise<StockSetSummary[]> {
-  const res = await backendFetch("/api/stock-filters");
+  const res = await backendFetch("/stock-sets");
   if (!res || !res.ok) return [];
   const sets: StockSet[] = await res.json();
   return sets.map((s) => ({ id: s.id, name: s.name, codeCount: s.codes.length }));

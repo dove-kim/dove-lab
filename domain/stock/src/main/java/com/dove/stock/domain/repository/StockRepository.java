@@ -3,10 +3,12 @@ package com.dove.stock.domain.repository;
 import com.dove.market.domain.enums.MarketType;
 import com.dove.stock.domain.entity.Stock;
 import com.dove.stock.domain.entity.StockId;
-import com.dove.stock.domain.enums.TradingStatus;
 import org.springframework.data.jpa.repository.JpaRepository;
+import org.springframework.data.jpa.repository.Query;
+import org.springframework.data.repository.query.Param;
 import org.springframework.stereotype.Repository;
 
+import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
@@ -18,9 +20,8 @@ public interface StockRepository extends JpaRepository<Stock, StockId> {
         return findById_MarketTypeAndId_Code(marketType, code);
     }
 
-    List<Stock> findAllByTradingStatus(TradingStatus tradingStatus);
-
-    List<Stock> findAllByTradingStatusAndId_MarketType(TradingStatus tradingStatus, MarketType marketType);
-
     List<Stock> findAllById_MarketType(MarketType marketType);
+
+    @Query("SELECT s FROM Stock s WHERE s.id.code IN :codes")
+    List<Stock> findAllByCodeIn(@Param("codes") Collection<String> codes);
 }

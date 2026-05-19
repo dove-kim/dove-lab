@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
 
@@ -166,3 +166,4 @@ export default function TradingDayCalendar({ value, tradingDays, onChange }: Pro
     </div>
   );
 }
+

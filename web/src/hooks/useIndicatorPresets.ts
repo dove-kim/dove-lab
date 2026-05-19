@@ -85,3 +85,5 @@ export function useIndicatorPresets() {
 
   return { presets, activePreset, setActivePreset, loading, create, update, remove, reorder };
 }
+
+export type UseIndicatorPresetsReturn = ReturnType<typeof useIndicatorPresets>;

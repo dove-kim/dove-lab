@@ -1,50 +1,27 @@
-# 운영용 docker-compose 예시. 복사 후 환경변수 채워서 사용.
-# 환경변수 설명은 README.md 상단 표 참조.
-
-version: '3.8'
+# 운영용 docker-compose 예시.
+# 파일 복사 후 <...> 자리에 실제 값을 채워서 사용한다.
+# 환경변수 설명은 각 앱의 README를 참조한다.
 
 services:
-  stock-batch:
-    image: ghcr.io/dove-kim/stock-ledger-system/stock-ledger-batch:latest
-    container_name: stock-batch
+  scheduler:
+    image: ghcr.io/dove-kim/dove-lab/scheduler:latest
+    container_name: scheduler
     restart: unless-stopped
     environment:
       DB_HOST: <DB 호스트>
       DB_PORT: <DB 포트>
       DB_USERNAME: <DB 사용자명>
       DB_PASSWORD: <DB 비밀번호>
-      KAFKA_HOST: <Kafka 호스트>
-      KAFKA_PORT: <Kafka 포트>
-      KRX_TARGET_MARKETS: "KOSPI,KOSDAQ,KONEX"
-      LOG_LEVEL: INFO
-      SPRING_PROFILES_INCLUDE: file
-    volumes:
-      - ./logs/batch:/logs
-    network_mode: "host"
-
-  stock-consumer:
-    image: ghcr.io/dove-kim/stock-ledger-system/stock-ledger-consumer:latest
-    container_name: stock-consumer
-    restart: unless-stopped
-    environment:
-      DB_HOST: <DB 호스트>
-      DB_PORT: <DB 포트>
-      DB_USERNAME: <DB 사용자명>
-      DB_PASSWORD: <DB 비밀번호>
-      KAFKA_HOST: <Kafka 호스트>
-      KAFKA_PORT: <Kafka 포트>
       KRX_API_AUTH_KEY: <한국거래소 API 인증키>
-      REDIS_HOST: <Redis 호스트>
-      REDIS_PORT: <Redis 포트>
-      LOG_LEVEL: INFO
-      SPRING_PROFILES_INCLUDE: file
+      KRX_TARGET_MARKETS: "KOSPI,KOSDAQ"
+      MARKET_INITIAL_DATE: "2010-01-01"
     volumes:
-      - ./logs/consumer:/logs
+      - ./logs/scheduler:/logs
     network_mode: "host"
 
-  stock-api:
-    image: ghcr.io/dove-kim/stock-ledger-system/stock-ledger-api:latest
-    container_name: stock-api
+  api:
+    image: ghcr.io/dove-kim/dove-lab/api:latest
+    container_name: api
     restart: unless-stopped
     environment:
       SERVER_PORT: ${API_PORT:-8081}
@@ -52,14 +29,18 @@ services:
       DB_PORT: <DB 포트>
       DB_USERNAME: <DB 사용자명>
       DB_PASSWORD: <DB 비밀번호>
-      LOG_LEVEL: INFO
+      JWT_SECRET: <JWT 서명 키 (32자 이상, 반드시 변경)>
+      JWT_EXPIRATION_MS: 3600000
+      JWT_REMEMBER_ME_EXPIRATION_MS: 2592000000
+      INIT_ADMIN_USERNAME: <최초 ROOT 계정 아이디 (최초 1회)>
+      INIT_ADMIN_PASSWORD: <최초 ROOT 계정 비밀번호 (최초 1회)>
     volumes:
       - ./logs/api:/logs
     network_mode: "host"
 
-  stock-web:
-    image: ghcr.io/dove-kim/stock-ledger-system/stock-ledger-web:latest
-    container_name: stock-web
+  web:
+    image: ghcr.io/dove-kim/dove-lab/web:latest
+    container_name: web
     restart: unless-stopped
     environment:
       PORT: ${WEB_PORT:-3000}
