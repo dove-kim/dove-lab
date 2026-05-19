@@ -1,12 +1,9 @@
 package com.dove.stock.domain.entity;
 
 import com.dove.market.domain.enums.MarketType;
-import com.dove.stock.domain.enums.TradingStatus;
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
-import jakarta.persistence.EnumType;
-import jakarta.persistence.Enumerated;
 import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
@@ -22,20 +19,20 @@ import java.time.LocalDateTime;
 @Getter
 @Entity
 @Table(name = "STOCK",
-        indexes = @Index(name = "IDX_STOCK_TRADING_STATUS", columnList = "TRADING_STATUS"))
+        indexes = @Index(name = "IDX_STOCK_ISIN_CODE", columnList = "ISIN_CODE"))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 @AllArgsConstructor
 public class Stock {
     @EmbeddedId
     private StockId id;
 
+
     @Column(name = "NAME", nullable = false, length = 100)
     private String name;
 
-    @Column(name = "TRADING_STATUS", nullable = false, length = 20)
-    @Enumerated(EnumType.STRING)
-    @Comment("현재 거래 상태 (ACTIVE/SUSPENDED/DELISTED)")
-    private TradingStatus tradingStatus;
+    @Column(name = "ISIN_CODE", length = 12)
+    @Comment("ISIN 코드 (KR + 종류코드 1자 + 티커 6자 + 체크디짓 3자 = 12자)")
+    private String isinCode;
 
     @CreationTimestamp
     @Column(name = "CREATED_AT", nullable = false, updatable = false)
@@ -43,22 +40,18 @@ public class Stock {
     private LocalDateTime createdAt;
 
     @Column(name = "LISTING_DATE", nullable = false, updatable = false)
-    @Comment("최초 상장일 (KRX 최초 등록 기준)")
+    @Comment("최초 상장일 (KRX 기준)")
     private LocalDate listingDate;
 
-    public Stock(MarketType marketType, String code, String name, TradingStatus tradingStatus, LocalDate listingDate) {
+    public Stock(MarketType marketType, String code, String name, LocalDate listingDate, String isinCode) {
         this.id = new StockId(marketType, code);
         this.name = name;
-        this.tradingStatus = tradingStatus;
         this.listingDate = listingDate;
+        this.isinCode = isinCode;
     }
 
     public Stock updateName(String name) {
         this.name = name;
         return this;
-    }
-
-    public void updateTradingStatus(TradingStatus tradingStatus) {
-        this.tradingStatus = tradingStatus;
     }
 }

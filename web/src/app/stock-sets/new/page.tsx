@@ -1,12 +1,12 @@
 ﻿import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
-import StockSetEditorClient from "@/containers/stock-sets/StockSetEditorClient";
+import StockSetEditorClient from "@/containers/stock-search/stock-sets/StockSetEditorClient";
 import { backendFetch } from "@/services/backend";
 import { Stock } from "@/types/stock";
 
 async function fetchStocks(): Promise<Stock[]> {
-  const res = await backendFetch("/api/stocks");
+  const res = await backendFetch("/stocks");
   if (!res || !res.ok) return [];
   return res.json();
 }

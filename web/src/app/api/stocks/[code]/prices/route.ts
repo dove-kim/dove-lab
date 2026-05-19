@@ -6,7 +6,7 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ code
   const market = req.nextUrl.searchParams.get("market") ?? "KOSPI";
   const limit = req.nextUrl.searchParams.get("limit") ?? "60";
   const res = await backendFetch(
-    `/api/stocks/${encodeURIComponent(code)}/prices?market=${market}&limit=${limit}`
+    `/stocks/${encodeURIComponent(code)}/prices?market=${market}&limit=${limit}`
   );
   if (!res) return unauthorized();
   if (!res.ok) return NextResponse.json([], { status: res.status });
