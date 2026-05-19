@@ -1,0 +1,109 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="860" height="480" font-family="'Malgun Gothic','Apple SD Gothic Neo',sans-serif">
+  <rect width="860" height="480" fill="#f8f9fa"/>
+
+  <defs>
+    <marker id="arr" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#555"/>
+    </marker>
+    <marker id="arrBlue" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#2980b9"/>
+    </marker>
+    <marker id="arrGreen" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#27ae60"/>
+    </marker>
+    <marker id="arrPurple" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#8e44ad"/>
+    </marker>
+    <marker id="arrGray" markerWidth="8" markerHeight="8" refX="6" refY="3" orient="auto">
+      <path d="M0,0 L0,6 L8,3 z" fill="#aaa"/>
+    </marker>
+  </defs>
+
+  <!-- ══════════ SECTION 1: 주식 데이터 수집 ══════════ -->
+  <text x="20" y="28" font-size="11" fill="#888">주식 데이터 수집</text>
+  <line x1="16" y1="35" x2="844" y2="35" stroke="#ddd" stroke-width="1"/>
+
+  <!-- scheduler box -->
+  <rect x="30" y="50" width="200" height="120" rx="8" fill="#fff" stroke="#555" stroke-width="1.5"/>
+  <text x="130" y="76" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">scheduler</text>
+  <!-- divider inside box -->
+  <line x1="44" y1="85" x2="216" y2="85" stroke="#eee" stroke-width="1"/>
+  <!-- job 1 -->
+  <text x="48" y="102" font-size="10" fill="#555">● DailyMarketJob</text>
+  <text x="48" y="117" font-size="10" fill="#888">   08:05 KST (평일)</text>
+  <!-- job 2 -->
+  <text x="48" y="135" font-size="10" fill="#555">● CompletionScanJob</text>
+  <text x="48" y="150" font-size="10" fill="#888">   12:00 KST (매일)</text>
+
+  <!-- arrow scheduler → KRX -->
+  <line x1="230" y1="90" x2="698" y2="90" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="464" y="80" text-anchor="middle" font-size="10" fill="#555">KRX API 직접 호출</text>
+
+  <!-- KRX box -->
+  <rect x="700" y="60" width="90" height="56" rx="8" fill="#eaf4fb" stroke="#2980b9" stroke-width="1.5"/>
+  <text x="745" y="85" text-anchor="middle" font-size="13" font-weight="bold" fill="#2980b9">KRX</text>
+  <text x="745" y="101" text-anchor="middle" font-size="10" fill="#2980b9">API</text>
+
+  <!-- arrow scheduler → MySQL (down) -->
+  <line x1="130" y1="170" x2="130" y2="238" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="148" y="210" font-size="10" fill="#555">저장</text>
+
+  <!-- ══════════ SECTION 2: 데이터 저장소 ══════════ -->
+  <text x="20" y="222" font-size="11" fill="#888">데이터 저장소</text>
+  <line x1="16" y1="229" x2="844" y2="229" stroke="#ddd" stroke-width="1"/>
+
+  <!-- MySQL outer -->
+  <rect x="20" y="243" width="720" height="88" rx="10" fill="none" stroke="#bbb" stroke-width="1.2" stroke-dasharray="5,3"/>
+  <text x="756" y="259" font-size="10" fill="#aaa">MySQL 8</text>
+
+  <!-- stock sub-box -->
+  <rect x="35" y="256" width="185" height="60" rx="6" fill="#eafaf1" stroke="#27ae60" stroke-width="1.4"/>
+  <text x="128" y="280" text-anchor="middle" font-size="11" font-weight="bold" fill="#27ae60">주식 · 주가 · 지표</text>
+  <text x="128" y="298" text-anchor="middle" font-size="10" fill="#555">STOCK, DAILY_STOCK_PRICE</text>
+  <text x="128" y="310" text-anchor="middle" font-size="10" fill="#555">TECHNICAL_INDICATOR …</text>
+
+  <!-- user sub-box -->
+  <rect x="245" y="256" width="145" height="60" rx="6" fill="#eaf4fb" stroke="#2980b9" stroke-width="1.4"/>
+  <text x="318" y="280" text-anchor="middle" font-size="11" font-weight="bold" fill="#2980b9">회원 프로필</text>
+  <text x="318" y="298" text-anchor="middle" font-size="10" fill="#555">MEMBER</text>
+  <text x="318" y="310" text-anchor="middle" font-size="10" fill="#555">USER_FEATURE_GRANT …</text>
+
+  <!-- auth sub-box -->
+  <rect x="415" y="256" width="155" height="60" rx="6" fill="#fdf2f8" stroke="#8e44ad" stroke-width="1.4"/>
+  <text x="493" y="280" text-anchor="middle" font-size="11" font-weight="bold" fill="#8e44ad">자격증명</text>
+  <text x="493" y="298" text-anchor="middle" font-size="10" fill="#555">CREDENTIAL</text>
+  <text x="493" y="310" text-anchor="middle" font-size="10" fill="#555">INVITE_CODE …</text>
+
+  <!-- ══════════ SECTION 3: 서비스 / 클라이언트 ══════════ -->
+  <text x="20" y="354" font-size="11" fill="#888">서비스 / 클라이언트</text>
+  <line x1="16" y1="361" x2="844" y2="361" stroke="#ddd" stroke-width="1"/>
+
+  <!-- browser box -->
+  <rect x="30" y="378" width="90" height="56" rx="8" fill="#f0f0f0" stroke="#aaa" stroke-width="1.2"/>
+  <text x="75" y="403" text-anchor="middle" font-size="12" fill="#555">브라우저</text>
+
+  <!-- arrow browser → web -->
+  <line x1="120" y1="406" x2="153" y2="406" stroke="#aaa" stroke-width="1.2" marker-end="url(#arrGray)"/>
+
+  <!-- web box -->
+  <rect x="155" y="378" width="130" height="56" rx="8" fill="#fff" stroke="#555" stroke-width="1.5"/>
+  <text x="220" y="403" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">web</text>
+  <text x="220" y="421" text-anchor="middle" font-size="10" fill="#777">Next.js</text>
+
+  <!-- arrow web → api -->
+  <line x1="285" y1="406" x2="333" y2="406" stroke="#555" stroke-width="1.5" marker-end="url(#arr)"/>
+  <text x="309" y="398" text-anchor="middle" font-size="10" fill="#555">HTTP</text>
+
+  <!-- api box -->
+  <rect x="335" y="378" width="130" height="56" rx="8" fill="#fff" stroke="#555" stroke-width="1.5"/>
+  <text x="400" y="403" text-anchor="middle" font-size="13" font-weight="bold" fill="#333">api</text>
+  <text x="400" y="421" text-anchor="middle" font-size="10" fill="#777">Spring Boot REST</text>
+
+  <!-- arrow api → stock DB (up) -->
+  <line x1="380" y1="378" x2="200" y2="331" stroke="#27ae60" stroke-width="1.2" marker-end="url(#arrGreen)"/>
+  <!-- arrow api → user DB (up) -->
+  <line x1="400" y1="378" x2="360" y2="331" stroke="#2980b9" stroke-width="1.2" marker-end="url(#arrBlue)"/>
+  <!-- arrow api → auth DB (up) -->
+  <line x1="420" y1="378" x2="480" y2="331" stroke="#8e44ad" stroke-width="1.2" marker-end="url(#arrPurple)"/>
+
+</svg>

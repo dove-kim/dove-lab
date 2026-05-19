@@ -1,4 +1,4 @@
-import { cookies } from "next/headers";
+﻿import { cookies } from "next/headers";
 import { logout } from "@/actions/auth";
 import MobileMenuButton from "./MobileMenuButton";
 import { decodeJwtPayload } from "@/utils/jwt";
@@ -29,3 +29,4 @@ export default async function Header() {
     </header>
   );
 }
+

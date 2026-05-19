@@ -1,4 +1,4 @@
-"use client";
+﻿"use client";
 
 export default function MobileMenuButton() {
   return (
@@ -15,3 +15,4 @@ export default function MobileMenuButton() {
     </button>
   );
 }
+

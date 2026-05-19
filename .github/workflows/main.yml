@@ -20,21 +20,17 @@ jobs:
       fail-fast: false
       matrix:
         include:
-          - app: stock-api
-            dir: application/stock-api
-            image: stock-ledger-api
+          - app: api
+            dir: application/api
+            image: api
             java: true
-          - app: stock-batch
-            dir: application/stock-batch
-            image: stock-ledger-batch
-            java: true
-          - app: stock-consumer
-            dir: application/stock-consumer
-            image: stock-ledger-consumer
+          - app: scheduler
+            dir: application/scheduler
+            image: scheduler
             java: true
           - app: web
             dir: web
-            image: stock-ledger-web
+            image: web
             java: false
     steps:
       - uses: actions/checkout@v4
