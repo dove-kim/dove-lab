@@ -1,19 +1,19 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
 import com.dove.indicator.domain.enums.IndicatorType;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 갭 상승 계산기. 당일 시가를 전일 종가와 비교한 갭 비율을 산출한다.
+ */
+@Component
 public class GapOpenCalculator implements TechnicalIndicatorCalculator {
 
     private static final int REQUIRED_SIZE = 2;
-
-    @Override
-    public String getName() {
-        return "GAP_OPEN";
-    }
 
     @Override
     public int requiredDataSize() {
@@ -26,7 +26,7 @@ public class GapOpenCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+    public Map<IndicatorType, Double> calculate(List<StockPrice> dailyStockPriceList) {
         if (dailyStockPriceList.size() < REQUIRED_SIZE) {
             return Map.of();
         }

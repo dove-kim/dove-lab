@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
-import com.dove.market.domain.enums.MarketType;
+import com.dove.stock.domain.entity.StockPrice;
+import com.dove.stock.domain.enums.StockExchange;
+import com.dove.stock.domain.enums.PriceType;
 import com.dove.indicator.domain.calculator.BollingerBandsCalculator;
 import com.dove.indicator.domain.enums.IndicatorType;
 import org.junit.jupiter.api.DisplayName;
@@ -19,17 +20,17 @@ class BollingerBandsCalculatorTest {
 
     private final BollingerBandsCalculator calculator = new BollingerBandsCalculator();
 
-    private DailyStockPrice createDailyStockPrice(LocalDate date, long closePrice) {
-        return new DailyStockPrice(MarketType.KOSPI, "005930", date,
-                1000L, 100L, closePrice, 90L, 110L);
+    private StockPrice createStockPrice(LocalDate date, long closePrice) {
+        return new StockPrice("005930", StockExchange.KOSPI, PriceType.RAW, date,
+                100L, 110L, 90L, closePrice, 1000L, null);
     }
 
     @Test
     @DisplayName("Middle Band는 20일 SMA이다")
     void shouldCalculateMiddleBandAsSma20() {
         // Given
-        List<DailyStockPrice> data = IntStream.rangeClosed(1, 20)
-                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, i), 1000 + i * 10))
+        List<StockPrice> data = IntStream.rangeClosed(1, 20)
+                .mapToObj(i -> createStockPrice(LocalDate.of(2024, 1, i), 1000 + i * 10))
                 .toList();
 
         // When
@@ -47,8 +48,8 @@ class BollingerBandsCalculatorTest {
     @DisplayName("Upper Band = Middle + 2 * 표준편차")
     void shouldCalculateUpperBandWithStdDev() {
         // Given
-        List<DailyStockPrice> data = IntStream.rangeClosed(1, 20)
-                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, i), 1000 + i * 10))
+        List<StockPrice> data = IntStream.rangeClosed(1, 20)
+                .mapToObj(i -> createStockPrice(LocalDate.of(2024, 1, i), 1000 + i * 10))
                 .toList();
 
         // When
@@ -64,8 +65,8 @@ class BollingerBandsCalculatorTest {
     @DisplayName("Lower Band = Middle - 2 * 표준편차")
     void shouldCalculateLowerBandWithStdDev() {
         // Given
-        List<DailyStockPrice> data = IntStream.rangeClosed(1, 20)
-                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, i), 1000 + i * 10))
+        List<StockPrice> data = IntStream.rangeClosed(1, 20)
+                .mapToObj(i -> createStockPrice(LocalDate.of(2024, 1, i), 1000 + i * 10))
                 .toList();
 
         // When
@@ -84,8 +85,8 @@ class BollingerBandsCalculatorTest {
     @DisplayName("가격이 일정하면 표준편차=0이므로 upper=middle=lower")
     void shouldHandleConstantPrices() {
         // Given
-        List<DailyStockPrice> data = IntStream.rangeClosed(1, 20)
-                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, i), 5000))
+        List<StockPrice> data = IntStream.rangeClosed(1, 20)
+                .mapToObj(i -> createStockPrice(LocalDate.of(2024, 1, i), 5000))
                 .toList();
 
         // When
@@ -106,8 +107,8 @@ class BollingerBandsCalculatorTest {
     @Test
     @DisplayName("%B는 (close - lower) / (upper - lower) 수식으로 계산된다")
     void shouldCalculateBbPercentBCorrectly() {
-        List<DailyStockPrice> prices = IntStream.rangeClosed(1, 20)
-                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, i), 1000 + i * 10))
+        List<StockPrice> prices = IntStream.rangeClosed(1, 20)
+                .mapToObj(i -> createStockPrice(LocalDate.of(2024, 1, i), 1000 + i * 10))
                 .toList();
         double sumOfPrices = IntStream.rangeClosed(1, 20).mapToDouble(i -> 1000 + i * 10).sum();
         double sma = sumOfPrices / 20;
@@ -129,8 +130,8 @@ class BollingerBandsCalculatorTest {
     @Test
     @DisplayName("밴드 폭이 0이면 %B는 0.0이다")
     void shouldReturnZeroPercentBWhenBandWidthIsZero() {
-        List<DailyStockPrice> data = IntStream.rangeClosed(1, 20)
-                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, i), 5000))
+        List<StockPrice> data = IntStream.rangeClosed(1, 20)
+                .mapToObj(i -> createStockPrice(LocalDate.of(2024, 1, i), 5000))
                 .toList();
 
         Map<IndicatorType, Double> result = calculator.calculate(data);
@@ -141,8 +142,8 @@ class BollingerBandsCalculatorTest {
     @Test
     @DisplayName("BB_WIDTH_20는 (upper - lower) / middle이다")
     void shouldCalculateBbWidthCorrectly() {
-        List<DailyStockPrice> data = IntStream.rangeClosed(1, 20)
-                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, i), 1000 + i * 10))
+        List<StockPrice> data = IntStream.rangeClosed(1, 20)
+                .mapToObj(i -> createStockPrice(LocalDate.of(2024, 1, i), 1000 + i * 10))
                 .toList();
 
         Map<IndicatorType, Double> result = calculator.calculate(data);

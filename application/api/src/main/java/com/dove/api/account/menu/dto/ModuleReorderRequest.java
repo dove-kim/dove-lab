@@ -5,4 +5,10 @@ import jakarta.validation.constraints.NotNull;
 
 import java.util.List;
 
-public record ModuleReorderRequest(@NotNull List<ModuleCode> modules) {}
+/**
+ * 모듈 표시 순서 변경 요청.
+ *
+ * @param modules 정렬된 모듈 코드 목록
+ */
+public record ModuleReorderRequest(@NotNull List<ModuleCode> modules) {
+}

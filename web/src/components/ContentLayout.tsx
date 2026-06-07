@@ -34,7 +34,7 @@ export default function ContentLayout({ role, menu, mustChangePassword = false, 
 
       <Sidebar role={role} menu={menu} mobileOpen={mobileOpen} onMobileClose={closeMobile} />
 
-      <div className="flex flex-col flex-1 overflow-hidden min-w-0">
+      <div className="flex flex-col flex-1 overflow-y-auto min-w-0 min-h-0">
         {children}
       </div>
     </div>

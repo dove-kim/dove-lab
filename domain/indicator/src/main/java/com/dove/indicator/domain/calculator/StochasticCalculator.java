@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
 import com.dove.indicator.domain.enums.IndicatorType;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
@@ -9,16 +10,12 @@ import java.util.Map;
 /**
  * 스토캐스틱 계산기. %K(14일)와 %D(7일 평균)로 과매수/과매도 수준을 판단한다.
  */
+@Component
 public class StochasticCalculator implements TechnicalIndicatorCalculator {
 
     private static final int K_PERIOD = 14;
     private static final int D_PERIOD = 7;
     private static final int REQUIRED_SIZE = K_PERIOD + D_PERIOD - 1;
-
-    @Override
-    public String getName() {
-        return "STOCHASTIC";
-    }
 
     @Override
     public int requiredDataSize() {
@@ -31,7 +28,7 @@ public class StochasticCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+    public Map<IndicatorType, Double> calculate(List<StockPrice> dailyStockPriceList) {
         int totalSize = dailyStockPriceList.size();
         int kCount = totalSize - K_PERIOD + 1;
         double[] kValues = new double[kCount];
@@ -41,7 +38,7 @@ public class StochasticCalculator implements TechnicalIndicatorCalculator {
             long lowestLow = Long.MAX_VALUE;
 
             for (int j = i; j < i + K_PERIOD; j++) {
-                DailyStockPrice data = dailyStockPriceList.get(j);
+                StockPrice data = dailyStockPriceList.get(j);
                 highestHigh = Math.max(highestHigh, data.getHighPrice());
                 lowestLow = Math.min(lowestLow, data.getLowPrice());
             }

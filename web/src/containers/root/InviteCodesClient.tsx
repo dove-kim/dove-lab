@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useEffect, useState } from "react";
 import { cx } from "@/utils/cx";
@@ -24,7 +24,7 @@ export default function InviteCodesClient() {
   const [error, setError] = useState<string | null>(null);
 
   const fetchCodes = async () => {
-    const res = await clientFetch("/api/root/invite-codes");
+    const res = await clientFetch("/api/admin/invite-codes");
     if (res?.ok) {
       setCodes(await res.json());
     } else if (res) {
@@ -40,7 +40,7 @@ export default function InviteCodesClient() {
     setNewCode(null);
     setError(null);
     try {
-      const res = await clientFetch("/api/root/invite-codes", {
+      const res = await clientFetch("/api/admin/invite-codes", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role, expireDays }),

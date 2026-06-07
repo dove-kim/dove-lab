@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
-import com.dove.market.domain.enums.MarketType;
+import com.dove.stock.domain.entity.StockPrice;
+import com.dove.stock.domain.enums.StockExchange;
+import com.dove.stock.domain.enums.PriceType;
 import com.dove.indicator.domain.calculator.WilliamsRCalculator;
 import com.dove.indicator.domain.enums.IndicatorType;
 import org.junit.jupiter.api.DisplayName;
@@ -19,9 +20,9 @@ class WilliamsRCalculatorTest {
 
     private final WilliamsRCalculator calculator = new WilliamsRCalculator();
 
-    private DailyStockPrice createDailyStockPrice(LocalDate date, long high, long low, long close) {
-        return new DailyStockPrice(MarketType.KOSPI, "005930", date,
-                1000L, 100L, close, low, high);
+    private StockPrice createStockPrice(LocalDate date, long high, long low, long close) {
+        return new StockPrice("005930", StockExchange.KOSPI, PriceType.RAW, date,
+                100L, high, low, close, 1000L, null);
     }
 
     @Test
@@ -29,8 +30,8 @@ class WilliamsRCalculatorTest {
     void shouldCalculateWilliamsRFromKnownValues() {
         // Given - 14일 고가 120, 저가 80, 종가 100
         // %R = (120 - 100) / (120 - 80) * -100 = -50
-        List<DailyStockPrice> data = IntStream.range(0, 14)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 14)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         120, 80, 100))
                 .toList();
@@ -46,8 +47,8 @@ class WilliamsRCalculatorTest {
     @DisplayName("종가가 최고가일 때 %R은 0이다")
     void shouldReturn0WhenCloseAtHigh() {
         // Given
-        List<DailyStockPrice> data = IntStream.range(0, 14)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 14)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         120, 80, 120))
                 .toList();
@@ -63,8 +64,8 @@ class WilliamsRCalculatorTest {
     @DisplayName("종가가 최저가일 때 %R은 -100이다")
     void shouldReturnMinus100WhenCloseAtLow() {
         // Given
-        List<DailyStockPrice> data = IntStream.range(0, 14)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 14)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         120, 80, 80))
                 .toList();

@@ -9,8 +9,8 @@
 
 ![system](./doc/system.svg)
 
-1. **scheduler**: 매일 08:05 KST에 KRX에서 종목·주가를 직접 수집하고 기술지표를 계산한다. 12:00에는 누락 데이터를 전체 이력 기준으로 보정한다.
-2. **api**: REST API 서버 — 회원 인증 + 주식 데이터 조회 + 사용자 기능 권한 관리
+1. **scheduler**: 잡마다 독립 스레드로 — KRX 당일 종목 동기화(08:05), KIS 종목 상세·투자자동향 수집(12:00), 거래소별 당일 주가 수집(21:00), 커서 기반 기술적 지표 계산(00:00). 역사적 수집은 ROOT 전용 백필 API(비동기, 재조회 ≤어제). 진행률은 ROOT 대시보드로 조회.
+2. **api**: REST API 서버 — 회원 인증 + 주식 데이터 조회 + 사용자 기능 권한 관리 + 운영(수집·스케줄러) 관리
 3. **web**: Next.js 기반 UI
 
 ## 프로젝트 구성
@@ -26,39 +26,24 @@ domain/                     Aggregate 단위 모듈 (entity + repository + CQRS 
   auth                      Credential, InviteCode
   user                      MemberProfile, MemberRole
   user-feature              UserFeatureGrant, UserModuleDisplay, UserFeatureDisplay
-  market                    MarketType, MarketTradingDate
-  stock                     Stock, DailyStockPrice
-  indicator                 TechnicalIndicator + 지표 계산기
+  market                    Exchange, ExchangeTradingDate, MarketListingSync
+  stock                     Stock, StockDetail, StockEvent(권리이벤트), StockPrice(RAW·ADJUSTED), StockTagValue
+  stock-collection          KIS 주가·권리이벤트(KSD)·투자자동향 수집 코어 + 백필 런처(CollectionLauncher)
+  indicator                 StockFeatureDaily(지표 wide 저장) + 지표 계산기 + IndicatorCursor(그룹 단위 CAS)
   screening                 사용자 정의 종목 필터 + 종목 세트 + 지표 프리셋
+  investor-flow             종목별 투자자 매매동향 (기관·외국인·개인)
+  system-event              수집·계산 운영 이벤트 기록 (ROOT 모니터링)
 
 infrastructure/             Driven adapter
-  krx                       KRX API 어댑터 (Feign) + DailyMarketData 타입
-  security                  JwtProvider, JwtFilter, AuthenticatedUser
+  krx                       KRX API 어댑터 (Feign)
+  kis                       KIS API 어댑터 (Feign) + KisGate (초당 20회 율제한)
 
 library/
   jpa                       JpaConfig, QuerydslConfiguration
   logging                   logback 공통 설정
-```
-
-## 프론트엔드 구조 (Next.js App Router)
-
-```
-web/src/
-  app/           라우팅. Server Component로 데이터 fetch → containers에 props 전달
-  containers/    기능(메뉴) 단위 폴더
-    dashboard/
-    stock-search/
-      main/        /stock-search
-      filters/     /search-filters
-      stock-sets/  /stock-sets
-    settings/
-    admin/
-    root/
-  components/    공통 컴포넌트 (여러 기능에서 재사용)
-  app/api/       Next.js API 라우트 — JWT 쿠키를 Authorization 헤더로 변환하는 백엔드 프록시
-  services/      외부 통신 (backendFetch, clientFetch)
-  utils/         순수 함수 유틸 (cx, jwt, filter)
-  types/         타입 정의
+  concurrent                Parallel (가상 스레드 동시 수 제한)
+  api-quota / datetime      공통 API 할당량 / 날짜 유틸
+  job-status                스케줄러 진행률 레지스트리 (Redis)
 ```
 
 ## 애플리케이션별 문서
@@ -208,3 +193,32 @@ docker compose -f docker-compose.prod.yml up -d
 | `init.sql` | 스키마 DDL (단일 진실 원천) |
 | `init_data.sql` | 로컬 개발용 사용자 시드 |
 | `init_stock_data.sql` | 로컬 개발용 종목·주가·기술지표 mock |
+
+### 신규 지표 추가 절차
+
+1. **코드**: `IndicatorType`에 값 추가 → Calculator 작성 → `TechnicalIndicatorConfig`에 빈 등록 → `StockFeatureDaily`에 컬럼(필드 + `set()`/`toIndicatorMap()` 케이스) 추가 → `init.sql`의 `STOCK_FEATURE_DAILY`에 컬럼 추가.
+2. **스키마 반영**: 운영 DB는 `ALTER TABLE STOCK_FEATURE_DAILY ADD COLUMN <컬럼> FLOAT;` (MySQL 8 nullable 컬럼은 INSTANT — 즉시).
+3. **과거 채우기**: 커서를 비우면 다음 배치가 1985년부터 전 그룹을 재계산하며 새 컬럼을 채운다.
+   ```sql
+   TRUNCATE TABLE INDICATOR_CURSOR;   -- 전 종목 전체 재계산 (수동 1회)
+   ```
+   - 전체 재계산 비용 = 약 1,500만 행 재기록(로컬 약 30-60분 / 운영 약 1-3시간). 신규 지표는 가끔 있는 일이라 허용한다.
+   - 일부만(예: ADJUSTED만) 재계산하려면 WHERE가 되는 `DELETE`(또는 `clearAdjusted`)를 쓴다.
+4. **지표 배치 실행** → 새 컬럼이 채워진다. 이후 일일 배치는 새 날짜만 계산(수 분).
+
+> `TRUNCATE`는 즉시 커밋(롤백 불가)이라 의도적으로 전체 재계산할 때만 쓴다.
+> 앱 코드에서는 native SQL 금지이므로 `repository.deleteAllInBatch()`를 사용한다.
+
+## Docker 메모리 설정
+
+`docker-compose.prod.yml.example`에 메모리 한계가 미리 설정되어 있다.
+8GB 서버 기준 권장값:
+
+| 서비스 | 컨테이너 한계 | JVM/Node 힙 설정 |
+|--------|-------------|-----------------|
+| scheduler | 1,536 MB | `-Xmx1100m -XX:+UseZGC` |
+| api | 1,024 MB | `-Xmx700m -XX:+UseG1GC` |
+| web | 768 MB | `--max-old-space-size=512` |
+| MySQL | 2,560 MB | `innodb_buffer_pool_size=1536M` |
+
+> JVM/Node 힙 옵션은 각 `Dockerfile`의 `JAVA_TOOL_OPTIONS` / `CMD` 에 이미 적용되어 있다.

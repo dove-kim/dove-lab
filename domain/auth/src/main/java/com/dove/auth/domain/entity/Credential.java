@@ -14,10 +14,6 @@ import java.time.LocalDateTime;
 
 /**
  * 회원 자격증명. 로그인 식별자와 비밀번호 해시를 보유한다.
- *
- * <p>DOVE_AUTH 스키마의 CREDENTIAL 테이블에 매핑된다. PK는 MemberProfile.id를 논리 참조하며,
- * cross-schema FK는 두지 않는다(스키마 격리 원칙). 비밀번호 해시는 이 모듈 밖으로 절대
- * 노출되지 않으며, ArchUnit 가드레일로 강제한다.
  */
 @Entity
 @Table(
@@ -80,7 +76,6 @@ public class Credential {
 
     /**
      * 외부에서 결정한 잠금 해제 시점까지 계정을 잠근다.
-     * 잠금 정책(임계치, 지속 시간)은 application 레이어 책임.
      */
     public void lockUntil(LocalDateTime until) {
         this.lockedUntil = until;
@@ -94,7 +89,9 @@ public class Credential {
         this.passwordHash = newPasswordHash;
     }
 
-    /** 관리자에 의한 비밀번호 초기화. 다음 로그인 시 변경 강제. */
+    /**
+     * 관리자에 의한 비밀번호 초기화. 다음 로그인 시 변경 강제.
+     */
     public void resetPassword(String newPasswordHash) {
         this.passwordHash = newPasswordHash;
         this.passwordResetRequired = true;
@@ -102,7 +99,9 @@ public class Credential {
         this.lockedUntil = null;
     }
 
-    /** 사용자가 직접 비밀번호 변경. 초기화 플래그 해제. */
+    /**
+     * 사용자가 직접 비밀번호 변경. 초기화 플래그 해제.
+     */
     public void changePassword(String newPasswordHash) {
         this.passwordHash = newPasswordHash;
         this.passwordResetRequired = false;

@@ -1,5 +1,8 @@
 package com.dove.indicator.domain.enums;
 
+/**
+ * wide 피처 행에 저장되는 기술적 지표의 종류.
+ */
 public enum IndicatorType {
     SMA_5, SMA_10, SMA_20, SMA_50, SMA_60, SMA_120, SMA_200,
     EMA_5, EMA_10, EMA_20, EMA_60, EMA_120, EMA_200,
@@ -15,7 +18,21 @@ public enum IndicatorType {
     WILLIAMS_R,
     VOLATILITY_5D, VOLATILITY_20D,
     HIGH_20D_RATIO, HIGH_52W_RATIO,
+    LOW_20D_RATIO,
     VOLUME_MA20_RATIO,
     GAP_OPEN,
-    IS_52W_HIGH, IS_52W_LOW, IS_20D_HIGH, IS_20D_LOW
+    IS_52W_HIGH, IS_52W_LOW, IS_20D_HIGH, IS_20D_LOW,
+    RET_1D, RET_5D, RET_10D,
+    BODY_RATIO, LOWER_WICK;
+
+    /**
+     * 이름으로 IndicatorType을 찾고, 알 수 없는 이름이면 null을 반환한다.
+     */
+    public static IndicatorType parseOrNull(String name) {
+        try {
+            return valueOf(name);
+        } catch (IllegalArgumentException e) {
+            return null;
+        }
+    }
 }

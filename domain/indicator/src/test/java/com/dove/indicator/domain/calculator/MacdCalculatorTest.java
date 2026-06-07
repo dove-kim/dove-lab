@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
-import com.dove.market.domain.enums.MarketType;
+import com.dove.stock.domain.entity.StockPrice;
+import com.dove.stock.domain.enums.StockExchange;
+import com.dove.stock.domain.enums.PriceType;
 import com.dove.indicator.domain.calculator.MacdCalculator;
 import com.dove.indicator.domain.enums.IndicatorType;
 import org.junit.jupiter.api.DisplayName;
@@ -19,18 +20,18 @@ class MacdCalculatorTest {
 
     private final MacdCalculator macdCalculator = new MacdCalculator();
 
-    private DailyStockPrice createDailyStockPrice(LocalDate date, long closePrice) {
-        return new DailyStockPrice(MarketType.KOSPI, "005930", date,
-                1000L, 100L, closePrice, 90L, 110L);
+    private StockPrice createStockPrice(LocalDate date, long closePrice) {
+        return new StockPrice("005930", StockExchange.KOSPI, PriceType.RAW, date,
+                100L, 110L, 90L, closePrice, 1000L, null);
     }
 
     @Test
     @DisplayName("알려진 값으로 MACD Line을 검증한다")
     void shouldCalculateMacdLineFromKnownValues() {
-        List<DailyStockPrice> data = IntStream.range(0, 130)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 130)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
-                        10000 + i * 50))
+                        10000 + i * 50L))
                 .toList();
 
         Map<IndicatorType, Double> result = macdCalculator.calculate(data);
@@ -41,10 +42,10 @@ class MacdCalculatorTest {
     @Test
     @DisplayName("Signal Line을 계산한다")
     void shouldCalculateSignalLine() {
-        List<DailyStockPrice> data = IntStream.range(0, 130)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 130)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
-                        10000 + i * 50))
+                        10000 + i * 50L))
                 .toList();
 
         Map<IndicatorType, Double> result = macdCalculator.calculate(data);
@@ -56,10 +57,10 @@ class MacdCalculatorTest {
     @Test
     @DisplayName("Histogram은 MACD Line - Signal Line이다")
     void shouldCalculateHistogram() {
-        List<DailyStockPrice> data = IntStream.range(0, 130)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 130)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
-                        10000 + i * 50))
+                        10000 + i * 50L))
                 .toList();
 
         Map<IndicatorType, Double> result = macdCalculator.calculate(data);
@@ -73,8 +74,8 @@ class MacdCalculatorTest {
     @Test
     @DisplayName("3개 엔트리(MACD_LINE, SIGNAL, HISTOGRAM)를 반환한다")
     void shouldReturnThreeEntryMap() {
-        List<DailyStockPrice> data = IntStream.range(0, 130)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 130)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i), 10000))
                 .toList();
 

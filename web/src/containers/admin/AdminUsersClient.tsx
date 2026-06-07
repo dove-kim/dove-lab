@@ -14,13 +14,13 @@ const FEATURE_LABELS: Record<string, string> = {
 const SUB_MENU_LABELS: Record<string, string> = {
   STOCK_SEARCH_MAIN: "종목 검색",
   STOCK_SEARCH_FILTER: "필터 관리",
-  STOCK_SEARCH_SETS: "종목 필터 관리",
+  STOCK_FILTERS: "종목 필터",
 };
 
 const ALL_FEATURES = ["STOCK_SEARCH", "STOCK_LEDGER", "BUDGET"];
 
 const SUB_MENUS_BY_FEATURE: Record<string, string[]> = {
-  STOCK_SEARCH: ["STOCK_SEARCH_MAIN", "STOCK_SEARCH_FILTER", "STOCK_SEARCH_SETS"],
+  STOCK_SEARCH: ["STOCK_SEARCH_MAIN", "STOCK_SEARCH_FILTER", "STOCK_FILTERS"],
   STOCK_LEDGER: [],
   BUDGET: [],
 };

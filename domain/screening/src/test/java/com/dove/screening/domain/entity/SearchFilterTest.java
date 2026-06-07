@@ -2,6 +2,8 @@ package com.dove.screening.domain.entity;
 
 import com.dove.market.domain.enums.MarketType;
 import com.dove.screening.domain.enums.DateRule;
+import com.dove.screening.domain.value.FilterExpression;
+import com.dove.stock.domain.enums.PriceType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -13,8 +15,8 @@ class SearchFilterTest {
 
     private SearchFilter create() {
         return SearchFilter.create(1L, "필터1", DateRule.LATEST,
-                List.of(MarketType.KOSPI, MarketType.KOSDAQ),
-                "{}", null, null);
+                List.of(MarketType.KOSPI, MarketType.KOSDAQ), PriceType.RAW,
+                FilterExpression.empty(), null);
     }
 
     @Test
@@ -25,30 +27,28 @@ class SearchFilterTest {
         assertThat(f.getMemberId()).isEqualTo(1L);
         assertThat(f.getName()).isEqualTo("필터1");
         assertThat(f.getDateRule()).isEqualTo(DateRule.LATEST);
-        assertThat(f.getExpression()).isEqualTo("{}");
-        assertThat(f.getIncludeStockSetId()).isNull();
-        assertThat(f.getExcludeStockSetId()).isNull();
+        assertThat(f.getPriceType()).isEqualTo(PriceType.RAW);
+        assertThat(f.getExpression()).isNotNull();
+        assertThat(f.getStockFilterId()).isNull();
         assertThat(f.getCreatedAt()).isNotNull();
         assertThat(f.getUpdatedAt()).isNotNull();
     }
 
     @Test
-    @DisplayName("getMarketList — 쉼표 구분 문자열 → MarketType 리스트 파싱")
-    void shouldParseMarketList() {
+    @DisplayName("getMarkets — List<MarketType> 직접 반환")
+    void shouldReturnMarketList() {
         SearchFilter f = create();
 
-        List<MarketType> markets = f.getMarketList();
-
-        assertThat(markets).containsExactlyInAnyOrder(MarketType.KOSPI, MarketType.KOSDAQ);
+        assertThat(f.getMarkets()).containsExactlyInAnyOrder(MarketType.KOSPI, MarketType.KOSDAQ);
     }
 
     @Test
-    @DisplayName("getMarketList — 단일 시장")
-    void shouldParseSingleMarket() {
+    @DisplayName("getMarkets — 단일 시장")
+    void shouldReturnSingleMarket() {
         SearchFilter f = SearchFilter.create(1L, "필터", DateRule.SPECIFIC_DATE,
-                List.of(MarketType.KOSPI), "{}", null, null);
+                List.of(MarketType.KOSPI), PriceType.RAW, FilterExpression.empty(), null);
 
-        assertThat(f.getMarketList()).containsExactly(MarketType.KOSPI);
+        assertThat(f.getMarkets()).containsExactly(MarketType.KOSPI);
     }
 
     @Test
@@ -57,14 +57,14 @@ class SearchFilterTest {
         SearchFilter f = create();
 
         f.update("새이름", DateRule.PREV_5D,
-                List.of(MarketType.KOSDAQ), "{\"updated\":true}", 10L, 20L);
+                List.of(MarketType.KOSDAQ), PriceType.ADJUSTED, FilterExpression.parse("{\"updated\":true}"), 10L);
 
         assertThat(f.getName()).isEqualTo("새이름");
         assertThat(f.getDateRule()).isEqualTo(DateRule.PREV_5D);
-        assertThat(f.getMarketList()).containsExactly(MarketType.KOSDAQ);
-        assertThat(f.getExpression()).isEqualTo("{\"updated\":true}");
-        assertThat(f.getIncludeStockSetId()).isEqualTo(10L);
-        assertThat(f.getExcludeStockSetId()).isEqualTo(20L);
+        assertThat(f.getMarkets()).containsExactly(MarketType.KOSDAQ);
+        assertThat(f.getPriceType()).isEqualTo(PriceType.ADJUSTED);
+        assertThat(f.getExpression().toJson()).isEqualTo("{\"updated\":true}");
+        assertThat(f.getStockFilterId()).isEqualTo(10L);
     }
 
     @Test
