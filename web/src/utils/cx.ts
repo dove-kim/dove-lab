@@ -17,7 +17,7 @@
     "px-3 py-2 rounded-lg text-sm font-medium bg-white/5 text-slate-400 border border-white/15 hover:text-white transition",
   table: {
     root: "w-full text-sm",
-    head: "border-b border-white/10",
+    head: "border-b border-white/10 bg-slate-900/95 backdrop-blur-sm",
     th: "text-left text-xs text-slate-400 px-4 py-2.5 font-medium",
     body: "divide-y divide-white/5",
     tr: "hover:bg-white/3 transition",

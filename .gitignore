@@ -62,6 +62,8 @@ scripts/init_indicator_data.sql
 
 /.claude/worktrees/
 settings.local.json
+.env
+
 
 plan*.md
 PLAN*.md

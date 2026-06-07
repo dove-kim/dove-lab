@@ -29,4 +29,6 @@ EXPOSE 3000
 ENV PORT=3000
 ENV HOSTNAME="0.0.0.0"
 
-CMD ["node", "server.js"]
+# 컨테이너 메모리 한계 768MB 기준:
+#   Node.js V8 힙 512MB + 기타 네이티브 메모리 ≈ 768MB
+CMD ["node", "--max-old-space-size=512", "server.js"]

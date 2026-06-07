@@ -62,7 +62,7 @@ export default function LoginPage() {
     <main className="min-h-screen bg-gradient-to-br from-gray-950 via-slate-900 to-indigo-950 flex items-center justify-center">
       <div className="w-full max-w-sm mx-4 bg-white/8 backdrop-blur-md border border-white/10 rounded-2xl shadow-2xl p-8">
         <h1 className="text-2xl font-semibold text-white text-center mb-1 tracking-wide">
-          주식 딸깍이
+          도브 연구실
         </h1>
         <p className="text-sm text-slate-400 text-center mb-8">
           계속하려면 로그인하세요

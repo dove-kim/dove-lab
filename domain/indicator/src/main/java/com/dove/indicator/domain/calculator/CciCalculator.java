@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
 import com.dove.indicator.domain.enums.IndicatorType;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
@@ -9,15 +10,11 @@ import java.util.Map;
 /**
  * CCI(Commodity Channel Index) 계산기. 20일 Typical Price의 평균 편차를 기준으로 추세를 판단한다.
  */
+@Component
 public class CciCalculator implements TechnicalIndicatorCalculator {
 
     private static final int PERIOD = 20;
     private static final double CONSTANT = 0.015;
-
-    @Override
-    public String getName() {
-        return "CCI";
-    }
 
     @Override
     public int requiredDataSize() {
@@ -30,10 +27,10 @@ public class CciCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+    public Map<IndicatorType, Double> calculate(List<StockPrice> dailyStockPriceList) {
         double[] typicalPrices = new double[dailyStockPriceList.size()];
         for (int i = 0; i < dailyStockPriceList.size(); i++) {
-            DailyStockPrice data = dailyStockPriceList.get(i);
+            StockPrice data = dailyStockPriceList.get(i);
             typicalPrices[i] = (data.getHighPrice() + data.getLowPrice() + data.getClosePrice()) / 3.0;
         }
 

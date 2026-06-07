@@ -2,7 +2,9 @@ package com.dove.screening.application.service;
 
 import com.dove.screening.domain.entity.IndicatorPreset;
 import com.dove.screening.domain.repository.IndicatorPresetRepository;
+import com.dove.screening.domain.value.IndicatorPresetItem;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -21,85 +23,107 @@ import static org.mockito.BDDMockito.given;
 import static org.mockito.Mockito.verify;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("IndicatorPresetCommandService")
 class IndicatorPresetCommandServiceTest {
 
-    @Mock IndicatorPresetRepository repository;
+    @Mock IndicatorPresetRepository indicatorPresetRepository;
     @InjectMocks IndicatorPresetCommandService service;
 
     private static final Long MEMBER_ID = 1L;
     private static final Long PRESET_ID = 10L;
 
-    private IndicatorPreset makePreset() {
-        return IndicatorPreset.create(MEMBER_ID, "프리셋", "[]", null);
+    private IndicatorPreset makePreset(String name) {
+        return IndicatorPreset.create(MEMBER_ID, name, List.of(), List.of());
     }
 
-    @Test
-    @DisplayName("create — repository.save 위임 후 반환")
-    void shouldDelegateToRepositoryOnCreate() {
-        IndicatorPreset preset = makePreset();
-        given(repository.save(any())).willReturn(preset);
+    @Nested
+    @DisplayName("create")
+    class Create {
 
-        IndicatorPreset result = service.create(MEMBER_ID, "프리셋", "[]", null);
+        @Test
+        @DisplayName("프리셋을 저장하고 반환한다")
+        void shouldSaveAndReturnPreset() {
+            IndicatorPreset preset = makePreset("기본");
+            given(indicatorPresetRepository.save(any())).willReturn(preset);
 
-        assertThat(result).isSameAs(preset);
-        verify(repository).save(any(IndicatorPreset.class));
+            IndicatorPreset result = service.create(MEMBER_ID, "기본", List.of(), List.of());
+
+            assertThat(result).isSameAs(preset);
+            verify(indicatorPresetRepository).save(any(IndicatorPreset.class));
+        }
     }
 
-    @Test
-    @DisplayName("update — 프리셋 찾으면 update 호출 후 반환")
-    void shouldUpdatePresetWhenFound() {
-        IndicatorPreset preset = makePreset();
-        given(repository.findByIdAndMemberId(PRESET_ID, MEMBER_ID)).willReturn(Optional.of(preset));
+    @Nested
+    @DisplayName("update")
+    class Update {
 
-        IndicatorPreset result = service.update(MEMBER_ID, PRESET_ID, "새프리셋", "[{\"type\":\"EMA_5\"}]", "P1");
+        @Test
+        @DisplayName("프리셋을 찾으면 이름과 항목을 수정한다")
+        void shouldUpdateWhenFound() {
+            IndicatorPreset preset = makePreset("기본");
+            given(indicatorPresetRepository.findByIdAndMemberId(PRESET_ID, MEMBER_ID))
+                    .willReturn(Optional.of(preset));
 
-        assertThat(result.getName()).isEqualTo("새프리셋");
-        assertThat(result.getItems()).isEqualTo("[{\"type\":\"EMA_5\"}]");
-        assertThat(result.getPanelOrder()).isEqualTo("P1");
+            IndicatorPreset result = service.update(MEMBER_ID, PRESET_ID, "수정됨", List.of(), List.of());
+
+            assertThat(result.getName()).isEqualTo("수정됨");
+        }
+
+        @Test
+        @DisplayName("프리셋이 없으면 NoSuchElementException을 던진다")
+        void shouldThrowWhenNotFound() {
+            given(indicatorPresetRepository.findByIdAndMemberId(PRESET_ID, MEMBER_ID))
+                    .willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.update(MEMBER_ID, PRESET_ID, "이름", List.of(), List.of()))
+                    .isInstanceOf(NoSuchElementException.class);
+        }
     }
 
-    @Test
-    @DisplayName("update — 프리셋 없으면 NoSuchElementException")
-    void shouldThrowWhenPresetNotFoundOnUpdate() {
-        given(repository.findByIdAndMemberId(PRESET_ID, MEMBER_ID)).willReturn(Optional.empty());
+    @Nested
+    @DisplayName("delete")
+    class Delete {
 
-        assertThatThrownBy(() -> service.update(MEMBER_ID, PRESET_ID, "이름", "[]", null))
-                .isInstanceOf(NoSuchElementException.class);
+        @Test
+        @DisplayName("프리셋을 찾으면 삭제한다")
+        void shouldDeleteWhenFound() {
+            IndicatorPreset preset = makePreset("기본");
+            given(indicatorPresetRepository.findByIdAndMemberId(PRESET_ID, MEMBER_ID))
+                    .willReturn(Optional.of(preset));
+
+            service.delete(MEMBER_ID, PRESET_ID);
+
+            verify(indicatorPresetRepository).delete(preset);
+        }
+
+        @Test
+        @DisplayName("프리셋이 없으면 NoSuchElementException을 던진다")
+        void shouldThrowWhenNotFound() {
+            given(indicatorPresetRepository.findByIdAndMemberId(PRESET_ID, MEMBER_ID))
+                    .willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> service.delete(MEMBER_ID, PRESET_ID))
+                    .isInstanceOf(NoSuchElementException.class);
+        }
     }
 
-    @Test
-    @DisplayName("delete — 프리셋 찾으면 repository.delete 호출")
-    void shouldDeleteWhenFound() {
-        IndicatorPreset preset = makePreset();
-        given(repository.findByIdAndMemberId(PRESET_ID, MEMBER_ID)).willReturn(Optional.of(preset));
+    @Nested
+    @DisplayName("reorder")
+    class Reorder {
 
-        service.delete(MEMBER_ID, PRESET_ID);
+        @Test
+        @DisplayName("전달 순서대로 displayOrder를 갱신한다")
+        void shouldReorderByGivenIdOrder() {
+            IndicatorPreset p1 = makePreset("A");
+            IndicatorPreset p2 = makePreset("B");
+            ReflectionTestUtils.setField(p1, "id", 1L);
+            ReflectionTestUtils.setField(p2, "id", 2L);
+            given(indicatorPresetRepository.findAllByMemberId(MEMBER_ID)).willReturn(List.of(p1, p2));
 
-        verify(repository).delete(preset);
-    }
+            service.reorder(MEMBER_ID, List.of(2L, 1L));
 
-    @Test
-    @DisplayName("delete — 프리셋 없으면 NoSuchElementException")
-    void shouldThrowWhenPresetNotFoundOnDelete() {
-        given(repository.findByIdAndMemberId(PRESET_ID, MEMBER_ID)).willReturn(Optional.empty());
-
-        assertThatThrownBy(() -> service.delete(MEMBER_ID, PRESET_ID))
-                .isInstanceOf(NoSuchElementException.class);
-    }
-
-    @Test
-    @DisplayName("reorder — 전달 순서대로 displayOrder 갱신")
-    void shouldReorderPresets() {
-        IndicatorPreset p1 = makePreset();
-        IndicatorPreset p2 = IndicatorPreset.create(MEMBER_ID, "프리셋2", "[]", null);
-        ReflectionTestUtils.setField(p1, "id", 1L);
-        ReflectionTestUtils.setField(p2, "id", 2L);
-
-        given(repository.findAllByMemberId(MEMBER_ID)).willReturn(List.of(p1, p2));
-
-        service.reorder(MEMBER_ID, List.of(2L, 1L));   // p2 → 0번, p1 → 1번
-
-        assertThat(p2.getDisplayOrder()).isEqualTo(0);
-        assertThat(p1.getDisplayOrder()).isEqualTo(1);
+            assertThat(p2.getDisplayOrder()).isEqualTo(0);
+            assertThat(p1.getDisplayOrder()).isEqualTo(1);
+        }
     }
 }

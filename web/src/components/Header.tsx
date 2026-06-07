@@ -1,4 +1,5 @@
-﻿import { cookies } from "next/headers";
+﻿import Link from "next/link";
+import { cookies } from "next/headers";
 import { logout } from "@/actions/auth";
 import MobileMenuButton from "./MobileMenuButton";
 import { decodeJwtPayload } from "@/utils/jwt";
@@ -11,7 +12,12 @@ export default async function Header() {
     <header className="w-full px-6 py-4 bg-slate-900/80 backdrop-blur-md border-b border-white/10 flex items-center justify-between">
       <div className="flex items-center gap-2">
         <MobileMenuButton />
-        <span className="text-white font-semibold tracking-wide">주식 딸깍이</span>
+        <Link
+          href="/"
+          className="text-white font-semibold tracking-wide hover:text-indigo-300 transition"
+        >
+          도브 연구실
+        </Link>
       </div>
       {user && (
         <div className="flex items-center gap-4">

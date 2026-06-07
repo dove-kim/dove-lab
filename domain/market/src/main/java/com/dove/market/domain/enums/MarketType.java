@@ -1,6 +1,15 @@
 package com.dove.market.domain.enums;
 
-/** 한국 주식 시장 유형. */
+import java.util.List;
+
+/**
+ * 한국 주식 시장 유형.
+ */
 public enum MarketType {
-    KOSPI, KOSDAQ, KONEX
+    KOSPI, KOSDAQ, KONEX;
+
+    /**
+     * KRX가 운영하는 전체 시장.
+     */
+    public static final List<MarketType> KRX_MARKETS = List.of(KOSPI, KOSDAQ, KONEX);
 }

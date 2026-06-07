@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.market.domain.enums.MarketType;
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
+import com.dove.stock.domain.enums.StockExchange;
+import com.dove.stock.domain.enums.PriceType;
 import com.dove.indicator.domain.enums.IndicatorType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,9 +19,9 @@ class PriceRangeRatioCalculatorTest {
 
     private final PriceRangeRatioCalculator calculator = new PriceRangeRatioCalculator();
 
-    private DailyStockPrice createDailyStockPrice(LocalDate date, long open, long close, long low, long high) {
-        return new DailyStockPrice(MarketType.KOSPI, "005930", date,
-                1000L, open, close, low, high);
+    private StockPrice createStockPrice(LocalDate date, long open, long close, long low, long high) {
+        return new StockPrice("005930", StockExchange.KOSPI, PriceType.RAW, date,
+                open, high, low, close, 1000L, null);
     }
 
     @Test
@@ -29,8 +30,8 @@ class PriceRangeRatioCalculatorTest {
         // Given - 252개 데이터, 고가 200, 저가 100, 종가 150 (정중앙)
         // HIGH_20D_RATIO = (150 - 100) / (200 - 100) = 0.5
         // HIGH_52W_RATIO = (150 - 100) / (200 - 100) = 0.5
-        List<DailyStockPrice> data = IntStream.range(0, 252)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 252)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         150L, 150L, 100L, 200L))
                 .toList();
@@ -47,8 +48,8 @@ class PriceRangeRatioCalculatorTest {
     @DisplayName("고가와 저가가 같으면 분모가 0이므로 해당 지표를 0.0으로 반환한다")
     void shouldReturnZeroWhenHighEqualsLow() {
         // Given - 252개 데이터, 고가 == 저가 == 종가 == 100 (분모 0)
-        List<DailyStockPrice> data = IntStream.range(0, 252)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 252)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         100L, 100L, 100L, 100L))
                 .toList();
@@ -65,8 +66,8 @@ class PriceRangeRatioCalculatorTest {
     @DisplayName("데이터가 requiredDataSize 미만이면 빈 맵을 반환한다")
     void shouldReturnEmptyWhenDataInsufficient() {
         // Given - 251개 (252 미만)
-        List<DailyStockPrice> data = IntStream.range(0, 251)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 251)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         150L, 150L, 100L, 200L))
                 .toList();

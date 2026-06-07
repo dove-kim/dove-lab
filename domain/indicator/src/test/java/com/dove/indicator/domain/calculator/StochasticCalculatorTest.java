@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
-import com.dove.market.domain.enums.MarketType;
+import com.dove.stock.domain.entity.StockPrice;
+import com.dove.stock.domain.enums.StockExchange;
+import com.dove.stock.domain.enums.PriceType;
 import com.dove.indicator.domain.calculator.StochasticCalculator;
 import com.dove.indicator.domain.enums.IndicatorType;
 import org.junit.jupiter.api.DisplayName;
@@ -19,9 +20,9 @@ class StochasticCalculatorTest {
 
     private final StochasticCalculator calculator = new StochasticCalculator();
 
-    private DailyStockPrice createDailyStockPrice(LocalDate date, long high, long low, long close) {
-        return new DailyStockPrice(MarketType.KOSPI, "005930", date,
-                1000L, 100L, close, low, high);
+    private StockPrice createStockPrice(LocalDate date, long high, long low, long close) {
+        return new StockPrice("005930", StockExchange.KOSPI, PriceType.RAW, date,
+                100L, high, low, close, 1000L, null);
     }
 
     @Test
@@ -29,8 +30,8 @@ class StochasticCalculatorTest {
     void shouldCalculatePercentK() {
         // Given - 20개 데이터 (14 + 7 - 1 = 20)
         // 고가 200, 저가 80, 종가가 점진적으로 상승 (고저 범위 안)
-        List<DailyStockPrice> data = IntStream.range(0, 20)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 20)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         200, 80, 90 + i))
                 .toList();
@@ -46,8 +47,8 @@ class StochasticCalculatorTest {
     @DisplayName("%D는 %K의 7일 SMA이다")
     void shouldCalculatePercentDAsSmoothedK() {
         // Given
-        List<DailyStockPrice> data = IntStream.range(0, 20)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 20)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         200, 80, 90 + i))
                 .toList();
@@ -64,8 +65,8 @@ class StochasticCalculatorTest {
     @DisplayName("종가가 최고가일 때 %K는 100이다")
     void shouldReturn100WhenCloseAtHigh() {
         // Given - 종가 = 고가 = 110
-        List<DailyStockPrice> data = IntStream.range(0, 20)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 20)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         110, 90, 110))
                 .toList();
@@ -81,8 +82,8 @@ class StochasticCalculatorTest {
     @DisplayName("종가가 최저가일 때 %K는 0이다")
     void shouldReturn0WhenCloseAtLow() {
         // Given - 종가 = 저가 = 90
-        List<DailyStockPrice> data = IntStream.range(0, 20)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 20)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         110, 90, 90))
                 .toList();

@@ -1,5 +1,8 @@
 package com.dove.screening.domain.entity;
 
+import com.dove.jpa.converter.StringListConverter;
+import com.dove.screening.domain.converter.IndicatorPresetItemListConverter;
+import com.dove.screening.domain.value.IndicatorPresetItem;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -7,7 +10,11 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Comment;
 
 import java.time.LocalDateTime;
+import java.util.List;
 
+/**
+ * 회원별 지표 프리셋.
+ */
 @Entity
 @Table(
     name = "INDICATOR_PRESET",
@@ -36,13 +43,15 @@ public class IndicatorPreset {
     @Comment("프리셋 이름 (사용자 내 고유)")
     private String name;
 
-    @Column(name = "ITEMS", nullable = false, columnDefinition = "TEXT")
+    @Convert(converter = IndicatorPresetItemListConverter.class)
+    @Column(name = "ITEMS", nullable = false, columnDefinition = "JSON")
     @Comment("지표 설정 목록 (JSON 배열: [{type, enabled, color, lineWidth}])")
-    private String items;
+    private List<IndicatorPresetItem> items;
 
-    @Column(name = "PANEL_ORDER", length = 300)
-    @Comment("서브패널 노출 순서 (쉼표 구분 PanelId)")
-    private String panelOrder;
+    @Convert(converter = StringListConverter.class)
+    @Column(name = "PANEL_ORDER", columnDefinition = "JSON")
+    @Comment("서브패널 노출 순서 (JSON 배열 of PanelId)")
+    private List<String> panelOrder;
 
     @Column(name = "DISPLAY_ORDER", nullable = false)
     @Comment("목록 노출 순서 (낮을수록 위)")
@@ -56,7 +65,11 @@ public class IndicatorPreset {
     @Comment("수정일시")
     private LocalDateTime updatedAt;
 
-    public static IndicatorPreset create(Long memberId, String name, String items, String panelOrder) {
+    /**
+     * 새 지표 프리셋을 생성한다.
+     */
+    public static IndicatorPreset create(Long memberId, String name, List<IndicatorPresetItem> items,
+                                         List<String> panelOrder) {
         IndicatorPreset p = new IndicatorPreset();
         p.memberId   = memberId;
         p.name       = name;
@@ -67,11 +80,14 @@ public class IndicatorPreset {
         return p;
     }
 
-    public void update(String name, String items, String panelOrder) {
-        this.name       = name;
-        this.items      = items;
+    /**
+     * 프리셋 이름·지표 항목·패널 순서를 갱신한다.
+     */
+    public void update(String name, List<IndicatorPresetItem> items, List<String> panelOrder) {
+        this.name      = name;
+        this.items     = items;
         this.panelOrder = panelOrder;
-        this.updatedAt  = LocalDateTime.now();
+        this.updatedAt = LocalDateTime.now();
     }
 
     public void updateDisplayOrder(int order) {
