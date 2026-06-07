@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
+import { decodeJwtPayload } from "@/utils/jwt";
 
 const PUBLIC_PATHS = ["/login", "/register"];
 
@@ -42,12 +43,8 @@ setInterval(() => {
 // ─── Token ────────────────────────────────────────────────────────────────────
 
 function isTokenValid(token: string): boolean {
-  try {
-    const payload = JSON.parse(Buffer.from(token.split(".")[1], "base64url").toString());
-    return typeof payload.exp === "number" && payload.exp * 1000 > Date.now();
-  } catch {
-    return false;
-  }
+  const payload = decodeJwtPayload(token);
+  return typeof payload?.exp === "number" && payload.exp * 1000 > Date.now();
 }
 
 // ─── Middleware ───────────────────────────────────────────────────────────────

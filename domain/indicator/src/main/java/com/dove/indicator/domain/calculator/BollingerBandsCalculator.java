@@ -1,20 +1,20 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
 import com.dove.indicator.domain.enums.IndicatorType;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 볼린저 밴드 계산기. 20일 이동평균을 중심으로 표준편차 기반 상·하단 밴드와 %B·밴드폭을 산출한다.
+ */
+@Component
 public class BollingerBandsCalculator implements TechnicalIndicatorCalculator {
 
     private static final int PERIOD = 20;
     private static final double MULTIPLIER = 2.0;
-
-    @Override
-    public String getName() {
-        return "BOLLINGER_BANDS";
-    }
 
     @Override
     public int requiredDataSize() {
@@ -27,15 +27,15 @@ public class BollingerBandsCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+    public Map<IndicatorType, Double> calculate(List<StockPrice> dailyStockPriceList) {
         double sum = 0;
-        for (DailyStockPrice data : dailyStockPriceList) {
+        for (StockPrice data : dailyStockPriceList) {
             sum += data.getClosePrice();
         }
         double middle = sum / PERIOD;
 
         double varianceSum = 0;
-        for (DailyStockPrice data : dailyStockPriceList) {
+        for (StockPrice data : dailyStockPriceList) {
             double diff = data.getClosePrice() - middle;
             varianceSum += diff * diff;
         }

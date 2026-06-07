@@ -1,6 +1,10 @@
 import { NextRequest, NextResponse } from "next/server";
 import { safeJson } from "@/services/backend";
 
+const ACCESS_MAX_AGE = 60 * 15;
+const REFRESH_MAX_AGE = 60 * 60 * 24 * 30;
+const REFRESH_COOKIE_PATH = "/api/auth";
+
 export async function POST(req: NextRequest) {
   const body = await req.json();
 
@@ -10,7 +14,14 @@ export async function POST(req: NextRequest) {
     body: JSON.stringify(body),
   });
 
-  const data = await safeJson(apiRes) as { detail?: string; username?: string; name?: string; role?: string; accessToken?: string };
+  const data = await safeJson(apiRes) as {
+    detail?: string;
+    username?: string;
+    name?: string;
+    role?: string;
+    accessToken?: string;
+    refreshToken?: string;
+  };
 
   if (!apiRes.ok) {
     return NextResponse.json(
@@ -25,6 +36,14 @@ export async function POST(req: NextRequest) {
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
     path: "/",
+    maxAge: ACCESS_MAX_AGE,
+  });
+  response.cookies.set("refreshToken", data.refreshToken!, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: REFRESH_COOKIE_PATH,
+    maxAge: REFRESH_MAX_AGE,
   });
 
   return response;

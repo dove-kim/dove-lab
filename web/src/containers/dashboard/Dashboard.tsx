@@ -1,4 +1,8 @@
-﻿function MarketStatusCard() {
+"use client";
+
+import { useEffect, useState } from "react";
+
+function MarketStatusCard() {
   return (
     <div className="bg-white/5 border border-white/10 rounded-xl p-5">
       <h3 className="text-slate-300 text-sm font-medium mb-4 flex items-center gap-2">
@@ -89,23 +93,233 @@ function RecentActivityCard() {
   );
 }
 
-export default function Dashboard() {
+interface KrxUsage {
+  used: number;
+  quota: number;
+  remaining: number;
+  lastRateLimitAt: string | null;
+}
+
+interface JobStatus {
+  name: string;
+  state: "RUNNING" | "COMPLETED" | "FAILED";
+  total: number;
+  processed: number;
+  startedAtEpochMs: number;
+  updatedAtEpochMs: number;
+  message: string | null;
+}
+
+const JOB_LABEL: Record<string, string> = {
+  STOCK_SYNC: "종목 동기화",
+  STOCK_DETAIL: "종목 상세",
+  INVESTOR_FLOW: "투자자 동향",
+  DAILY_PRICE: "일일 주가",
+  INDICATOR: "지표 계산",
+};
+
+/** 진행 수치 단위 */
+const JOB_UNIT: Record<string, string> = {
+  STOCK_SYNC: "일×시장",
+  STOCK_DETAIL: "종목",
+  INVESTOR_FLOW: "종목",
+  DAILY_PRICE: "시장",
+  INDICATOR: "그룹",
+};
+
+function usePolling<T>(url: string, intervalMs: number, reloadToken = 0) {
+  const [data, setData] = useState<T | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  useEffect(() => {
+    let active = true;
+    const load = async () => {
+      try {
+        const res = await fetch(url, { cache: "no-store" });
+        if (!res.ok) { if (active) setError("로드 실패"); return; }
+        if (active) { setData(await res.json()); setError(null); }
+      } catch { if (active) setError("로드 실패"); }
+    };
+    load();
+    const id = setInterval(load, intervalMs);
+    return () => { active = false; clearInterval(id); };
+  }, [url, intervalMs, reloadToken]);
+  return { data, error };
+}
+
+function KrxUsageCard({ reloadToken }: { reloadToken: number }) {
+  const { data: usage, error } = usePolling<KrxUsage>("/api/admin/ops/krx-usage", 60_000, reloadToken);
+
+  const ratio = usage && usage.quota > 0 ? Math.min(100, (usage.used / usage.quota) * 100) : 0;
+  const barColor = ratio >= 90 ? "bg-rose-500" : ratio >= 70 ? "bg-amber-400" : "bg-emerald-500";
+
   return (
-    <div className="flex-1 overflow-y-auto p-6">
-      <h2 className="text-white text-lg font-semibold mb-6">대시보드</h2>
-      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-        <div className="md:col-span-2">
-          <MarketStatusCard />
+    <div className="bg-white/5 border border-white/10 rounded-xl p-5 h-full">
+      <h3 className="text-slate-300 text-sm font-medium mb-4 flex items-center gap-2">
+        <svg className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M3 3v18h18" />
+          <path d="M7 14l4-4 4 4 5-5" />
+        </svg>
+        KRX API 사용량
+      </h3>
+      {error && <p className="text-rose-400 text-xs">{error}</p>}
+      {!error && !usage && <p className="text-slate-500 text-xs">불러오는 중...</p>}
+      {usage && (
+        <div className="flex flex-col gap-3">
+          <div className="flex flex-col gap-0.5">
+            <span className="text-white text-2xl font-semibold">{usage.used.toLocaleString()}</span>
+            <span className="text-slate-400 text-xs">/ {usage.quota.toLocaleString()}건</span>
+          </div>
+          <div className="h-2 rounded-full bg-white/10 overflow-hidden">
+            <div className={`h-full ${barColor} transition-all`} style={{ width: `${ratio}%` }} />
+          </div>
+          <span className="text-slate-300 text-xs">잔여 {usage.remaining.toLocaleString()}건</span>
+          {usage.lastRateLimitAt && (
+            <p className="text-amber-300 text-xs">마지막 한도 초과: {usage.lastRateLimitAt}</p>
+          )}
         </div>
-        <div className="lg:row-span-2">
-          <PortfolioCard tall />
-        </div>
-        <WatchlistCard />
-        <div className="md:col-span-2 lg:col-span-1">
-          <RecentActivityCard />
-        </div>
-      </div>
+      )}
     </div>
   );
 }
 
+function SchedulerStatusCard({ reloadToken }: { reloadToken: number }) {
+  const { data: jobs, error } = usePolling<JobStatus[]>("/api/admin/ops/scheduler-status", 15_000, reloadToken);
+
+  function stateChip(state: JobStatus["state"]) {
+    if (state === "RUNNING") return <span className="px-1.5 py-0.5 rounded text-xs bg-indigo-500/20 text-indigo-300 border border-indigo-500/30">실행 중</span>;
+    if (state === "COMPLETED") return <span className="px-1.5 py-0.5 rounded text-xs bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">완료</span>;
+    return <span className="px-1.5 py-0.5 rounded text-xs bg-rose-500/20 text-rose-300 border border-rose-500/30">실패</span>;
+  }
+
+  function formatTime(epochMs: number) {
+    if (!epochMs) return "-";
+    return new Date(epochMs).toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+  }
+
+  /** 진행률·경과시간 기반 예상 남은 시간. 계산 불가하면 null. */
+  function jobEta(job: JobStatus): string | null {
+    if (job.state !== "RUNNING" || job.total <= 0 || job.processed <= 0 || job.processed >= job.total) return null;
+    const elapsed = job.updatedAtEpochMs - job.startedAtEpochMs;
+    if (elapsed <= 0) return null;
+    const remainMs = (elapsed / job.processed) * (job.total - job.processed);
+    const sec = Math.round(remainMs / 1000);
+    if (sec < 60) return `~${sec}초`;
+    const min = Math.round(sec / 60);
+    if (min < 60) return `~${min}분`;
+    return `~${Math.floor(min / 60)}시간 ${min % 60}분`;
+  }
+
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-xl p-5 h-full">
+      <h3 className="text-slate-300 text-sm font-medium mb-4 flex items-center gap-2">
+        <svg className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
+        </svg>
+        배치 작업 현황
+      </h3>
+      {error && <p className="text-rose-400 text-xs">{error}</p>}
+      {!error && !jobs && <p className="text-slate-500 text-xs">불러오는 중...</p>}
+      {jobs && jobs.length === 0 && <p className="text-slate-500 text-xs">기록된 작업 없음</p>}
+      {jobs && jobs.length > 0 && (
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead>
+              <tr className="text-slate-500 border-b border-white/10">
+                <th className="text-left pb-2 font-medium">작업</th>
+                <th className="text-left pb-2 font-medium">상태</th>
+                <th className="text-right pb-2 font-medium">진행</th>
+                <th className="text-right pb-2 font-medium">예상 종료</th>
+                <th className="text-right pb-2 font-medium">갱신</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {jobs.map((job) => {
+                const pct = job.total > 0 ? Math.round((job.processed / job.total) * 100) : null;
+                return (
+                  <tr key={job.name} className="text-slate-300">
+                    <td className="py-2 pr-3">{JOB_LABEL[job.name] ?? job.name}</td>
+                    <td className="py-2 pr-3">{stateChip(job.state)}</td>
+                    <td className="py-2 pr-3 text-right tabular-nums">
+                      {pct !== null ? `${job.processed.toLocaleString()} / ${job.total.toLocaleString()} ${JOB_UNIT[job.name] ?? ""} (${pct}%)` : "-"}
+                    </td>
+                    <td className="py-2 pr-3 text-right text-slate-400 tabular-nums whitespace-nowrap">{jobEta(job) ?? "-"}</td>
+                    <td className="py-2 text-right text-slate-400 tabular-nums whitespace-nowrap">{formatTime(job.updatedAtEpochMs)}</td>
+                  </tr>
+                );
+              })}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  );
+}
+
+export default function Dashboard({ role }: { role: string }) {
+  const isRoot = role === "ROOT";
+  const [reloadToken, setReloadToken] = useState(0);
+  const [spinning, setSpinning] = useState(false);
+
+  function handleRefresh() {
+    setReloadToken((t) => t + 1);
+    setSpinning(true);
+    setTimeout(() => setSpinning(false), 600);
+  }
+
+  return (
+    <div className="flex-1 overflow-y-auto p-6">
+      <div className="flex items-center gap-2 mb-6">
+        <h2 className="text-white text-lg font-semibold">대시보드</h2>
+        <div className="ml-auto flex items-center gap-3">
+          {isRoot && (
+            <span className="flex items-center gap-1.5 text-xs text-slate-400">
+              <span className="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse" />
+              자동 새로고침 중
+            </span>
+          )}
+          <button
+            type="button"
+            onClick={handleRefresh}
+            title="새로고침"
+            aria-label="새로고침"
+            className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition"
+          >
+            <svg
+              className={`w-5 h-5 ${spinning ? "animate-spin" : ""}`}
+              viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
+            >
+              <polyline points="23 4 23 10 17 10" />
+              <polyline points="1 20 1 14 7 14" />
+              <path d="M3.51 9a9 9 0 0 1 14.85-3.36L23 10M1 14l4.64 4.36A9 9 0 0 0 20.49 15" />
+            </svg>
+          </button>
+        </div>
+      </div>
+      {isRoot ? (
+        // ROOT: KRX 사용량(1/4) + 배치 작업 현황(3/4)
+        <div className="grid grid-cols-4 gap-4">
+          <div className="col-span-1">
+            <KrxUsageCard reloadToken={reloadToken} />
+          </div>
+          <div className="col-span-3">
+            <SchedulerStatusCard reloadToken={reloadToken} />
+          </div>
+        </div>
+      ) : (
+        // USER/ADMIN: 기능 준비 중 카드들
+        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+          <div className="md:col-span-2">
+            <MarketStatusCard />
+          </div>
+          <div className="lg:row-span-2">
+            <PortfolioCard tall />
+          </div>
+          <WatchlistCard />
+          <div className="md:col-span-2 lg:col-span-1">
+            <RecentActivityCard />
+          </div>
+        </div>
+      )}
+    </div>
+  );
+}

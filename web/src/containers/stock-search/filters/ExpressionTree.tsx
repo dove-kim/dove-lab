@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import {
   ExpressionNode,
@@ -397,4 +397,3 @@ function ConditionNodeView({
     </div>
   );
 }
-

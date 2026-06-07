@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
 import com.dove.indicator.domain.enums.IndicatorType;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
@@ -9,15 +10,11 @@ import java.util.Map;
 /**
  * ATR(Average True Range) 계산기. 14일간 True Range 평균으로 변동성을 측정한다.
  */
+@Component
 public class AtrCalculator implements TechnicalIndicatorCalculator {
 
     private static final int PERIOD = 14;
     private static final int REQUIRED_SIZE = 70;
-
-    @Override
-    public String getName() {
-        return "ATR";
-    }
 
     @Override
     public int requiredDataSize() {
@@ -30,12 +27,12 @@ public class AtrCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+    public Map<IndicatorType, Double> calculate(List<StockPrice> dailyStockPriceList) {
         double[] trueRanges = new double[dailyStockPriceList.size() - 1];
 
         for (int i = 1; i < dailyStockPriceList.size(); i++) {
-            DailyStockPrice current = dailyStockPriceList.get(i);
-            DailyStockPrice previous = dailyStockPriceList.get(i - 1);
+            StockPrice current = dailyStockPriceList.get(i);
+            StockPrice previous = dailyStockPriceList.get(i - 1);
 
             double hl = current.getHighPrice() - current.getLowPrice();
             double hc = Math.abs(current.getHighPrice() - previous.getClosePrice());

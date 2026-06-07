@@ -1,72 +1,104 @@
 package com.dove.user.application.service;
 
 import com.dove.user.domain.entity.MemberProfile;
-import com.dove.user.domain.entity.MemberRole;
+import com.dove.auth.domain.enums.MemberRole;
 import com.dove.user.domain.repository.MemberProfileRepository;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 
+import java.util.List;
 import java.util.Optional;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("MemberProfileQueryService")
 class MemberProfileQueryServiceTest {
 
-    @Mock
-    private MemberProfileRepository memberProfileRepository;
+    @Mock MemberProfileRepository memberProfileRepository;
+    @InjectMocks MemberProfileQueryService queryService;
 
-    @InjectMocks
-    private MemberProfileQueryService queryService;
+    @Nested
+    @DisplayName("findAll")
+    class FindAll {
 
-    @Test
-    @DisplayName("findById — 프로필 반환")
-    void shouldFindById() {
-        MemberProfile profile = MemberProfile.create("a@a.com", "Alice", MemberRole.USER);
-        given(memberProfileRepository.findById(1L)).willReturn(Optional.of(profile));
+        @Test
+        @DisplayName("shouldReturnAllProfilesOrderedByCreatedAtDesc")
+        void shouldReturnAllProfilesOrderedByCreatedAtDesc() {
+            MemberProfile a = MemberProfile.create("a@a.com", "A", MemberRole.USER);
+            MemberProfile b = MemberProfile.create("b@b.com", "B", MemberRole.ADMIN);
+            given(memberProfileRepository.findAllByOrderByCreatedAtDesc()).willReturn(List.of(b, a));
 
-        Optional<MemberProfile> result = queryService.findById(1L);
+            List<MemberProfile> result = queryService.findAll();
 
-        assertThat(result).isPresent();
-        assertThat(result.get().getEmail()).isEqualTo("a@a.com");
+            assertThat(result).containsExactly(b, a);
+        }
     }
 
-    @Test
-    @DisplayName("findById — 없으면 empty")
-    void shouldReturnEmptyWhenNotFound() {
-        given(memberProfileRepository.findById(99L)).willReturn(Optional.empty());
+    @Nested
+    @DisplayName("findById")
+    class FindById {
 
-        assertThat(queryService.findById(99L)).isEmpty();
+        @Test
+        @DisplayName("shouldReturnProfileWhenFound")
+        void shouldReturnProfileWhenFound() {
+            MemberProfile profile = MemberProfile.create("a@a.com", "Alice", MemberRole.USER);
+            given(memberProfileRepository.findById(1L)).willReturn(Optional.of(profile));
+
+            Optional<MemberProfile> result = queryService.findById(1L);
+
+            assertThat(result).isPresent();
+            assertThat(result.get().getEmail()).isEqualTo("a@a.com");
+        }
+
+        @Test
+        @DisplayName("shouldReturnEmptyWhenNotFound")
+        void shouldReturnEmptyWhenNotFound() {
+            given(memberProfileRepository.findById(99L)).willReturn(Optional.empty());
+
+            assertThat(queryService.findById(99L)).isEmpty();
+        }
     }
 
-    @Test
-    @DisplayName("existsByEmail — 이메일 존재 여부 전달")
-    void shouldDelegateExistsByEmail() {
-        given(memberProfileRepository.existsByEmail("a@a.com")).willReturn(true);
-        given(memberProfileRepository.existsByEmail("b@b.com")).willReturn(false);
+    @Nested
+    @DisplayName("existsByEmail")
+    class ExistsByEmail {
 
-        assertThat(queryService.existsByEmail("a@a.com")).isTrue();
-        assertThat(queryService.existsByEmail("b@b.com")).isFalse();
+        @Test
+        @DisplayName("shouldDelegateToRepository")
+        void shouldDelegateToRepository() {
+            given(memberProfileRepository.existsByEmail("a@a.com")).willReturn(true);
+            given(memberProfileRepository.existsByEmail("b@b.com")).willReturn(false);
+
+            assertThat(queryService.existsByEmail("a@a.com")).isTrue();
+            assertThat(queryService.existsByEmail("b@b.com")).isFalse();
+        }
     }
 
-    @Test
-    @DisplayName("existsAdmin — ADMIN 여부 전달")
-    void shouldCheckAdminExistence() {
-        given(memberProfileRepository.existsByRole(MemberRole.ADMIN)).willReturn(true);
+    @Nested
+    @DisplayName("existsRoot")
+    class ExistsRoot {
 
-        assertThat(queryService.existsAdmin()).isTrue();
-    }
+        @Test
+        @DisplayName("shouldReturnTrueWhenRootExists")
+        void shouldReturnTrueWhenRootExists() {
+            given(memberProfileRepository.existsByRole(MemberRole.ROOT)).willReturn(true);
 
-    @Test
-    @DisplayName("existsAdmin — ADMIN 없으면 false")
-    void shouldReturnFalseWhenNoAdmin() {
-        given(memberProfileRepository.existsByRole(MemberRole.ADMIN)).willReturn(false);
+            assertThat(queryService.existsRoot()).isTrue();
+        }
 
-        assertThat(queryService.existsAdmin()).isFalse();
+        @Test
+        @DisplayName("shouldReturnFalseWhenNoRoot")
+        void shouldReturnFalseWhenNoRoot() {
+            given(memberProfileRepository.existsByRole(MemberRole.ROOT)).willReturn(false);
+
+            assertThat(queryService.existsRoot()).isFalse();
+        }
     }
 }

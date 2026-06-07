@@ -27,13 +27,17 @@ interface PriceSnapshot {
   expandedBars: (PriceBar | null)[];
 }
 
-const _priceCache     = new Map<string, PriceSnapshot>(); // key: `${code}|${market}`
-const _indicatorCache = new Map<string, IndicatorBar[]>(); // key: `${code}|${market}|${typesKey}`
+const _priceCache     = new Map<string, PriceSnapshot>(); // key: `${code}|${source}|${adjusted}`
+const _indicatorCache = new Map<string, IndicatorBar[]>(); // key: `${code}|${source}|${adjusted}|${typesKey}`
 const _priceInflight  = new Set<string>();                 // fetch 진행 중인 가격 키
 const _indicatorInflight = new Set<string>();              // fetch 진행 중인 지표 키
 
-function _cacheKey(code: string, market: string)                    { return `${code}|${market}`; }
-function _iCacheKey(code: string, market: string, typesKey: string) { return `${code}|${market}|${typesKey}`; }
+function _cacheKey(code: string, source: string, adjusted: boolean) {
+  return `${code}|${source}|${adjusted}`;
+}
+function _iCacheKey(code: string, source: string, adjusted: boolean, typesKey: string) {
+  return `${code}|${source}|${adjusted}|${typesKey}`;
+}
 
 /** LRU 삽입: 캐시 최대치 초과 시 첫 번째(가장 오래된) 항목 제거 후 추가 */
 function _lruSet<V>(map: Map<string, V>, key: string, value: V) {
@@ -46,11 +50,16 @@ function _lruSet<V>(map: Map<string, V>, key: string, value: V) {
  * 마우스 hover 시 StockSearchLayout에서 호출해 미리 fetch한다.
  * 캐시 HIT이거나 이미 fetch 중이면 아무것도 하지 않는다.
  */
-export function prefetchChart(code: string, market: string, indicatorsKey: string) {
-  const pk = _cacheKey(code, market);
+export function prefetchChart(
+  code: string,
+  source: string,
+  adjusted: boolean,
+  indicatorsKey: string,
+) {
+  const pk = _cacheKey(code, source, adjusted);
   if (!_priceCache.has(pk) && !_priceInflight.has(pk)) {
     _priceInflight.add(pk);
-    fetch(`/api/stocks/${code}/prices?market=${market}&limit=120`)
+    fetch(`/api/stocks/${code}/prices?source=${source}&adjusted=${adjusted}&limit=120`)
       .then(r => r.ok ? r.json() : null)
       .then((data: PriceBar[] | null) => {
         if (data) {
@@ -62,10 +71,10 @@ export function prefetchChart(code: string, market: string, indicatorsKey: strin
       .finally(() => _priceInflight.delete(pk));
   }
   if (indicatorsKey) {
-    const ik = _iCacheKey(code, market, indicatorsKey);
+    const ik = _iCacheKey(code, source, adjusted, indicatorsKey);
     if (!_indicatorCache.has(ik) && !_indicatorInflight.has(ik)) {
       _indicatorInflight.add(ik);
-      fetch(`/api/stocks/${code}/indicators?market=${market}&limit=120&types=${indicatorsKey}`)
+      fetch(`/api/stocks/${code}/indicators?source=${source}&adjusted=${adjusted}&limit=120&types=${indicatorsKey}`)
         .then(r => r.ok ? r.json() : null)
         .then((data: IndicatorBar[] | null) => {
           if (data) _lruSet(_indicatorCache, ik, Array.isArray(data) ? data : []);
@@ -93,10 +102,13 @@ export interface IndicatorBar {
 
 interface Props {
   code: string;
-  market: string;
+  source: string;
+  adjusted: boolean;
   presetItems: IndicatorPresetItem[];
   panelOrder?: PanelId[];
   mode: Mode;
+  /** 최신 일봉(가장 최근 봉)을 부모로 올려준다. 데이터 없으면 null. */
+  onLatestBar?: (bar: PriceBar | null) => void;
 }
 
 type Mode = "candle" | "line";
@@ -274,7 +286,10 @@ function computeLayout(
 
 // ── 메인 컴포넌트 ─────────────────────────────────────────────────────────────
 
-function StockChart({ code, market, presetItems, panelOrder, mode }: Props) {
+function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onLatestBar }: Props) {
+  // 콜백 식별자 변화로 fetch effect가 재실행되지 않도록 ref로 미러링
+  const onLatestBarRef = useRef(onLatestBar);
+  onLatestBarRef.current = onLatestBar;
   const selectedIndicatorsKey = useMemo(
     () => presetItems.filter(i => i.enabled).map(i => i.type).join(","),
     [presetItems],
@@ -342,7 +357,7 @@ function StockChart({ code, market, presetItems, panelOrder, mode }: Props) {
     perf.pipe.mark("④ prices useEffect 시작");
 
     function applyPriceData(arr: PriceBar[], fromCache: boolean) {
-      const expanded = fromCache ? _priceCache.get(_cacheKey(code, market))!.expandedBars
+      const expanded = fromCache ? _priceCache.get(_cacheKey(code, source, adjusted))!.expandedBars
                                  : expandBarsWithGaps(arr);
       const plotW     = Math.max(1, widthRef.current - PAD.left - PAD.right);
       const defaultVc = Math.max(10, Math.round(plotW / 14));
@@ -353,11 +368,12 @@ function StockChart({ code, market, presetItems, panelOrder, mode }: Props) {
       setVisibleCount(vc); vcRef.current = vc;
       setRightIndex(expanded.length - 1); riRef.current = expanded.length - 1;
       setLoading(false);
+      onLatestBarRef.current?.(arr.length ? arr[arr.length - 1] : null);
       perf.pipe.mark(`⑥ setState 완료 (${fromCache ? "캐시 HIT ⚡" : "네트워크"})`);
     }
 
     // 캐시 HIT → 즉시 표시, fetch 없음
-    const cached = _priceCache.get(_cacheKey(code, market));
+    const cached = _priceCache.get(_cacheKey(code, source, adjusted));
     if (cached) {
       perf.pipe.mark("⑤ 캐시 HIT — 즉시 반환");
       applyPriceData(cached.bars, true);
@@ -367,29 +383,30 @@ function StockChart({ code, market, presetItems, panelOrder, mode }: Props) {
     // 캐시 MISS → 네트워크
     setLoading(true);
     setError(null);
-    perf.measure("API", `GET /api/stocks/${code}/prices?market=${market}&limit=120`, () =>
-      fetch(`/api/stocks/${code}/prices?market=${market}&limit=120`, { signal: controller.signal })
+    perf.measure("API", `GET /api/stocks/${code}/prices?source=${source}&adjusted=${adjusted}&limit=120`, () =>
+      fetch(`/api/stocks/${code}/prices?source=${source}&adjusted=${adjusted}&limit=120`, { signal: controller.signal })
         .then(r => { if (!r.ok) throw new Error(); return r; })
     ).then(r => r.json())
       .then((data: PriceBar[]) => {
         perf.pipe.mark("⑤ prices fetch 완료");
         const arr      = Array.isArray(data) ? data : [];
         const expanded = expandBarsWithGaps(arr);
-        _lruSet(_priceCache, _cacheKey(code, market), { bars: arr, expandedBars: expanded });
+        _lruSet(_priceCache, _cacheKey(code, source, adjusted), { bars: arr, expandedBars: expanded });
         applyPriceData(arr, false);
       })
       .catch((e: unknown) => {
         if (e instanceof Error && e.name === "AbortError") return;
         setError("차트 데이터를 불러올 수 없습니다."); setLoading(false);
+        onLatestBarRef.current?.(null);
       });
     return () => controller.abort();
-  }, [code, market]);
+  }, [code, source, adjusted]);
 
   useEffect(() => {
     if (selectedIndicatorsKey === "") { setIndicatorData([]); return; }
 
     // 캐시 HIT
-    const ik     = _iCacheKey(code, market, selectedIndicatorsKey);
+    const ik     = _iCacheKey(code, source, adjusted, selectedIndicatorsKey);
     const cached = _indicatorCache.get(ik);
     if (cached) {
       setIndicatorData(cached);
@@ -400,8 +417,8 @@ function StockChart({ code, market, presetItems, panelOrder, mode }: Props) {
     // 캐시 MISS
     const controller = new AbortController();
     setIndicatorLoading(true);
-    perf.measure("API", `GET /api/stocks/${code}/indicators?market=${market}&limit=120&types=${selectedIndicatorsKey}`, () =>
-      fetch(`/api/stocks/${code}/indicators?market=${market}&limit=120&types=${selectedIndicatorsKey}`, { signal: controller.signal })
+    perf.measure("API", `GET /api/stocks/${code}/indicators?source=${source}&adjusted=${adjusted}&limit=120&types=${selectedIndicatorsKey}`, () =>
+      fetch(`/api/stocks/${code}/indicators?source=${source}&adjusted=${adjusted}&limit=120&types=${selectedIndicatorsKey}`, { signal: controller.signal })
         .then(r => { if (!r.ok) throw new Error(); return r; })
     ).then(r => r.json())
       .then((data: IndicatorBar[]) => {
@@ -415,7 +432,7 @@ function StockChart({ code, market, presetItems, panelOrder, mode }: Props) {
         setIndicatorData([]); setIndicatorLoading(false);
       });
     return () => controller.abort();
-  }, [code, market, selectedIndicatorsKey]);
+  }, [code, source, adjusted, selectedIndicatorsKey]);
 
   // ── ResizeObserver (debounce 50ms) ──────────────────────────────────────────
 

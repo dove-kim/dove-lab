@@ -3,7 +3,9 @@ import { redirect, notFound } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import FilterEditorClient from "@/containers/stock-search/filters/FilterEditorClient";
 import { backendFetch } from "@/services/backend";
-import { SearchFilter, StockSet, StockSetSummary } from "@/types/filter";
+import { SearchFilter } from "@/types/filter";
+
+interface StockFilterSummary { id: number; name: string; scope: "SYSTEM" | "MEMBER"; }
 
 async function fetchFilter(id: string): Promise<SearchFilter | null> {
   const res = await backendFetch("/filters");
@@ -12,23 +14,23 @@ async function fetchFilter(id: string): Promise<SearchFilter | null> {
   return filters.find((f) => f.id === parseInt(id)) ?? null;
 }
 
-async function fetchStockSets(): Promise<StockSetSummary[]> {
-  const res = await backendFetch("/stock-sets");
+async function fetchStockFilters(): Promise<StockFilterSummary[]> {
+  const res = await backendFetch("/stock-filters/available");
   if (!res || !res.ok) return [];
-  const sets: StockSet[] = await res.json();
-  return sets.map((s) => ({ id: s.id, name: s.name, codeCount: s.codes.length }));
+  const data = await res.json();
+  return data.map((f: { id: number; name: string; scope: "SYSTEM" | "MEMBER" }) => ({ id: f.id, name: f.name, scope: f.scope }));
 }
 
 export default async function EditSearchFilterPage({ params }: { params: Promise<{ id: string }> }) {
   if (!(await cookies()).get("token")) redirect("/login");
 
   const { id } = await params;
-  const [filter, stockSets] = await Promise.all([fetchFilter(id), fetchStockSets()]);
+  const [filter, stockFilters] = await Promise.all([fetchFilter(id), fetchStockFilters()]);
   if (!filter) notFound();
 
   return (
     <AppShell>
-      <FilterEditorClient initial={filter} stockSets={stockSets} />
+      <FilterEditorClient initial={filter} stockFilters={stockFilters} />
     </AppShell>
   );
 }

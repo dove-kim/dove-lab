@@ -1,17 +1,17 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
 import com.dove.indicator.domain.enums.IndicatorType;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
 
+/**
+ * OBV(On-Balance Volume) 계산기. 종가 등락에 따라 거래량을 누적해 매집·분산 강도를 측정한다.
+ */
+@Component
 public class ObvCalculator implements TechnicalIndicatorCalculator {
-
-    @Override
-    public String getName() {
-        return "OBV";
-    }
 
     @Override
     public int requiredDataSize() {
@@ -29,12 +29,17 @@ public class ObvCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+    public boolean requiresPersistedSeed() {
+        return true;
+    }
+
+    @Override
+    public Map<IndicatorType, Double> calculate(List<StockPrice> dailyStockPriceList) {
         return calculateWithSeed(dailyStockPriceList, 0.0);
     }
 
     @Override
-    public Map<IndicatorType, Double> calculateWithSeed(List<DailyStockPrice> pool, double seed) {
+    public Map<IndicatorType, Double> calculateWithSeed(List<StockPrice> pool, double seed) {
         double obv = seed;
 
         for (int i = 1; i < pool.size(); i++) {

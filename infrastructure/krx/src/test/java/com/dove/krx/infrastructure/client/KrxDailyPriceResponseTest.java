@@ -16,7 +16,7 @@ class KrxDailyPriceResponseTest {
     @DisplayName("Data 타입 변환")
     class DataTypeConversion {
 
-        private final KrxDailyPriceResponse.Data data = new KrxDailyPriceResponse.Data(
+        private final KrxDailyPriceData data = new KrxDailyPriceData(
                 "20240115", "005930", "삼성전자", "KOSPI", "",
                 "71000", "1000", "1.43",
                 "70000", "72000", "69000",
@@ -80,7 +80,7 @@ class KrxDailyPriceResponseTest {
         @Test
         @DisplayName("데이터가 있으면 JSON 문자열로 변환한다")
         void shouldConvertDataToJson() {
-            KrxDailyPriceResponse.Data data = new KrxDailyPriceResponse.Data(
+            KrxDailyPriceData data = new KrxDailyPriceData(
                     "20240115", "005930", "삼성전자", "KOSPI", "",
                     "71000", "1000", "1.43",
                     "70000", "72000", "69000",
@@ -99,12 +99,12 @@ class KrxDailyPriceResponseTest {
         @Test
         @DisplayName("여러 데이터가 있으면 쉼표로 구분된 JSON 배열을 반환한다")
         void shouldJoinMultipleDataWithComma() {
-            KrxDailyPriceResponse.Data data1 = new KrxDailyPriceResponse.Data(
+            KrxDailyPriceData data1 = new KrxDailyPriceData(
                     "20240115", "005930", "삼성전자", "KOSPI", "",
                     "71000", "1000", "1.43", "70000", "72000", "69000",
                     "1500000", "0", "0", "0"
             );
-            KrxDailyPriceResponse.Data data2 = new KrxDailyPriceResponse.Data(
+            KrxDailyPriceData data2 = new KrxDailyPriceData(
                     "20240115", "000660", "SK하이닉스", "KOSPI", "",
                     "130000", "2000", "1.56", "128000", "131000", "127000",
                     "500000", "0", "0", "0"

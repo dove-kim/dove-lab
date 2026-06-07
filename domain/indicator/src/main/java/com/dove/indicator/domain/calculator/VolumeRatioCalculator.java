@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
 import com.dove.indicator.domain.enums.IndicatorType;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
@@ -9,15 +10,11 @@ import java.util.Map;
 /**
  * 거래량 비율(VR) 계산기. 20일간 상승일/하락일 거래량 비율로 매수 세력을 판단한다.
  */
+@Component
 public class VolumeRatioCalculator implements TechnicalIndicatorCalculator {
 
     private static final int PERIOD = 20;
     private static final int REQUIRED_SIZE = PERIOD + 1;
-
-    @Override
-    public String getName() {
-        return "VOLUME_RATIO";
-    }
 
     @Override
     public int requiredDataSize() {
@@ -30,7 +27,7 @@ public class VolumeRatioCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+    public Map<IndicatorType, Double> calculate(List<StockPrice> dailyStockPriceList) {
         long upVolume = 0;
         long downVolume = 0;
         long unchangedVolume = 0;

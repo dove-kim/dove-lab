@@ -1,11 +1,14 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
 import com.dove.indicator.domain.enums.IndicatorType;
 
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 상대강도지수(RSI) 계산기. 지정 기간의 평균 상승폭/하락폭 비율로 과매수·과매도 수준을 산출한다.
+ */
 public class RsiCalculator implements TechnicalIndicatorCalculator {
 
     private final int period;
@@ -14,11 +17,6 @@ public class RsiCalculator implements TechnicalIndicatorCalculator {
     public RsiCalculator(int period, IndicatorType indicatorType) {
         this.period = period;
         this.indicatorType = indicatorType;
-    }
-
-    @Override
-    public String getName() {
-        return indicatorType.name();
     }
 
     @Override
@@ -32,7 +30,7 @@ public class RsiCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+    public Map<IndicatorType, Double> calculate(List<StockPrice> dailyStockPriceList) {
         double gainSum = 0;
         double lossSum = 0;
 

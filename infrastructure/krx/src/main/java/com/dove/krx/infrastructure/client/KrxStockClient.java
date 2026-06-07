@@ -17,36 +17,54 @@ import java.time.LocalDate;
         configuration = KrxStockClientConfig.class
 )
 public interface KrxStockClient {
+    /**
+     * 지정일의 KOSPI 일별 시세를 조회한다.
+     */
     @GetMapping("/sto/stk_bydd_trd")
     KrxDailyPriceResponse getDailyKospiStockInfo(
             @RequestHeader("AUTH_KEY") String authKey,
             @RequestParam("basDd") @DateTimeFormat(pattern = "yyyyMMdd") LocalDate basDd
     );
 
+    /**
+     * 지정일의 KOSDAQ 일별 시세를 조회한다.
+     */
     @GetMapping("/sto/ksq_bydd_trd")
     KrxDailyPriceResponse getDailyKosdaqStockInfo(
             @RequestHeader("AUTH_KEY") String authKey,
             @RequestParam("basDd") @DateTimeFormat(pattern = "yyyyMMdd") LocalDate basDd
     );
 
+    /**
+     * 지정일의 KONEX 일별 시세를 조회한다.
+     */
     @GetMapping("/sto/knx_bydd_trd")
     KrxDailyPriceResponse getDailyKonexStockInfo(
             @RequestHeader("AUTH_KEY") String authKey,
             @RequestParam("basDd") @DateTimeFormat(pattern = "yyyyMMdd") LocalDate basDd
     );
 
+    /**
+     * 지정일의 KOSPI 상장 종목 목록을 조회한다.
+     */
     @GetMapping("/sto/stk_isu_base_info")
     KrxListedStockResponse getKospiListedStocks(
             @RequestHeader("AUTH_KEY") String authKey,
             @RequestParam("basDd") @DateTimeFormat(pattern = "yyyyMMdd") LocalDate basDd
     );
 
+    /**
+     * 지정일의 KOSDAQ 상장 종목 목록을 조회한다.
+     */
     @GetMapping("/sto/ksq_isu_base_info")
     KrxListedStockResponse getKosdaqListedStocks(
             @RequestHeader("AUTH_KEY") String authKey,
             @RequestParam("basDd") @DateTimeFormat(pattern = "yyyyMMdd") LocalDate basDd
     );
 
+    /**
+     * 지정일의 KONEX 상장 종목 목록을 조회한다.
+     */
     @GetMapping("/sto/knx_isu_base_info")
     KrxListedStockResponse getKonexListedStocks(
             @RequestHeader("AUTH_KEY") String authKey,

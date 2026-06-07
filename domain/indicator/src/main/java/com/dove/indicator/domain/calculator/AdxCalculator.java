@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
 import com.dove.indicator.domain.enums.IndicatorType;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
@@ -9,15 +10,11 @@ import java.util.Map;
 /**
  * ADX(평균 방향성 지수) 계산기. 14일 기간의 ADX, +DI, -DI를 산출하여 추세 강도를 측정한다.
  */
+@Component
 public class AdxCalculator implements TechnicalIndicatorCalculator {
 
     private static final int PERIOD = 14;
     private static final int REQUIRED_SIZE = 100;
-
-    @Override
-    public String getName() {
-        return "ADX";
-    }
 
     @Override
     public int requiredDataSize() {
@@ -30,7 +27,7 @@ public class AdxCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+    public Map<IndicatorType, Double> calculate(List<StockPrice> dailyStockPriceList) {
         int size = dailyStockPriceList.size();
 
         double[] tr = new double[size - 1];
@@ -38,8 +35,8 @@ public class AdxCalculator implements TechnicalIndicatorCalculator {
         double[] minusDm = new double[size - 1];
 
         for (int i = 1; i < size; i++) {
-            DailyStockPrice current = dailyStockPriceList.get(i);
-            DailyStockPrice previous = dailyStockPriceList.get(i - 1);
+            StockPrice current = dailyStockPriceList.get(i);
+            StockPrice previous = dailyStockPriceList.get(i - 1);
 
             double highDiff = current.getHighPrice() - previous.getHighPrice();
             double lowDiff = previous.getLowPrice() - current.getLowPrice();

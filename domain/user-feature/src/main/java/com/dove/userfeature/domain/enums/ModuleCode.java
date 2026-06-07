@@ -1,10 +1,7 @@
 package com.dove.userfeature.domain.enums;
 
 /**
- * 메뉴 모듈 코드.
- *
- * <p>모듈은 기능(FeatureCode)의 논리적 그룹이다.
- * 사용자는 모듈 단위로 순서를 조정하거나 숨길 수 있다.
+ * 기능의 논리적 그룹을 나타내는 메뉴 모듈 코드.
  */
 public enum ModuleCode {
     STOCK("주식"),
