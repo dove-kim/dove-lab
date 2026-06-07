@@ -71,7 +71,7 @@ const FEATURE_META: Record<string, { label: string; icon: React.ReactNode }> = {
 
 /** 기능별 하위 메뉴 코드 목록 (프론트 기준) */
 const FEATURE_SUB_MENUS: Record<string, string[]> = {
-  STOCK_SEARCH: ["STOCK_SEARCH_MAIN", "STOCK_SEARCH_FILTER", "STOCK_SEARCH_SETS"],
+  STOCK_SEARCH: ["STOCK_SEARCH_MAIN", "STOCK_VIEW_ALL", "STOCK_SEARCH_FILTER", "STOCK_FILTERS"],
   STOCK_LEDGER: [],
   BUDGET: [],
 };
@@ -87,6 +87,16 @@ const SUB_MENU_NAV: Record<string, NavItem> = {
       </svg>
     ),
   },
+  STOCK_VIEW_ALL: {
+    href: "/all-stocks",
+    label: "모든 종목",
+    icon: (
+      <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+        <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
+        <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
+      </svg>
+    ),
+  },
   STOCK_SEARCH_FILTER: {
     href: "/search-filters",
     label: "필터 관리",
@@ -96,9 +106,9 @@ const SUB_MENU_NAV: Record<string, NavItem> = {
       </svg>
     ),
   },
-  STOCK_SEARCH_SETS: {
-    href: "/stock-sets",
-    label: "종목 필터 관리",
+  STOCK_FILTERS: {
+    href: "/stock-filters",
+    label: "종목 필터",
     icon: (
       <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="9" x2="15" y2="9" /><line x1="9" y1="12" x2="15" y2="12" /><line x1="9" y1="15" x2="12" y2="15" />
@@ -149,6 +159,63 @@ const ROOT_INVITE_ITEM: NavItem = {
     <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="7" width="20" height="14" rx="2" />
       <path d="M16 3l-4 4-4-4" />
+    </svg>
+  ),
+};
+
+const ROOT_STOCK_LIST_ITEM: NavItem = {
+  href: "/all-stocks",
+  label: "주식 종목 리스트",
+  icon: (
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
+      <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
+    </svg>
+  ),
+};
+
+const ROOT_STOCK_FILTERS_ITEM: NavItem = {
+  href: "/stock-filters",
+  label: "종목 필터",
+  icon: (
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <line x1="4" y1="6" x2="20" y2="6" />
+      <line x1="8" y1="12" x2="16" y2="12" />
+      <line x1="11" y1="18" x2="13" y2="18" />
+    </svg>
+  ),
+};
+
+const ROOT_BACKFILL_ITEM: NavItem = {
+  href: "/root/ops/backfill",
+  label: "데이터 재조회",
+  icon: (
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="1 4 1 10 7 10" />
+      <path d="M3.51 15a9 9 0 1 0 .49-4.37" />
+    </svg>
+  ),
+};
+
+const ROOT_SYSTEM_EVENTS_ITEM: NavItem = {
+  href: "/root/ops/system-events",
+  label: "시스템 이벤트",
+  icon: (
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86 1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z" />
+      <line x1="12" y1="9" x2="12" y2="13" />
+      <line x1="12" y1="17" x2="12.01" y2="17" />
+    </svg>
+  ),
+};
+
+const ROOT_STOCK_TAGS_ITEM: NavItem = {
+  href: "/root/ops/stock-tags",
+  label: "분류 표시명",
+  icon: (
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M20.59 13.41l-7.17 7.17a2 2 0 0 1-2.83 0L2 12V2h10l8.59 8.59a2 2 0 0 1 0 2.82z" />
+      <line x1="7" y1="7" x2="7.01" y2="7" />
     </svg>
   ),
 };
@@ -236,11 +303,30 @@ export default function Sidebar({ role, menu, mobileOpen, onMobileClose }: Props
       {/* 메뉴 */}
       <nav className="flex flex-col flex-1 py-2 gap-0.5 px-1.5 overflow-y-auto">
         {isRoot ? (
-          /* ROOT: 사용자 관리 → 초대 코드 → 기능 권한 관리 */
+          /* ROOT: 대시보드 → 사용자 관리 → 초대 코드 → 기능 권한 관리 → 데이터 → 운영 */
           <>
+            <NavLink item={DASHBOARD_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+            <div className="my-2 border-t border-white/10 mx-1" />
             <NavLink item={ROOT_USER_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
             <NavLink item={ROOT_INVITE_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
             <NavLink item={ADMIN_USER_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+            <div className="my-2 border-t border-white/10 mx-1" />
+            {showLabel && (
+              <div className="px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                데이터
+              </div>
+            )}
+            <NavLink item={ROOT_STOCK_LIST_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+            <NavLink item={ROOT_STOCK_FILTERS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+            <div className="my-2 border-t border-white/10 mx-1" />
+            {showLabel && (
+              <div className="px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                운영
+              </div>
+            )}
+            <NavLink item={ROOT_BACKFILL_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+            <NavLink item={ROOT_STOCK_TAGS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+            <NavLink item={ROOT_SYSTEM_EVENTS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
           </>
         ) : (
           /* USER / ADMIN: 대시보드 → 기능 그룹 → (ADMIN) 기능 권한 관리 */

@@ -3,8 +3,12 @@ bootJar.enabled = false
 dependencies {
     implementation project(':jpa')
     implementation project(':market')
+    implementation project(':stock')
+    implementation project(':indicator')
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
+    implementation 'com.fasterxml.jackson.core:jackson-databind'
+    implementation 'com.querydsl:querydsl-jpa:5.0.0:jakarta'
 
     testImplementation 'com.h2database:h2'
 }

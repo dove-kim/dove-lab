@@ -1,7 +1,11 @@
 package com.dove.screening.domain.entity;
 
 import com.dove.market.domain.enums.MarketType;
+import com.dove.screening.domain.converter.FilterExpressionConverter;
+import com.dove.screening.domain.converter.MarketTypeListConverter;
 import com.dove.screening.domain.enums.DateRule;
+import com.dove.screening.domain.value.FilterExpression;
+import com.dove.stock.domain.enums.PriceType;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -9,10 +13,11 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Comment;
 
 import java.time.LocalDateTime;
-import java.util.Arrays;
 import java.util.List;
-import java.util.stream.Collectors;
 
+/**
+ * 회원별 지표 검색 필터.
+ */
 @Entity
 @Table(
     name = "SEARCH_FILTER",
@@ -20,7 +25,8 @@ import java.util.stream.Collectors;
         @UniqueConstraint(name = "UK_SEARCH_FILTER_MEMBER_NAME", columnNames = {"MEMBER_ID", "NAME"})
     },
     indexes = {
-        @Index(name = "IDX_SEARCH_FILTER_MEMBER_ID", columnList = "MEMBER_ID")
+        @Index(name = "IDX_SEARCH_FILTER_MEMBER_ID", columnList = "MEMBER_ID"),
+        @Index(name = "IDX_SEARCH_FILTER_SF_ID", columnList = "STOCK_FILTER_ID")
     }
 )
 @Getter
@@ -46,21 +52,24 @@ public class SearchFilter {
     @Comment("날짜 규칙 (LATEST/SPECIFIC_DATE/PREV_1D/PREV_3D/PREV_5D/PREV_10D)")
     private DateRule dateRule;
 
-    @Column(name = "MARKETS", nullable = false, length = 50)
-    @Comment("대상 시장 (쉼표 구분, 예: KOSPI,KOSDAQ)")
-    private String markets;
+    @Convert(converter = MarketTypeListConverter.class)
+    @Column(name = "MARKETS", nullable = false, columnDefinition = "JSON")
+    @Comment("대상 시장 (JSON 배열, 예: [\"KOSPI\",\"KOSDAQ\"])")
+    private List<MarketType> markets;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "PRICE_TYPE", nullable = false, length = 10)
+    @Comment("주가 유형 (RAW=비수정/ADJUSTED=수정)")
+    private PriceType priceType;
+
+    @Convert(converter = FilterExpressionConverter.class)
     @Column(name = "EXPRESSION", nullable = false, columnDefinition = "TEXT")
-    @Comment("검색 식 (JSON 트리)")
-    private String expression;
+    @Comment("지표 검색 식 (JSON 트리)")
+    private FilterExpression expression;
 
-    @Column(name = "INCLUDE_STOCK_SET_ID")
-    @Comment("포함 종목 세트 ID (nullable)")
-    private Long includeStockSetId;
-
-    @Column(name = "EXCLUDE_STOCK_SET_ID")
-    @Comment("제외 종목 세트 ID (nullable)")
-    private Long excludeStockSetId;
+    @Column(name = "STOCK_FILTER_ID")
+    @Comment("적용할 종목 필터 ID (null=필터 없음)")
+    private Long stockFilterId;
 
     @Column(name = "DISPLAY_ORDER", nullable = false)
     @Comment("목록 노출 순서 (낮을수록 위)")
@@ -74,37 +83,36 @@ public class SearchFilter {
     @Comment("수정일시")
     private LocalDateTime updatedAt;
 
-    public List<MarketType> getMarketList() {
-        return Arrays.stream(markets.split(","))
-                .map(String::trim)
-                .map(MarketType::valueOf)
-                .collect(Collectors.toList());
-    }
-
+    /**
+     * 새 검색 필터를 생성한다.
+     */
     public static SearchFilter create(Long memberId, String name, DateRule dateRule,
-                                       List<MarketType> marketList, String expression,
-                                       Long includeStockSetId, Long excludeStockSetId) {
+                                       List<MarketType> markets, PriceType priceType, FilterExpression expression,
+                                       Long stockFilterId) {
         SearchFilter f = new SearchFilter();
         f.memberId = memberId;
         f.name = name;
         f.dateRule = dateRule;
-        f.markets = marketList.stream().map(MarketType::name).collect(Collectors.joining(","));
+        f.markets = markets;
+        f.priceType = priceType != null ? priceType : PriceType.RAW;
         f.expression = expression;
-        f.includeStockSetId = includeStockSetId;
-        f.excludeStockSetId = excludeStockSetId;
+        f.stockFilterId = stockFilterId;
         f.createdAt = LocalDateTime.now();
         f.updatedAt = LocalDateTime.now();
         return f;
     }
 
-    public void update(String name, DateRule dateRule, List<MarketType> marketList, String expression,
-                       Long includeStockSetId, Long excludeStockSetId) {
+    /**
+     * 필터 이름·날짜 규칙·시장·주가 유형·표현식·종목 필터 연결을 갱신한다.
+     */
+    public void update(String name, DateRule dateRule, List<MarketType> markets, PriceType priceType,
+                       FilterExpression expression, Long stockFilterId) {
         this.name = name;
         this.dateRule = dateRule;
-        this.markets = marketList.stream().map(MarketType::name).collect(Collectors.joining(","));
+        this.markets = markets;
+        this.priceType = priceType != null ? priceType : PriceType.RAW;
         this.expression = expression;
-        this.includeStockSetId = includeStockSetId;
-        this.excludeStockSetId = excludeStockSetId;
+        this.stockFilterId = stockFilterId;
         this.updatedAt = LocalDateTime.now();
     }
 

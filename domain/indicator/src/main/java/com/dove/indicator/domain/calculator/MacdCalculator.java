@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
 import com.dove.indicator.domain.enums.IndicatorType;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
@@ -9,17 +10,13 @@ import java.util.Map;
 /**
  * MACD 계산기. 12일/26일 EMA 차이(MACD Line), 9일 시그널, 히스토그램을 산출한다.
  */
+@Component
 public class MacdCalculator implements TechnicalIndicatorCalculator {
 
     private static final int SHORT_PERIOD = 12;
     private static final int LONG_PERIOD = 26;
     private static final int SIGNAL_PERIOD = 9;
     private static final int REQUIRED_SIZE = 130;
-
-    @Override
-    public String getName() {
-        return "MACD";
-    }
 
     @Override
     public int requiredDataSize() {
@@ -32,9 +29,9 @@ public class MacdCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+    public Map<IndicatorType, Double> calculate(List<StockPrice> dailyStockPriceList) {
         double[] closePrices = dailyStockPriceList.stream()
-                .mapToDouble(DailyStockPrice::getClosePrice)
+                .mapToDouble(StockPrice::getClosePrice)
                 .toArray();
 
         double[] ema12 = calculateEma(closePrices, SHORT_PERIOD);

@@ -1,6 +1,6 @@
 package com.dove.auth.domain.entity;
 
-import com.dove.user.domain.entity.MemberRole;
+import com.dove.auth.domain.enums.MemberRole;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 

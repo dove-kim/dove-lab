@@ -4,7 +4,10 @@ import com.dove.market.domain.enums.MarketType;
 import com.dove.screening.domain.entity.SearchFilter;
 import com.dove.screening.domain.enums.DateRule;
 import com.dove.screening.domain.repository.SearchFilterRepository;
+import com.dove.screening.domain.value.FilterExpression;
+import com.dove.stock.domain.enums.PriceType;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
@@ -18,6 +21,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.BDDMockito.given;
 
 @ExtendWith(MockitoExtension.class)
+@DisplayName("SearchFilterQueryService")
 class SearchFilterQueryServiceTest {
 
     @Mock SearchFilterRepository repository;
@@ -28,46 +32,56 @@ class SearchFilterQueryServiceTest {
 
     private SearchFilter makeFilter() {
         return SearchFilter.create(MEMBER_ID, "필터", DateRule.LATEST,
-                List.of(MarketType.KOSPI), "{}", null, null);
+                List.of(MarketType.KOSPI), PriceType.RAW, FilterExpression.empty(), null);
     }
 
-    @Test
-    @DisplayName("findAllByMemberId — repository 위임 결과 반환")
-    void shouldReturnFiltersForMember() {
-        SearchFilter filter = makeFilter();
-        given(repository.findAllByMemberIdOrderByDisplayOrderAscCreatedAtAsc(MEMBER_ID))
-                .willReturn(List.of(filter));
+    @Nested
+    @DisplayName("findAllByMemberId")
+    class FindAllByMemberId {
 
-        List<SearchFilter> result = service.findAllByMemberId(MEMBER_ID);
+        @Test
+        @DisplayName("repository 위임 결과를 반환한다")
+        void shouldReturnFiltersForMember() {
+            SearchFilter filter = makeFilter();
+            given(repository.findAllByMemberIdOrderByDisplayOrderAscCreatedAtAsc(MEMBER_ID))
+                    .willReturn(List.of(filter));
 
-        assertThat(result).containsExactly(filter);
+            List<SearchFilter> result = service.findAllByMemberId(MEMBER_ID);
+
+            assertThat(result).containsExactly(filter);
+        }
+
+        @Test
+        @DisplayName("결과 없으면 빈 리스트를 반환한다")
+        void shouldReturnEmptyWhenNoFilters() {
+            given(repository.findAllByMemberIdOrderByDisplayOrderAscCreatedAtAsc(MEMBER_ID))
+                    .willReturn(List.of());
+
+            assertThat(service.findAllByMemberId(MEMBER_ID)).isEmpty();
+        }
     }
 
-    @Test
-    @DisplayName("findAllByMemberId — 결과 없으면 빈 리스트")
-    void shouldReturnEmptyWhenNoFilters() {
-        given(repository.findAllByMemberIdOrderByDisplayOrderAscCreatedAtAsc(MEMBER_ID))
-                .willReturn(List.of());
+    @Nested
+    @DisplayName("findByIdAndMemberId")
+    class FindByIdAndMemberId {
 
-        assertThat(service.findAllByMemberId(MEMBER_ID)).isEmpty();
-    }
+        @Test
+        @DisplayName("존재하면 Optional에 담아 반환한다")
+        void shouldReturnFilterWhenFound() {
+            SearchFilter filter = makeFilter();
+            given(repository.findByIdAndMemberId(FILTER_ID, MEMBER_ID))
+                    .willReturn(Optional.of(filter));
 
-    @Test
-    @DisplayName("findByIdAndMemberId — 존재하면 Optional 반환")
-    void shouldReturnFilterWhenFound() {
-        SearchFilter filter = makeFilter();
-        given(repository.findByIdAndMemberId(FILTER_ID, MEMBER_ID))
-                .willReturn(Optional.of(filter));
+            assertThat(service.findByIdAndMemberId(FILTER_ID, MEMBER_ID)).contains(filter);
+        }
 
-        assertThat(service.findByIdAndMemberId(FILTER_ID, MEMBER_ID)).contains(filter);
-    }
+        @Test
+        @DisplayName("없으면 Optional.empty를 반환한다")
+        void shouldReturnEmptyWhenNotFound() {
+            given(repository.findByIdAndMemberId(FILTER_ID, MEMBER_ID))
+                    .willReturn(Optional.empty());
 
-    @Test
-    @DisplayName("findByIdAndMemberId — 없으면 Optional.empty")
-    void shouldReturnEmptyWhenNotFound() {
-        given(repository.findByIdAndMemberId(FILTER_ID, MEMBER_ID))
-                .willReturn(Optional.empty());
-
-        assertThat(service.findByIdAndMemberId(FILTER_ID, MEMBER_ID)).isEmpty();
+            assertThat(service.findByIdAndMemberId(FILTER_ID, MEMBER_ID)).isEmpty();
+        }
     }
 }

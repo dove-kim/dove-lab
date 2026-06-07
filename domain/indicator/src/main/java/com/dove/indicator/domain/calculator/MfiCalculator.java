@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
 import com.dove.indicator.domain.enums.IndicatorType;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
@@ -9,14 +10,10 @@ import java.util.Map;
 /**
  * MFI(Money Flow Index) 계산기. 가격과 거래량을 함께 고려하여 자금 유입/유출을 측정한다.
  */
+@Component
 public class MfiCalculator implements TechnicalIndicatorCalculator {
 
     private static final int PERIOD = 14;
-
-    @Override
-    public String getName() {
-        return "MFI";
-    }
 
     @Override
     public int requiredDataSize() {
@@ -29,13 +26,13 @@ public class MfiCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+    public Map<IndicatorType, Double> calculate(List<StockPrice> dailyStockPriceList) {
         double positiveFlow = 0;
         double negativeFlow = 0;
 
         for (int i = 1; i < dailyStockPriceList.size(); i++) {
-            DailyStockPrice current = dailyStockPriceList.get(i);
-            DailyStockPrice previous = dailyStockPriceList.get(i - 1);
+            StockPrice current = dailyStockPriceList.get(i);
+            StockPrice previous = dailyStockPriceList.get(i - 1);
 
             double currentTp = (current.getHighPrice() + current.getLowPrice() + current.getClosePrice()) / 3.0;
             double previousTp = (previous.getHighPrice() + previous.getLowPrice() + previous.getClosePrice()) / 3.0;

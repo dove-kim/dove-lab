@@ -1,0 +1,5 @@
+bootJar.enabled = false
+
+dependencies {
+    compileOnly 'org.redisson:redisson:3.27.2'
+}

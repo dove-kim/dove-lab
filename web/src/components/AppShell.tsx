@@ -6,9 +6,14 @@ import { backendFetch } from "@/services/backend";
 import type { UserMenu } from "@/types/user";
 
 async function fetchMenu(): Promise<UserMenu> {
-  const res = await backendFetch("/account/menu");
-  if (!res || !res.ok) return { modules: [] };
-  return res.json();
+  try {
+    const res = await backendFetch("/account/menu");
+    if (!res || !res.ok) return { modules: [] };
+    return res.json();
+  } catch {
+    // 백엔드 지연/타임아웃 시 빈 메뉴로 degrade — 페이지가 멈추지 않게.
+    return { modules: [] };
+  }
 }
 
 export default async function AppShell({ children }: { children: React.ReactNode }) {

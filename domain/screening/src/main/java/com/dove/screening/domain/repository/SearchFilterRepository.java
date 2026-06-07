@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * 검색 필터 영속성 저장소.
+ */
 public interface SearchFilterRepository extends JpaRepository<SearchFilter, Long> {
 
     List<SearchFilter> findAllByMemberIdOrderByDisplayOrderAscCreatedAtAsc(Long memberId);
