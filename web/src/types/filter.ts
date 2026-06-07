@@ -131,28 +131,13 @@ export const DATE_RULE_LABELS: Record<DateRule, string> = {
   PREV_10D: "기준일 전 10 거래일",
 };
 
-export interface StockSetSummary {
-  id: number;
-  name: string;
-  codeCount: number;
-}
-
-export interface StockSet {
-  id: number;
-  name: string;
-  codes: string[];
-  createdAt: string;
-  updatedAt: string;
-}
-
 export interface SearchFilter {
   id: number;
   name: string;
   dateRule: DateRule;
   markets: string[];
   expression: string;
-  includeStockSetId: number | null;
-  excludeStockSetId: number | null;
+  stockFilterId: number | null;
   createdAt: string;
   updatedAt: string;
 }
@@ -163,6 +148,8 @@ export interface StockMatchResult {
   marketType: string;
   closePrice: number | null;
   volume: number | null;
+  tradingHalt?: boolean;
+  adminItem?: boolean;
 }
 
 export interface ExecuteFilterResponse {

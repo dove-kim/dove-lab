@@ -1,22 +1,22 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
 import com.dove.indicator.domain.enums.IndicatorType;
+import org.springframework.stereotype.Component;
 
 import java.util.Collections;
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 변동성 계산기. 일간 로그수익률의 표준편차로 5일·20일 변동성을 산출한다.
+ */
+@Component
 public class VolatilityCalculator implements TechnicalIndicatorCalculator {
 
     private static final int REQUIRED_SIZE = 21;
     private static final int LONG_PERIOD = 20;
     private static final int SHORT_PERIOD = 5;
-
-    @Override
-    public String getName() {
-        return "VOLATILITY";
-    }
 
     @Override
     public int requiredDataSize() {
@@ -29,7 +29,7 @@ public class VolatilityCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+    public Map<IndicatorType, Double> calculate(List<StockPrice> dailyStockPriceList) {
         if (dailyStockPriceList.size() < REQUIRED_SIZE) {
             return Collections.emptyMap();
         }

@@ -3,12 +3,13 @@ import { backendFetch, unauthorized } from "@/services/backend";
 
 export async function GET(req: NextRequest, { params }: { params: Promise<{ code: string }> }) {
   const { code } = await params;
-  const market = req.nextUrl.searchParams.get("market") ?? "KOSPI";
-  const limit = req.nextUrl.searchParams.get("limit") ?? "120";
-  const types = req.nextUrl.searchParams.get("types") ?? "";
+  const source   = req.nextUrl.searchParams.get("source")   ?? "KRX";
+  const adjusted = req.nextUrl.searchParams.get("adjusted") ?? "true";
+  const limit    = req.nextUrl.searchParams.get("limit")    ?? "120";
+  const types    = req.nextUrl.searchParams.get("types")    ?? "";
   if (!types) return NextResponse.json([]);
 
-  const qs = new URLSearchParams({ market, limit });
+  const qs = new URLSearchParams({ source, adjusted, limit });
   types.split(",").forEach((t) => qs.append("types", t));
 
   const res = await backendFetch(`/stocks/${encodeURIComponent(code)}/indicators?${qs}`);

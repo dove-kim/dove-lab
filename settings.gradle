@@ -16,13 +16,19 @@ project(':stock').projectDir = file('domain/stock')
 
 include 'logging'
 include 'jpa'
+include 'api-quota'
+include 'concurrent'
+include 'datetime'
+include 'job-status'
 include 'screening'
 project(':screening').projectDir = file('domain/screening')
 project(':logging').projectDir = file('library/logging')
 project(':jpa').projectDir = file('library/jpa')
+project(':api-quota').projectDir = file('library/api-quota')
+project(':concurrent').projectDir = file('library/concurrent')
+project(':datetime').projectDir = file('library/datetime')
+project(':job-status').projectDir = file('library/job-status')
 
-include 'security'
-project(':security').projectDir = file('infrastructure/security')
 
 include 'user'
 project(':user').projectDir = file('domain/user')
@@ -32,3 +38,15 @@ project(':auth').projectDir = file('domain/auth')
 
 include 'user-feature'
 project(':user-feature').projectDir = file('domain/user-feature')
+
+include 'investor-flow'
+project(':investor-flow').projectDir = file('domain/investor-flow')
+
+include 'system-event'
+project(':system-event').projectDir = file('domain/system-event')
+
+include 'kis'
+project(':kis').projectDir = file('infrastructure/kis')
+
+include 'stock-collection'
+project(':stock-collection').projectDir = file('domain/stock-collection')

@@ -1,19 +1,19 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
 import com.dove.indicator.domain.enums.IndicatorType;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
 
+/**
+ * 거래량 이평 대비 비율 계산기. 당일 거래량을 20일 평균 거래량으로 나눈 비율을 산출한다.
+ */
+@Component
 public class VolumeMa20RatioCalculator implements TechnicalIndicatorCalculator {
 
     private static final int PERIOD = 20;
-
-    @Override
-    public String getName() {
-        return "VOLUME_MA20_RATIO";
-    }
 
     @Override
     public int requiredDataSize() {
@@ -26,16 +26,16 @@ public class VolumeMa20RatioCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+    public Map<IndicatorType, Double> calculate(List<StockPrice> dailyStockPriceList) {
         if (dailyStockPriceList.size() < PERIOD) {
             return Map.of();
         }
 
         int size = dailyStockPriceList.size();
-        List<DailyStockPrice> window = dailyStockPriceList.subList(size - PERIOD, size);
+        List<StockPrice> window = dailyStockPriceList.subList(size - PERIOD, size);
 
         double average = window.stream()
-                .mapToLong(DailyStockPrice::getVolume)
+                .mapToLong(StockPrice::getVolume)
                 .average()
                 .orElse(0.0);
 

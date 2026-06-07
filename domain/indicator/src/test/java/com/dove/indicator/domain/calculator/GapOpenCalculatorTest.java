@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.market.domain.enums.MarketType;
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
+import com.dove.stock.domain.enums.StockExchange;
+import com.dove.stock.domain.enums.PriceType;
 import com.dove.indicator.domain.enums.IndicatorType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -17,9 +18,9 @@ class GapOpenCalculatorTest {
 
     private final GapOpenCalculator calculator = new GapOpenCalculator();
 
-    private DailyStockPrice createDailyStockPrice(LocalDate date, long open, long close) {
-        return new DailyStockPrice(MarketType.KOSPI, "005930", date,
-                1000L, open, close, 90L, 120L);
+    private StockPrice createStockPrice(LocalDate date, long open, long close) {
+        return new StockPrice("005930", StockExchange.KOSPI, PriceType.RAW, date,
+                open, 120L, 90L, close, 1000L, null);
     }
 
     @Test
@@ -27,9 +28,9 @@ class GapOpenCalculatorTest {
     void shouldCalculateGapOpenCorrectly() {
         // Given - 전일 종가 100, 당일 시가 110
         // GAP_OPEN = 110 / 100 - 1 = 0.1
-        List<DailyStockPrice> data = List.of(
-                createDailyStockPrice(LocalDate.of(2024, 1, 1), 100L, 100L),
-                createDailyStockPrice(LocalDate.of(2024, 1, 2), 110L, 105L)
+        List<StockPrice> data = List.of(
+                createStockPrice(LocalDate.of(2024, 1, 1), 100L, 100L),
+                createStockPrice(LocalDate.of(2024, 1, 2), 110L, 105L)
         );
 
         // When
@@ -45,9 +46,9 @@ class GapOpenCalculatorTest {
     void shouldReturnNegativeGapOpenWhenOpenBelowPrevClose() {
         // Given - 전일 종가 100, 당일 시가 90
         // GAP_OPEN = 90 / 100 - 1 = -0.1
-        List<DailyStockPrice> data = List.of(
-                createDailyStockPrice(LocalDate.of(2024, 1, 1), 100L, 100L),
-                createDailyStockPrice(LocalDate.of(2024, 1, 2), 90L, 95L)
+        List<StockPrice> data = List.of(
+                createStockPrice(LocalDate.of(2024, 1, 1), 100L, 100L),
+                createStockPrice(LocalDate.of(2024, 1, 2), 90L, 95L)
         );
 
         // When
@@ -62,8 +63,8 @@ class GapOpenCalculatorTest {
     @DisplayName("데이터가 requiredDataSize 미만이면 빈 맵을 반환한다")
     void shouldReturnEmptyWhenDataInsufficient() {
         // Given - 1개 (2 미만)
-        List<DailyStockPrice> data = List.of(
-                createDailyStockPrice(LocalDate.of(2024, 1, 1), 100L, 100L)
+        List<StockPrice> data = List.of(
+                createStockPrice(LocalDate.of(2024, 1, 1), 100L, 100L)
         );
 
         // When

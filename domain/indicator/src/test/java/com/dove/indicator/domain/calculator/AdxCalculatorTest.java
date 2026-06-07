@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
-import com.dove.market.domain.enums.MarketType;
+import com.dove.stock.domain.entity.StockPrice;
+import com.dove.stock.domain.enums.StockExchange;
+import com.dove.stock.domain.enums.PriceType;
 import com.dove.indicator.domain.calculator.AdxCalculator;
 import com.dove.indicator.domain.enums.IndicatorType;
 import org.junit.jupiter.api.DisplayName;
@@ -19,16 +20,16 @@ class AdxCalculatorTest {
 
     private final AdxCalculator calculator = new AdxCalculator();
 
-    private DailyStockPrice createDailyStockPrice(LocalDate date, long high, long low, long close) {
-        return new DailyStockPrice(MarketType.KOSPI, "005930", date,
-                1000L, 100L, close, low, high);
+    private StockPrice createStockPrice(LocalDate date, long high, long low, long close) {
+        return new StockPrice("005930", StockExchange.KOSPI, PriceType.RAW, date,
+                100L, high, low, close, 1000L, null);
     }
 
     @Test
     @DisplayName("알려진 값으로 ADX를 검증한다")
     void shouldCalculateAdxFromKnownValues() {
-        List<DailyStockPrice> data = IntStream.range(0, 100)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 100)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         1000 + i * 20,
                         900 + i * 20,
@@ -44,8 +45,8 @@ class AdxCalculatorTest {
     @Test
     @DisplayName("+DI를 계산한다")
     void shouldCalculatePlusDi() {
-        List<DailyStockPrice> data = IntStream.range(0, 100)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 100)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         1000 + i * 20, 900 + i * 20, 950 + i * 20))
                 .toList();
@@ -58,10 +59,10 @@ class AdxCalculatorTest {
     @Test
     @DisplayName("-DI를 계산한다")
     void shouldCalculateMinusDi() {
-        List<DailyStockPrice> data = IntStream.range(0, 100)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 100)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
-                        2000 - i * 20, 1900 - i * 20, 1950 - i * 20))
+                        2000 - i * 20L, 1900 - i * 20L, 1950 - i * 20L))
                 .toList();
 
         Map<IndicatorType, Double> result = calculator.calculate(data);
@@ -72,8 +73,8 @@ class AdxCalculatorTest {
     @Test
     @DisplayName("횡보 시장에서 DM=0이면 0으로 처리한다")
     void shouldHandleFlatMarket() {
-        List<DailyStockPrice> data = IntStream.range(0, 100)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 100)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         1000, 1000, 1000))
                 .toList();

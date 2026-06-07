@@ -1,6 +1,6 @@
 package com.dove.auth.domain.entity;
 
-import com.dove.user.domain.entity.MemberRole;
+import com.dove.auth.domain.enums.MemberRole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -20,9 +20,7 @@ import java.time.LocalDateTime;
 import java.util.UUID;
 
 /**
- * 가입용 초대 코드. DOVE_AUTH 스키마에 위치.
- *
- * <p>발급 대상 권한(MemberRole)은 domain/user의 enum을 단방향으로 import한다.
+ * 가입용 초대 코드.
  */
 @Entity
 @Table(

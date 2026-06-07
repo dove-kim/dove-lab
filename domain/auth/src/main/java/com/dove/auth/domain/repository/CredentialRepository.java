@@ -7,6 +7,9 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * 회원 자격증명 영속성 저장소.
+ */
 public interface CredentialRepository extends JpaRepository<Credential, Long> {
 
     Optional<Credential> findByUsername(String username);

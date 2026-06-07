@@ -10,12 +10,29 @@
 
 /stocks                  GET   종목 목록
 /stocks/{code}/prices    GET   일별 주가
+                               ?source=KRX|NXT|CONSOLIDATED (기본값 KRX)
+                               ?adjusted=true|false          (기본값 true, ROOT 계정은 항상 false)
+                               ?limit=N                      (기본값 60)
 /stocks/{code}/indicators GET  기술적 지표
+                               ?source=KRX|NXT|CONSOLIDATED (기본값 KRX)
+                               ?adjusted=true|false          (기본값 true, ROOT 계정은 항상 false)
+                               ?limit=N                      (기본값 120)
+                               ?types=SMA_5,EMA_20,...       (IndicatorType 이름 복수 가능)
+/stocks/{code}/detail    GET   종목 상세 (기본 + STOCK_DETAIL)
+/stocks/{code}/events    GET   권리 이벤트 목록 (배당·증자·감자·합병/분할·액면)
+/stocks/{code}/invest-opinion GET  종목투자의견 (on-demand, KIS 즉시 호출)
+/stocks/{code}/estimate  GET   종목추정실적 (on-demand, KIS 즉시 호출)
+/stocks/{code}/investor-flow GET  투자자별 일별 순매수 (개인·기관·외국인)
+                               ?source=KRX|NXT|CONSOLIDATED
+                               ?limit=N                      (기본값 60, 최신순)
 
 /market/trading-days     GET   거래일 목록
 
 /filters                 CRUD  종목 검색 필터 (저장·조회·실행)
 /filters/{id}/execute    POST  필터 실행
+
+/stock-tags              GET   종목 분류(태그) 차원·값 목록 + 수치 필드 (검색·필터 UI 공통)
+/admin/stock-tags/{id}/label  PATCH  분류 값 표시명 편집 (ROOT)
 
 /indicator-presets       CRUD  지표 프리셋
 
@@ -28,6 +45,15 @@
 
 /root/invite-codes       GET / POST  초대 코드 관리 (ROOT)
 /root/users              GET / PATCH 사용자 관리 (ROOT)
+
+# 운영 관리 (ROOT) — /admin/ops
+/admin/ops/collection/price   POST  주가 재조회(기간) 시작 → 작업ID (범위 ≤어제, 수정주가 재조회는 ADJUSTED_TOTAL/DONE에 별도 표시)
+/admin/ops/collection/stock   POST  종목 재조회(기간, KRX) 시작 → 작업ID
+/admin/ops/collection/event   POST  권리이벤트(KSD, 기간) 재조회 시작 → 작업ID (백필=종목별 전구간, 일일=날짜범위+캡 시 종목별 보완 → 완전 수집)
+/admin/ops/collection/tasks   GET   수집 작업 목록·상태 폴링
+/admin/ops/scheduler/status   GET   스케줄러/백필 진행률 (대시보드)
+/admin/ops/system-events      GET   수집·계산 운영 이벤트 (KRX/KIS 실패 등)
+/admin/ops/api-quota          GET   API 호출 할당량 현황
 ```
 
 ## 환경변수

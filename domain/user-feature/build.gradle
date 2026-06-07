@@ -2,7 +2,7 @@ bootJar.enabled = false
 
 dependencies {
     implementation project(':jpa')
-
+    implementation project(':auth')
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
     testImplementation 'com.h2database:h2'

@@ -5,48 +5,33 @@ import org.springframework.boot.SpringApplication;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.ComponentScan;
-import org.springframework.scheduling.annotation.EnableScheduling;
-import org.springframework.scheduling.concurrent.ThreadPoolTaskExecutor;
 
 import java.time.Clock;
+import java.time.Instant;
+import java.time.LocalDate;
 import java.time.ZoneId;
-import java.util.concurrent.ForkJoinPool;
 
-@EnableScheduling
+// @EnableScheduling은 SchedulingConfig(@Profile("!local"))로 분리 — local에선 cron 대신 LocalJobRunner의 수동 JOB만 실행.
 @SpringBootApplication
 @ComponentScan(basePackages = {"com.dove"})
 public class SchedulerApplication {
+
+    private static final ZoneId KST = ZoneId.of("Asia/Seoul");
 
     public static void main(String[] args) {
         SpringApplication.run(SchedulerApplication.class, args);
     }
 
+    /**
+     * 시스템 시계. JOB_DATE(yyyy-MM-dd) 지정 시 그 날짜 정오(KST)로 고정 — 로컬 배치 테스트용.
+     * 미지정(운영)이면 실제 시스템 시계를 사용한다.
+     */
     @Bean
-    public Clock clock() {
-        return Clock.system(ZoneId.of("Asia/Seoul"));
-    }
-
-    /** 시장 데이터 수집·지표 계산 전용 스레드 풀. */
-    @Bean
-    public ThreadPoolTaskExecutor taskExecutor(
-            @Value("${scheduler.thread-pool.core-size:4}") int coreSize,
-            @Value("${scheduler.thread-pool.max-size:8}") int maxSize,
-            @Value("${scheduler.thread-pool.queue-capacity:200}") int queueCapacity) {
-        ThreadPoolTaskExecutor executor = new ThreadPoolTaskExecutor();
-        executor.setCorePoolSize(coreSize);
-        executor.setMaxPoolSize(maxSize);
-        executor.setQueueCapacity(queueCapacity);
-        executor.setThreadNamePrefix("batch-worker-");
-        executor.setRejectedExecutionHandler(new java.util.concurrent.ThreadPoolExecutor.CallerRunsPolicy());
-        executor.setWaitForTasksToCompleteOnShutdown(true);
-        executor.setAwaitTerminationSeconds(60);
-        return executor;
-    }
-
-    /** 시장별 병렬 처리 전용 ForkJoinPool — commonPool 점유 방지. */
-    @Bean
-    public ForkJoinPool marketParallelPool(
-            @Value("${scheduler.market-parallelism:2}") int parallelism) {
-        return new ForkJoinPool(parallelism);
+    public Clock clock(@Value("${JOB_DATE:}") String jobDate) {
+        if (jobDate == null || jobDate.isBlank()) {
+            return Clock.system(KST);
+        }
+        Instant fixed = LocalDate.parse(jobDate.trim()).atTime(12, 0).atZone(KST).toInstant();
+        return Clock.fixed(fixed, KST);
     }
 }

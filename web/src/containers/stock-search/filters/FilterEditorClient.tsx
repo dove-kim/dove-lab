@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState, useCallback } from "react";
 import { cx } from "@/utils/cx";
@@ -8,7 +8,6 @@ import {
   ConditionType,
   SearchFilter,
   MarketTypeFilter,
-  StockSetSummary,
 } from "@/types/filter";
 import { createEmptyRoot } from "@/utils/filter";
 import ExpressionTree from "./ExpressionTree";
@@ -17,12 +16,18 @@ import Select from "@/components/Select";
 
 const ALL_MARKETS: MarketTypeFilter[] = ["KOSPI", "KOSDAQ", "KONEX"];
 
-interface Props {
-  initial?: SearchFilter;
-  stockSets: StockSetSummary[];
+interface StockFilterSummary {
+  id: number;
+  name: string;
+  scope: "SYSTEM" | "MEMBER";
 }
 
-export default function FilterEditorClient({ initial, stockSets }: Props) {
+interface Props {
+  initial?: SearchFilter;
+  stockFilters: StockFilterSummary[];
+}
+
+export default function FilterEditorClient({ initial, stockFilters }: Props) {
   const router = useRouter();
 
   const [initialData] = useState(() => {
@@ -38,12 +43,10 @@ export default function FilterEditorClient({ initial, stockSets }: Props) {
   const [selectedMarkets, setSelectedMarkets] = useState<Set<MarketTypeFilter>>(
     new Set((initial?.markets ?? ALL_MARKETS) as MarketTypeFilter[])
   );
-  const [includeStockSetId, setIncludeStockSetId] = useState<number | null>(
-    initial?.includeStockSetId ?? null
+  const [stockFilterId, setStockFilterId] = useState<number | null>(
+    initial?.stockFilterId ?? null
   );
-  const [excludeStockSetId, setExcludeStockSetId] = useState<number | null>(
-    initial?.excludeStockSetId ?? null
-  );
+
   const [root, setRoot] = useState<GroupNode>(initialData.root);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(initialData.id);
   const [pendingAddType, setPendingAddType] = useState<ConditionType | null>(null);
@@ -78,8 +81,7 @@ export default function FilterEditorClient({ initial, stockSets }: Props) {
       dateRule: "LATEST",
       markets: Array.from(selectedMarkets),
       expression: JSON.stringify(root),
-      includeStockSetId,
-      excludeStockSetId,
+      stockFilterId,
     };
     const url = initial ? `/api/filters/${initial.id}` : "/api/filters";
     const method = initial ? "PUT" : "POST";
@@ -149,31 +151,25 @@ export default function FilterEditorClient({ initial, stockSets }: Props) {
           </div>
         </div>
 
-        {/* 종목 세트 포함/제외 */}
-        {stockSets.length > 0 && (
-          <div className="flex flex-wrap gap-6 mt-4 pt-4 border-t border-white/5">
-            <StockSetPicker
-              label="포함 종목 필터"
-              value={includeStockSetId}
-              onChange={setIncludeStockSetId}
-              stockSets={stockSets}
-              helpText="선택된 세트의 종목만 결과에 포함"
-            />
-            <StockSetPicker
-              label="제외 종목 필터"
-              value={excludeStockSetId}
-              onChange={setExcludeStockSetId}
-              stockSets={stockSets}
-              helpText="선택된 세트의 종목을 결과에서 제외 (포함보다 제외 우선)"
-            />
-          </div>
-        )}
-        {stockSets.length === 0 && (
-          <p className="text-xs text-slate-600 mt-3">
-            종목 필터를 만들면 특정 종목만 포함하거나 제외할 수 있어요{" "}
-            <a href="/stock-sets/new" className="text-indigo-400 hover:text-indigo-300">새 종목 필터 만들기</a>
-          </p>
-        )}
+        {/* 종목 필터 설정 */}
+        <div className="mt-4 pt-4 border-t border-white/5">
+          <label className="text-xs text-slate-400 mb-1 block">종목 필터</label>
+          <Select
+            value={stockFilterId?.toString() ?? ""}
+            items={[
+              { value: "", label: "없음" },
+              ...stockFilters
+                .filter((f) => f.scope === "SYSTEM")
+                .map((f) => ({ value: f.id.toString(), label: `[시스템] ${f.name}` })),
+              ...stockFilters
+                .filter((f) => f.scope === "MEMBER")
+                .map((f) => ({ value: f.id.toString(), label: `[내] ${f.name}` })),
+            ]}
+            onChange={(v) => setStockFilterId(v ? parseInt(v) : null)}
+            className="min-w-52"
+          />
+          <p className="text-xs text-slate-500 mt-1">시스템 필터(전체 공유) 또는 본인의 개인 필터로 종목 풀을 한정합니다.</p>
+        </div>
       </div>
 
       {/* 본문 2-패널 */}
@@ -218,34 +214,3 @@ export default function FilterEditorClient({ initial, stockSets }: Props) {
     </div>
   );
 }
-
-function StockSetPicker({
-  label,
-  value,
-  onChange,
-  stockSets,
-  helpText,
-}: {
-  label: string;
-  value: number | null;
-  onChange: (v: number | null) => void;
-  stockSets: StockSetSummary[];
-  helpText: string;
-}) {
-  return (
-    <div>
-      <label className="text-xs text-slate-400 mb-1 block">{label}</label>
-      <Select
-        value={value?.toString() ?? ""}
-        items={[
-          { value: "", label: "없음" },
-          ...stockSets.map(s => ({ value: s.id.toString(), label: `${s.name} (${s.codeCount}종목)` })),
-        ]}
-        onChange={(v) => onChange(v ? parseInt(v) : null)}
-        className="min-w-44"
-      />
-      <p className="text-xs text-slate-500 mt-1">{helpText}</p>
-    </div>
-  );
-}
-

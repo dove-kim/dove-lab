@@ -54,7 +54,7 @@ function RegisterForm() {
     <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-gray-950 via-slate-900 to-indigo-950 px-4">
       <div className="w-full max-w-md">
         <div className="text-center mb-8">
-          <h1 className="text-2xl font-bold text-white tracking-wide">주식 딸깍이</h1>
+          <h1 className="text-2xl font-bold text-white tracking-wide">도브 연구실</h1>
           <p className="text-slate-400 text-sm mt-1">초대 코드로 계정을 만들어보세요</p>
         </div>
 

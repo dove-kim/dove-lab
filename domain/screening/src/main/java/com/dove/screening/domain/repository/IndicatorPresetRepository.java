@@ -6,6 +6,9 @@ import org.springframework.data.jpa.repository.JpaRepository;
 import java.util.List;
 import java.util.Optional;
 
+/**
+ * 지표 프리셋 영속성 저장소.
+ */
 public interface IndicatorPresetRepository extends JpaRepository<IndicatorPreset, Long> {
     List<IndicatorPreset> findAllByMemberIdOrderByDisplayOrderAscCreatedAtAsc(Long memberId);
 

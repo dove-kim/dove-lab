@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { ConditionType } from "@/types/filter";
 
@@ -102,4 +102,3 @@ export default function ConditionPalette({ selectedGroupId, rootId, onAdd }: Pro
     </div>
   );
 }
-

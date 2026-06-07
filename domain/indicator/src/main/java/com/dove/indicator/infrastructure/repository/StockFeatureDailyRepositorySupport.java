@@ -1,0 +1,45 @@
+package com.dove.indicator.infrastructure.repository;
+
+import com.dove.indicator.domain.entity.StockFeatureDaily;
+import com.dove.stock.domain.enums.PriceType;
+import com.dove.stock.domain.enums.StockExchange;
+import com.querydsl.jpa.impl.JPAQueryFactory;
+import lombok.RequiredArgsConstructor;
+import org.springframework.stereotype.Repository;
+
+import java.time.LocalDate;
+import java.util.List;
+
+import static com.dove.indicator.domain.entity.QStockFeatureDaily.stockFeatureDaily;
+
+/**
+ * wide 피처 행의 QueryDSL 기반 조회 지원.
+ */
+@Repository
+@RequiredArgsConstructor
+public class StockFeatureDailyRepositorySupport {
+
+    private final JPAQueryFactory queryFactory;
+
+    /** 거래소·가격유형·날짜의 전 종목 wide 피처 행. (검색 필터·ML 평가용) */
+    public List<StockFeatureDaily> findByExchangeAndPriceTypeAndDate(
+            StockExchange exchange, PriceType priceType, LocalDate date) {
+        return queryFactory.selectFrom(stockFeatureDaily)
+                .where(stockFeatureDaily.id.exchange.eq(exchange),
+                        stockFeatureDaily.id.priceType.eq(priceType),
+                        stockFeatureDaily.id.tradeDate.eq(date))
+                .fetch();
+    }
+
+    /** 종목·거래소·가격유형의 최근 거래일 N개 wide 피처 행 (거래일 내림차순). */
+    public List<StockFeatureDaily> findRecentByTicker(
+            String ticker, StockExchange exchange, PriceType priceType, int limit) {
+        return queryFactory.selectFrom(stockFeatureDaily)
+                .where(stockFeatureDaily.id.ticker.eq(ticker),
+                        stockFeatureDaily.id.exchange.eq(exchange),
+                        stockFeatureDaily.id.priceType.eq(priceType))
+                .orderBy(stockFeatureDaily.id.tradeDate.desc())
+                .limit(limit)
+                .fetch();
+    }
+}

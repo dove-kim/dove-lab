@@ -1,7 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { safeJson } from "@/services/backend";
 
-const REMEMBER_ME_MAX_AGE = 60 * 60 * 24 * 30; // 30일
+const ACCESS_MAX_AGE = 60 * 15;          // 15분 (access token TTL)
+const REFRESH_MAX_AGE = 60 * 60 * 24 * 30; // 30일 (refresh token TTL)
+const REFRESH_COOKIE_PATH = "/api/auth";
 
 export async function POST(req: NextRequest) {
   const body = await req.json();
@@ -19,15 +21,31 @@ export async function POST(req: NextRequest) {
     );
   }
 
-  const data = await safeJson(apiRes) as { accessToken: string; username: string; name: string; role: string; rememberMe: boolean };
+  const data = await safeJson(apiRes) as {
+    accessToken: string;
+    refreshToken: string;
+    username: string;
+    name: string;
+    role: string;
+    rememberMe: boolean;
+  };
 
   const response = NextResponse.json({ username: data.username, name: data.name, role: data.role });
+  // access token (15분, 전체 경로)
   response.cookies.set("token", data.accessToken, {
     httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    ...(data.rememberMe ? { maxAge: REMEMBER_ME_MAX_AGE } : {}),
     path: "/",
+    maxAge: ACCESS_MAX_AGE,
+  });
+  // refresh token (30일, /api/auth 경로에서만 전송)
+  response.cookies.set("refreshToken", data.refreshToken, {
+    httpOnly: true,
+    secure: process.env.NODE_ENV === "production",
+    sameSite: "strict",
+    path: REFRESH_COOKIE_PATH,
+    maxAge: REFRESH_MAX_AGE,
   });
 
   return response;
