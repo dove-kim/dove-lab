@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
 import com.dove.indicator.domain.enums.IndicatorType;
+import org.springframework.stereotype.Component;
 
 import java.util.List;
 import java.util.Map;
@@ -9,14 +10,10 @@ import java.util.Map;
 /**
  * Williams %R 계산기. 14일간 고가-저가 범위 대비 현재 종가 위치를 -100~0 범위로 산출한다.
  */
+@Component
 public class WilliamsRCalculator implements TechnicalIndicatorCalculator {
 
     private static final int PERIOD = 14;
-
-    @Override
-    public String getName() {
-        return "WILLIAMS_R";
-    }
 
     @Override
     public int requiredDataSize() {
@@ -29,11 +26,11 @@ public class WilliamsRCalculator implements TechnicalIndicatorCalculator {
     }
 
     @Override
-    public Map<IndicatorType, Double> calculate(List<DailyStockPrice> dailyStockPriceList) {
+    public Map<IndicatorType, Double> calculate(List<StockPrice> dailyStockPriceList) {
         long highestHigh = Long.MIN_VALUE;
         long lowestLow = Long.MAX_VALUE;
 
-        for (DailyStockPrice data : dailyStockPriceList) {
+        for (StockPrice data : dailyStockPriceList) {
             highestHigh = Math.max(highestHigh, data.getHighPrice());
             lowestLow = Math.min(lowestLow, data.getLowPrice());
         }

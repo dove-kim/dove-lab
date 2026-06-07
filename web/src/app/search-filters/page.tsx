@@ -1,9 +1,11 @@
-﻿import { cookies } from "next/headers";
+import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import AppShell from "@/components/AppShell";
 import FilterListClient from "@/containers/stock-search/filters/FilterListClient";
 import { backendFetch } from "@/services/backend";
-import { SearchFilter, StockSet, StockSetSummary } from "@/types/filter";
+import { SearchFilter } from "@/types/filter";
+
+interface StockFilterSummary { id: number; name: string; scope: "SYSTEM" | "MEMBER"; }
 
 async function fetchFilters(): Promise<SearchFilter[]> {
   const res = await backendFetch("/filters");
@@ -11,21 +13,21 @@ async function fetchFilters(): Promise<SearchFilter[]> {
   return res.json();
 }
 
-async function fetchStockSets(): Promise<StockSetSummary[]> {
-  const res = await backendFetch("/stock-sets");
+async function fetchStockFilters(): Promise<StockFilterSummary[]> {
+  const res = await backendFetch("/stock-filters/available");
   if (!res || !res.ok) return [];
-  const sets: StockSet[] = await res.json();
-  return sets.map((s) => ({ id: s.id, name: s.name, codeCount: s.codes.length }));
+  const data = await res.json();
+  return data.map((f: { id: number; name: string; scope: "SYSTEM" | "MEMBER" }) => ({ id: f.id, name: f.name, scope: f.scope }));
 }
 
 export default async function SearchFiltersPage() {
   if (!(await cookies()).get("token")) redirect("/login");
 
-  const [filters, stockSets] = await Promise.all([fetchFilters(), fetchStockSets()]);
+  const [filters, stockFilters] = await Promise.all([fetchFilters(), fetchStockFilters()]);
 
   return (
     <AppShell>
-      <FilterListClient filters={filters} stockSets={stockSets} />
+      <FilterListClient filters={filters} stockFilters={stockFilters} />
     </AppShell>
   );
 }

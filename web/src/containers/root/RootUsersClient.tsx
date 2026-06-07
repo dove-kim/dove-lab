@@ -33,7 +33,7 @@ export default function RootUsersClient({ users: initialUsers }: Props) {
   async function applyRoleChange(userId: number, role: Role) {
     setPendingId(userId);
     try {
-      const res = await clientFetch(`/api/root/users/${userId}/role`, {
+      const res = await clientFetch(`/api/admin/users/${userId}/role`, {
         method: "PATCH",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ role }),
@@ -52,7 +52,7 @@ export default function RootUsersClient({ users: initialUsers }: Props) {
   async function applyPasswordReset(userId: number) {
     setPendingId(userId);
     try {
-      const res = await clientFetch(`/api/root/users/${userId}/reset-password`, {
+      const res = await clientFetch(`/api/admin/users/${userId}/reset-password`, {
         method: "POST",
       });
       if (res?.ok) {

@@ -1,5 +1,6 @@
 package com.dove.user.domain.entity;
 
+import com.dove.auth.domain.enums.MemberRole;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -17,10 +18,7 @@ import org.hibernate.annotations.Comment;
 import java.time.LocalDateTime;
 
 /**
- * 회원 신원/프로필 정보.
- *
- * <p>DOVE_USER 스키마의 MEMBER 테이블에 매핑된다. 비밀번호 해시는 보유하지 않으며,
- * 자격증명은 별도 도메인(domain/auth)의 Credential이 책임진다.
+ * 회원 신원/프로필 정보. 비밀번호 해시는 보유하지 않는다(자격증명은 domain/auth 책임).
  */
 @Entity
 @Table(
@@ -56,6 +54,14 @@ public class MemberProfile {
     @Comment("가입일시")
     private LocalDateTime createdAt;
 
+    /**
+     * 신규 회원 프로필을 생성한다.
+     *
+     * @param email 이메일
+     * @param name  표시명
+     * @param role  초기 권한
+     * @return 영속화 전 프로필 인스턴스
+     */
     public static MemberProfile create(String email, String name, MemberRole role) {
         MemberProfile p = new MemberProfile();
         p.email = email;
@@ -65,10 +71,11 @@ public class MemberProfile {
         return p;
     }
 
-    public boolean hasRole(MemberRole required) {
-        return this.role == required;
-    }
-
+    /**
+     * 역할을 변경한다.
+     *
+     * @param role 새 역할
+     */
     public void changeRole(MemberRole role) {
         this.role = role;
     }

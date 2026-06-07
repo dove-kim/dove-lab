@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
-import com.dove.market.domain.enums.MarketType;
+import com.dove.stock.domain.entity.StockPrice;
+import com.dove.stock.domain.enums.StockExchange;
+import com.dove.stock.domain.enums.PriceType;
 import com.dove.indicator.domain.calculator.RsiCalculator;
 import com.dove.indicator.domain.enums.IndicatorType;
 import org.junit.jupiter.api.DisplayName;
@@ -19,9 +20,9 @@ class RsiCalculatorTest {
 
     private final RsiCalculator rsiCalculator = new RsiCalculator(14, IndicatorType.RSI_14);
 
-    private DailyStockPrice createDailyStockPrice(LocalDate date, long closePrice) {
-        return new DailyStockPrice(MarketType.KOSPI, "005930", date,
-                1000L, 100L, closePrice, 90L, 110L);
+    private StockPrice createStockPrice(LocalDate date, long closePrice) {
+        return new StockPrice("005930", StockExchange.KOSPI, PriceType.RAW, date,
+                100L, 110L, 90L, closePrice, 1000L, null);
     }
 
     @Test
@@ -30,8 +31,8 @@ class RsiCalculatorTest {
         long[] prices = {4400, 4434, 4409, 4361, 4433, 4483, 4510, 4542, 4584,
                 4608, 4589, 4603, 4561, 4628, 4628};
 
-        List<DailyStockPrice> data = IntStream.range(0, 15)
-                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, 1).plusDays(i), prices[i]))
+        List<StockPrice> data = IntStream.range(0, 15)
+                .mapToObj(i -> createStockPrice(LocalDate.of(2024, 1, 1).plusDays(i), prices[i]))
                 .toList();
 
         Map<IndicatorType, Double> result = rsiCalculator.calculate(data);
@@ -42,8 +43,8 @@ class RsiCalculatorTest {
     @Test
     @DisplayName("모두 상승이면 RSI는 100에 가깝다")
     void shouldReturn100WhenAllGains() {
-        List<DailyStockPrice> data = IntStream.range(0, 15)
-                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, 1).plusDays(i), 1000 + i * 100))
+        List<StockPrice> data = IntStream.range(0, 15)
+                .mapToObj(i -> createStockPrice(LocalDate.of(2024, 1, 1).plusDays(i), 1000 + i * 100))
                 .toList();
 
         Map<IndicatorType, Double> result = rsiCalculator.calculate(data);
@@ -54,8 +55,8 @@ class RsiCalculatorTest {
     @Test
     @DisplayName("모두 하락이면 RSI는 0에 가깝다")
     void shouldReturn0WhenAllLosses() {
-        List<DailyStockPrice> data = IntStream.range(0, 15)
-                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, 1).plusDays(i), 10000 - i * 100))
+        List<StockPrice> data = IntStream.range(0, 15)
+                .mapToObj(i -> createStockPrice(LocalDate.of(2024, 1, 1).plusDays(i), 10000 - i * 100))
                 .toList();
 
         Map<IndicatorType, Double> result = rsiCalculator.calculate(data);
@@ -71,8 +72,8 @@ class RsiCalculatorTest {
                 10900, 10850, 11000, 10950, 11100, 11050, 11200,
                 11150, 11300, 11250, 11400, 11350, 11500, 11450, 11600};
 
-        List<DailyStockPrice> data = IntStream.range(0, 30)
-                .mapToObj(i -> createDailyStockPrice(LocalDate.of(2024, 1, 1).plusDays(i), prices[i]))
+        List<StockPrice> data = IntStream.range(0, 30)
+                .mapToObj(i -> createStockPrice(LocalDate.of(2024, 1, 1).plusDays(i), prices[i]))
                 .toList();
 
         Map<IndicatorType, Double> result = rsiCalculator.calculate(data);

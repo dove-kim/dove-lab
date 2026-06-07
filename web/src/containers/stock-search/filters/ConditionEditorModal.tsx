@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { cx } from "@/utils/cx";
@@ -448,4 +448,3 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
     </div>
   );
 }
-

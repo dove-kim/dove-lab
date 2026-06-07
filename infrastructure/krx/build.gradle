@@ -4,7 +4,12 @@ dependencies {
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
 
     implementation project(':jpa')
+    implementation project(':concurrent')
     implementation project(':market')
+    implementation project(':stock')
+    implementation project(':system-event')
+    implementation project(':api-quota')
+    implementation 'org.springframework.boot:spring-boot-starter-data-redis'
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'

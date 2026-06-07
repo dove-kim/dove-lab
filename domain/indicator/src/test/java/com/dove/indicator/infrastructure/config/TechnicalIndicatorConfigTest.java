@@ -1,6 +1,7 @@
 package com.dove.indicator.infrastructure.config;
 
 import com.dove.indicator.domain.calculator.TechnicalIndicatorCalculator;
+import com.dove.indicator.domain.enums.IndicatorType;
 import com.dove.indicator.infrastructure.config.TechnicalIndicatorConfig;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -20,17 +21,17 @@ class TechnicalIndicatorConfigTest {
     private List<TechnicalIndicatorCalculator> calculators;
 
     @Test
-    @DisplayName("31개 계산기가 모두 등록된다 (SMA 7 + EMA 6 + RSI 3 + 나머지 15)")
+    @DisplayName("33개 계산기가 모두 등록된다 (SMA 7 + EMA 6 + RSI 3 + 나머지 17)")
     void shouldRegisterAllCalculators() {
-        assertThat(calculators).hasSize(31);
+        assertThat(calculators).hasSize(33);
     }
 
     @Test
-    @DisplayName("모든 계산기의 이름이 고유하다")
-    void shouldHaveUniqueNames() {
-        Set<String> names = calculators.stream()
-                .map(TechnicalIndicatorCalculator::getName)
+    @DisplayName("모든 계산기의 대표 지표 종류가 고유하다")
+    void shouldHaveUniqueIndicatorTypes() {
+        Set<IndicatorType> types = calculators.stream()
+                .map(TechnicalIndicatorCalculator::indicatorType)
                 .collect(Collectors.toSet());
-        assertThat(names).hasSize(calculators.size());
+        assertThat(types).hasSize(calculators.size());
     }
 }

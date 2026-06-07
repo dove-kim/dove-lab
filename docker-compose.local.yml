@@ -18,11 +18,21 @@ services:
       - mysql_data:/var/lib/mysql
       - ./scripts/init.sql:/docker-entrypoint-initdb.d/01_init.sql
       - ./scripts/init_data.sql:/docker-entrypoint-initdb.d/02_init_data.sql
-      - ./scripts/init_stock_data.sql:/docker-entrypoint-initdb.d/03_init_stock_data.sql
-#      - ./scripts/init_indicator_data.sql:/docker-entrypoint-initdb.d/04_init_indicator_data.sql
+
+  redis:
+    image: redis:7-alpine
+    container_name: dove-redis
+    restart: always
+    networks:
+      - dove-lab-network
+    ports:
+      - "6379:6379"
+    volumes:
+      - redis_data:/data
 
 volumes:
   mysql_data:
+  redis_data:
 
 networks:
   dove-lab-network:

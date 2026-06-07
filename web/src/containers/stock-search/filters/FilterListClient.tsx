@@ -1,4 +1,4 @@
-﻿"use client";
+"use client";
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
@@ -10,11 +10,14 @@ import {
   SortableContext, useSortable, verticalListSortingStrategy, arrayMove,
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
-import { SearchFilter, GroupNode, DATE_RULE_LABELS, DateRule, StockSetSummary } from "@/types/filter";
+import { SearchFilter, GroupNode, DATE_RULE_LABELS, DateRule } from "@/types/filter";
+import FilterEditorModal from "./FilterEditorModal";
+
+interface StockFilterSummary { id: number; name: string; scope: "SYSTEM" | "MEMBER"; }
 
 interface Props {
   filters: SearchFilter[];
-  stockSets: StockSetSummary[];
+  stockFilters: StockFilterSummary[];
 }
 
 function countNodes(node: GroupNode): number {
@@ -31,7 +34,7 @@ function parseRoot(expression: string): GroupNode | null {
 
 function FilterCard({
   filter,
-  setNameMap,
+  stockFilterMap,
   confirmId,
   deletingId,
   onConfirm,
@@ -41,7 +44,7 @@ function FilterCard({
   onSearch,
 }: {
   filter: SearchFilter;
-  setNameMap: Map<number, string>;
+  stockFilterMap: Map<number, string>;
   confirmId: number | null;
   deletingId: number | null;
   onConfirm: (id: number) => void;
@@ -61,6 +64,9 @@ function FilterCard({
 
   const root = parseRoot(filter.expression);
   const condCount = root ? countNodes(root) : 0;
+  const stockFilterName = filter.stockFilterId
+    ? stockFilterMap.get(filter.stockFilterId) ?? "?"
+    : null;
 
   return (
     <div
@@ -96,8 +102,7 @@ function FilterCard({
         <p className="text-white font-medium truncate">{filter.name}</p>
         <p className="text-xs text-slate-500 mt-1">
           조건 {condCount}개 · {DATE_RULE_LABELS[filter.dateRule as DateRule]} · {filter.markets.join(", ")}
-          {filter.includeStockSetId && <span className="text-emerald-500"> · 포함: {setNameMap.get(filter.includeStockSetId) ?? "?"}</span>}
-          {filter.excludeStockSetId && <span className="text-red-500"> · 제외: {setNameMap.get(filter.excludeStockSetId) ?? "?"}</span>}
+          {stockFilterName && <span className="text-amber-500/80"> · {stockFilterName}</span>}
         </p>
         <p className="text-xs text-slate-600 mt-0.5">
           {new Date(filter.updatedAt).toLocaleDateString("ko-KR")} 수정
@@ -157,13 +162,15 @@ function FilterCard({
   );
 }
 
-export default function FilterListClient({ filters: initialFilters, stockSets }: Props) {
-  const setNameMap = new Map(stockSets.map((s) => [s.id, s.name]));
+export default function FilterListClient({ filters: initialFilters, stockFilters }: Props) {
+  const stockFilterMap = new Map(stockFilters.map((f) => [f.id, f.name]));
   const router = useRouter();
 
   const [filters, setFilters] = useState<SearchFilter[]>(initialFilters);
   const [deletingId, setDeletingId] = useState<number | null>(null);
   const [confirmId, setConfirmId] = useState<number | null>(null);
+  const [editorOpen, setEditorOpen] = useState(false);
+  const [editingFilter, setEditingFilter] = useState<SearchFilter | null>(null);
 
   const sensors = useSensors(useSensor(PointerSensor, { activationConstraint: { distance: 5 } }));
 
@@ -179,6 +186,13 @@ export default function FilterListClient({ filters: initialFilters, stockSets }:
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ ids: next.map(f => f.id) }),
     });
+  }
+
+  async function handleFilterSaved(id: number, name: string) {
+    setEditorOpen(false);
+    setEditingFilter(null);
+    const res = await clientFetch("/api/filters");
+    if (res && res.ok) setFilters(await res.json());
   }
 
   async function handleDelete(id: number) {
@@ -201,7 +215,7 @@ export default function FilterListClient({ filters: initialFilters, stockSets }:
           <p className="text-sm text-slate-400 mt-0.5">나만의 조건식으로 종목을 검색하세요</p>
         </div>
         <button
-          onClick={() => router.push("/search-filters/new")}
+          onClick={() => { setEditingFilter(null); setEditorOpen(true); }}
           className="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white transition"
         >
           <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
@@ -226,7 +240,7 @@ export default function FilterListClient({ filters: initialFilters, stockSets }:
             <p className="text-slate-400 font-medium">저장된 필터가 없습니다</p>
             <p className="text-slate-500 text-sm mt-1">새 필터를 만들어 종목 검색 조건을 저장하세요</p>
             <button
-              onClick={() => router.push("/search-filters/new")}
+              onClick={() => { setEditingFilter(null); setEditorOpen(true); }}
               className="mt-5 px-4 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white transition"
             >
               첫 필터 만들기
@@ -240,13 +254,13 @@ export default function FilterListClient({ filters: initialFilters, stockSets }:
                   <FilterCard
                     key={f.id}
                     filter={f}
-                    setNameMap={setNameMap}
+                    stockFilterMap={stockFilterMap}
                     confirmId={confirmId}
                     deletingId={deletingId}
                     onConfirm={setConfirmId}
                     onCancelConfirm={() => setConfirmId(null)}
                     onDelete={handleDelete}
-                    onEdit={id => router.push(`/search-filters/${id}/edit`)}
+                    onEdit={id => { setEditingFilter(filters.find(f => f.id === id) ?? null); setEditorOpen(true); }}
                     onSearch={id => router.push(`/stock-search?filterId=${id}`)}
                   />
                 ))}
@@ -255,7 +269,14 @@ export default function FilterListClient({ filters: initialFilters, stockSets }:
           </DndContext>
         )}
       </div>
+
+      <FilterEditorModal
+        open={editorOpen}
+        onClose={() => { setEditorOpen(false); setEditingFilter(null); }}
+        onSaved={handleFilterSaved}
+        initial={editingFilter ?? undefined}
+        stockFilters={stockFilters}
+      />
     </div>
   );
 }
-

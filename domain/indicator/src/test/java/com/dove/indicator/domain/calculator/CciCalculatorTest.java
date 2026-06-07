@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.stock.domain.entity.DailyStockPrice;
-import com.dove.market.domain.enums.MarketType;
+import com.dove.stock.domain.entity.StockPrice;
+import com.dove.stock.domain.enums.StockExchange;
+import com.dove.stock.domain.enums.PriceType;
 import com.dove.indicator.domain.calculator.CciCalculator;
 import com.dove.indicator.domain.enums.IndicatorType;
 import org.junit.jupiter.api.DisplayName;
@@ -19,17 +20,17 @@ class CciCalculatorTest {
 
     private final CciCalculator calculator = new CciCalculator();
 
-    private DailyStockPrice createDailyStockPrice(LocalDate date, long high, long low, long close) {
-        return new DailyStockPrice(MarketType.KOSPI, "005930", date,
-                1000L, 100L, close, low, high);
+    private StockPrice createStockPrice(LocalDate date, long high, long low, long close) {
+        return new StockPrice("005930", StockExchange.KOSPI, PriceType.RAW, date,
+                100L, high, low, close, 1000L, null);
     }
 
     @Test
     @DisplayName("알려진 값으로 CCI(20)를 검증한다")
     void shouldCalculateCciFromKnownValues() {
         // Given - 20개 데이터, 상승 추세
-        List<DailyStockPrice> data = IntStream.range(0, 20)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 20)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         110 + i, 90 + i, 100 + i))
                 .toList();
@@ -45,8 +46,8 @@ class CciCalculatorTest {
     @DisplayName("가격이 평균에 있으면 CCI는 0에 가깝다")
     void shouldReturnZeroWhenPriceAtAverage() {
         // Given - 모든 가격이 동일
-        List<DailyStockPrice> data = IntStream.range(0, 20)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 20)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         110, 90, 100))
                 .toList();

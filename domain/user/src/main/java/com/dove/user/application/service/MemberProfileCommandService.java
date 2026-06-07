@@ -1,7 +1,8 @@
 package com.dove.user.application.service;
 
+import com.dove.auth.application.service.ForcedLogoutService;
 import com.dove.user.domain.entity.MemberProfile;
-import com.dove.user.domain.entity.MemberRole;
+import com.dove.auth.domain.enums.MemberRole;
 import com.dove.user.domain.repository.MemberProfileRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
@@ -9,12 +10,16 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.util.NoSuchElementException;
 
+/**
+ * 회원 프로필 저장·역할 변경 서비스.
+ */
 @Service
 @RequiredArgsConstructor
 @Transactional
 public class MemberProfileCommandService {
 
     private final MemberProfileRepository memberProfileRepository;
+    private final ForcedLogoutService forcedLogoutService;
 
     /**
      * 새 프로필을 저장하고 ID가 채번된 인스턴스를 반환한다.
@@ -44,6 +49,8 @@ public class MemberProfileCommandService {
             throw new IllegalArgumentException("ROOT_ROLE_IMMUTABLE");
         }
         profile.changeRole(newRole);
-        return memberProfileRepository.save(profile);
+        MemberProfile saved = memberProfileRepository.save(profile);
+        forcedLogoutService.markLogoutNow(userId);
+        return saved;
     }
 }

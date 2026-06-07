@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.market.domain.enums.MarketType;
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
+import com.dove.stock.domain.enums.StockExchange;
+import com.dove.stock.domain.enums.PriceType;
 import com.dove.indicator.domain.enums.IndicatorType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,9 +19,9 @@ class VolumeMa20RatioCalculatorTest {
 
     private final VolumeMa20RatioCalculator calculator = new VolumeMa20RatioCalculator();
 
-    private DailyStockPrice createDailyStockPrice(LocalDate date, long volume) {
-        return new DailyStockPrice(MarketType.KOSPI, "005930", date,
-                volume, 100L, 100L, 90L, 110L);
+    private StockPrice createStockPrice(LocalDate date, long volume) {
+        return new StockPrice("005930", StockExchange.KOSPI, PriceType.RAW, date,
+                100L, 110L, 90L, 100L, volume, null);
     }
 
     @Test
@@ -33,8 +34,8 @@ class VolumeMa20RatioCalculatorTest {
         // 검증 가능한 케이스: 모두 volume=100, 마지막만 volume=200 → 평균=105, ratio≈1.905
         // 더 명확한 케이스: 19개 volume=0이면 평균=volume_last/20, ratio=20 (but volume=0 odd)
         // 20개 모두 100 → 평균=100, ratio=1.0
-        List<DailyStockPrice> data = IntStream.range(0, 20)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 20)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         100L))
                 .toList();
@@ -52,13 +53,13 @@ class VolumeMa20RatioCalculatorTest {
         // Given - 19개 volume=100, 마지막 volume=300
         // 평균 = (19*100 + 300) / 20 = 2200 / 20 = 110
         // ratio = 300 / 110 ≈ 2.727
-        List<DailyStockPrice> firstNineteen = IntStream.range(0, 19)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> firstNineteen = IntStream.range(0, 19)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         100L))
                 .toList();
-        DailyStockPrice last = createDailyStockPrice(LocalDate.of(2024, 1, 1).plusDays(19), 300L);
-        List<DailyStockPrice> data = new java.util.ArrayList<>(firstNineteen);
+        StockPrice last = createStockPrice(LocalDate.of(2024, 1, 1).plusDays(19), 300L);
+        List<StockPrice> data = new java.util.ArrayList<>(firstNineteen);
         data.add(last);
 
         // When
@@ -72,8 +73,8 @@ class VolumeMa20RatioCalculatorTest {
     @DisplayName("데이터가 requiredDataSize 미만이면 빈 맵을 반환한다")
     void shouldReturnEmptyWhenDataInsufficient() {
         // Given - 19개 (20 미만)
-        List<DailyStockPrice> data = IntStream.range(0, 19)
-                .mapToObj(i -> createDailyStockPrice(
+        List<StockPrice> data = IntStream.range(0, 19)
+                .mapToObj(i -> createStockPrice(
                         LocalDate.of(2024, 1, 1).plusDays(i),
                         100L))
                 .toList();

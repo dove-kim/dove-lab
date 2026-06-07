@@ -66,7 +66,7 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
   const handleRowMouseEnter = (s: StockMatchResult) => {
     const indicatorsKey = presetsHook.activePreset?.items
       .filter(i => i.enabled).map(i => i.type).join(",") ?? "";
-    prefetchChart(s.code, s.marketType, indicatorsKey);
+    prefetchChart(s.code, "KRX", true, indicatorsKey);
   };
 
   // ── 검색 필터링 ──────────────────────────────────────────────────────────────

@@ -1,7 +1,8 @@
 package com.dove.indicator.domain.calculator;
 
-import com.dove.market.domain.enums.MarketType;
-import com.dove.stock.domain.entity.DailyStockPrice;
+import com.dove.stock.domain.entity.StockPrice;
+import com.dove.stock.domain.enums.StockExchange;
+import com.dove.stock.domain.enums.PriceType;
 import com.dove.indicator.domain.enums.IndicatorType;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
@@ -18,14 +19,14 @@ class VolatilityCalculatorTest {
 
     private final VolatilityCalculator calculator = new VolatilityCalculator();
 
-    private DailyStockPrice price(int dayOffset, long closePrice) {
-        return new DailyStockPrice(MarketType.KOSPI, "005930",
+    private StockPrice price(int dayOffset, long closePrice) {
+        return new StockPrice("005930", StockExchange.KOSPI, PriceType.RAW,
                 LocalDate.of(2024, 1, 1).plusDays(dayOffset),
-                1000L, 100L, closePrice, 90L, 110L);
+                100L, 110L, 90L, closePrice, 1000L, null);
     }
 
-    private List<DailyStockPrice> pricesOf(long... closePrices) {
-        List<DailyStockPrice> list = new ArrayList<>();
+    private List<StockPrice> pricesOf(long... closePrices) {
+        List<StockPrice> list = new ArrayList<>();
         for (int i = 0; i < closePrices.length; i++) {
             list.add(price(i, closePrices[i]));
         }
@@ -48,7 +49,7 @@ class VolatilityCalculatorTest {
         for (int i = 0; i < 21; i++) {
             closes[i] = 10000 + (long) (Math.sin(i * 0.5) * 500);
         }
-        List<DailyStockPrice> data = pricesOf(closes);
+        List<StockPrice> data = pricesOf(closes);
 
         var result = calculator.calculate(data);
 
@@ -69,19 +70,13 @@ class VolatilityCalculatorTest {
     @Test
     @DisplayName("21개 미만 데이터이면 빈 Map을 반환한다")
     void shouldReturnEmptyWhenDataInsufficient() {
-        List<DailyStockPrice> data = IntStream.range(0, 20)
+        List<StockPrice> data = IntStream.range(0, 20)
                 .mapToObj(i -> price(i, 10000 + i * 100L))
                 .toList();
 
         var result = calculator.calculate(data);
 
         assertThat(result).isEmpty();
-    }
-
-    @Test
-    @DisplayName("getName()은 VOLATILITY를 반환한다")
-    void shouldReturnCorrectName() {
-        assertThat(calculator.getName()).isEqualTo("VOLATILITY");
     }
 
     @Test

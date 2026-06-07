@@ -1,5 +1,8 @@
 package com.dove.screening.domain.enums;
 
+/**
+ * 검색 기준일을 결정하는 날짜 규칙.
+ */
 public enum DateRule {
     LATEST,        // 데이터가 있는 가장 최신 거래일 자동 선택
     SPECIFIC_DATE, // 직접 날짜 지정
