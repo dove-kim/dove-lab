@@ -1,10 +1,5 @@
 package com.dove.api;
 
-import com.dove.stockcollection.application.port.AnalystFetcher;
-import com.dove.stockcollection.application.port.DailyPriceFetcher;
-import com.dove.stockcollection.application.port.InvestorFetcher;
-import com.dove.stockcollection.application.port.KsdEventFetcher;
-import com.dove.stockcollection.application.port.TradingDayPort;
 import org.redisson.api.RRateLimiter;
 import org.redisson.api.RedissonClient;
 import org.springframework.boot.autoconfigure.SpringBootApplication;
@@ -24,7 +19,7 @@ import static org.mockito.Mockito.when;
 public class TestApiApplication {
 
     /**
-     * 외부 시스템(Redis, KIS, KRX) 의존 빈을 mock으로 교체한다.
+     * 외부 시스템(Redis) 의존 빈을 mock으로 교체한다.
      */
     @TestConfiguration
     static class TestInfraConfig {
@@ -46,11 +41,5 @@ public class TestApiApplication {
             when(template.opsForHash()).thenReturn(hashOps);
             return template;
         }
-
-        @Bean public DailyPriceFetcher dailyPriceFetcher() { return mock(DailyPriceFetcher.class); }
-        @Bean public KsdEventFetcher ksdEventFetcher() { return mock(KsdEventFetcher.class); }
-        @Bean public AnalystFetcher analystFetcher() { return mock(AnalystFetcher.class); }
-        @Bean public InvestorFetcher investorFetcher() { return mock(InvestorFetcher.class); }
-        @Bean public TradingDayPort tradingDayPort() { return mock(TradingDayPort.class); }
     }
 }

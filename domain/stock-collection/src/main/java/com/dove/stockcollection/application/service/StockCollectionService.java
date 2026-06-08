@@ -7,6 +7,7 @@ import com.dove.stock.application.service.StockCommandService;
 import com.dove.stock.domain.entity.Stock;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
@@ -18,6 +19,7 @@ import java.util.List;
  */
 @Slf4j
 @Service
+@ConditionalOnBean(TradingDayPort.class)
 @RequiredArgsConstructor
 public class StockCollectionService {
 
