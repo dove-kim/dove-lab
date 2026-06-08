@@ -5,6 +5,7 @@ import com.dove.stockcollection.domain.entity.CollectionTask;
 import com.dove.stockcollection.domain.enums.CollectionType;
 import org.junit.jupiter.api.Test;
 
+
 import java.time.Clock;
 import java.time.LocalDate;
 import java.time.ZoneId;
@@ -24,14 +25,8 @@ class CollectionLauncherTest {
     private static final Clock CLOCK =
             Clock.fixed(LocalDate.of(2026, 5, 31).atStartOfDay(SEOUL).toInstant(), SEOUL); // 오늘=5/31
 
-    private final PriceCollectionService priceCollectionService = mock(PriceCollectionService.class);
-    private final StockCollectionService stockCollectionService = mock(StockCollectionService.class);
-    private final StockEventCollectionService eventCollectionService = mock(StockEventCollectionService.class);
-    private final InvestorCollectionService investorCollectionService = mock(InvestorCollectionService.class);
     private final CollectionTaskService taskService = mock(CollectionTaskService.class);
-    private final CollectionLauncher launcher = new CollectionLauncher(
-            priceCollectionService, stockCollectionService, eventCollectionService,
-            investorCollectionService, taskService, CLOCK);
+    private final CollectionLauncher launcher = new CollectionLauncher(taskService, CLOCK);
 
     @Test
     void shouldCapToYesterdayWhenRangeIncludesToday() {

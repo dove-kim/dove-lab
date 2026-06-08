@@ -8,6 +8,7 @@ import com.dove.stock.domain.enums.StockExchange;
 import com.dove.stockcollection.application.port.InvestorDailyRow;
 import com.dove.stockcollection.application.port.InvestorFetcher;
 import lombok.RequiredArgsConstructor;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
@@ -24,6 +25,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Slf4j
 @Service
+@ConditionalOnBean(InvestorFetcher.class)
 @RequiredArgsConstructor
 public class InvestorCollectionService {
 
