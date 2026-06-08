@@ -1,4 +1,4 @@
-package com.dove.krx;
+package com.dove.stockcollection.application.port;
 
 import java.time.LocalDate;
 

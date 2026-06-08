@@ -6,17 +6,13 @@ import java.time.LocalDate;
 
 /**
  * 주가 재조회 요청.
+ *
+ * @param exchange KOSPI/KOSDAQ/KONEX/NXT/INTEGRATED
+ * @param from     수집 시작일
+ * @param to       수집 종료일
  */
 public record PriceCollectionRequest(
-        @NotNull String exchange,   // KOSPI/KOSDAQ/KONEX/NXT/INTEGRATED
+        @NotNull String exchange,
         @NotNull LocalDate from,
-        @NotNull LocalDate to,
-        Integer adjustedFromYear    // 수정주가 재조회 시작 연도. null이면 재조회 안 함.
-) {
-    /**
-     * 수정주가 재조회 하한 날짜. null이면 재조회 생략.
-     */
-    public LocalDate adjustedFrom() {
-        return adjustedFromYear == null ? null : LocalDate.of(adjustedFromYear, 1, 1);
-    }
-}
+        @NotNull LocalDate to
+) {}
