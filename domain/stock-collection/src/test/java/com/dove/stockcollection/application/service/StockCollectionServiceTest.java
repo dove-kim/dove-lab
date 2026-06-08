@@ -1,7 +1,7 @@
 package com.dove.stockcollection.application.service;
 
-import com.dove.krx.StockListing;
-import com.dove.krx.TradingDayPort;
+import com.dove.stockcollection.application.port.StockListing;
+import com.dove.stockcollection.application.port.TradingDayPort;
 import com.dove.market.domain.enums.MarketType;
 import com.dove.stock.application.service.StockCommandService;
 import com.dove.stock.domain.entity.Stock;

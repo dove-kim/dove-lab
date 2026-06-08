@@ -1,6 +1,6 @@
 package com.dove.krx.acl;
 
-import com.dove.krx.StockListing;
+import com.dove.stockcollection.application.port.StockListing;
 import com.dove.krx.infrastructure.client.KrxListedStockItem;
 import com.dove.krx.infrastructure.client.KrxListedStockResponse;
 
