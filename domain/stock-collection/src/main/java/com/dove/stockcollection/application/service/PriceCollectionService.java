@@ -13,6 +13,7 @@ import com.dove.stock.domain.enums.StockExchange;
 import com.dove.stockcollection.application.dto.CollectionUnit;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Service;
 
@@ -28,6 +29,7 @@ import java.util.concurrent.atomic.AtomicInteger;
  */
 @Slf4j
 @Service
+@ConditionalOnBean(DailyPriceFetcher.class)
 @RequiredArgsConstructor
 public class PriceCollectionService {
 

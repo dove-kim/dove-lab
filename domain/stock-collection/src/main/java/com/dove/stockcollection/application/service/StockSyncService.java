@@ -9,6 +9,7 @@ import com.dove.stockcollection.application.port.StockListing;
 import com.dove.stockcollection.application.port.TradingDayPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.boot.autoconfigure.condition.ConditionalOnBean;
 import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
@@ -23,6 +24,7 @@ import java.util.Set;
  */
 @Slf4j
 @Service
+@ConditionalOnBean(TradingDayPort.class)
 @RequiredArgsConstructor
 public class StockSyncService {
 
