@@ -3,7 +3,7 @@ package com.dove.scheduler.job;
 import com.dove.jobstatus.JobStatusRegistry;
 import com.dove.jobstatus.SchedulerJobName;
 import com.dove.market.domain.enums.MarketType;
-import com.dove.scheduler.service.StockSyncService;
+import com.dove.stockcollection.application.service.StockSyncService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;

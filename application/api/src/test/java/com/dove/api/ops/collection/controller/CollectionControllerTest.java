@@ -46,12 +46,12 @@ class CollectionControllerTest {
 
     @BeforeEach
     void setUp() {
-        given(launcher.launchPriceCollection(any(StockExchange.class), any(), any(), any(), anyLong()))
+        given(launcher.enqueuePriceCollection(any(StockExchange.class), any(), any(), anyLong()))
                 .willReturn(11L);
-        given(launcher.launchEventCollection(any(), any(), anyLong())).willReturn(22L);
-        given(launcher.launchStockCollection(any(), any(), anyLong())).willReturn(33L);
-        given(launcher.launchInvestorCollection(any(), any(), anyLong())).willReturn(55L);
-        given(launcher.relaunch(anyLong(), anyLong())).willReturn(44L);
+        given(launcher.enqueueEventCollection(any(), any(), anyLong())).willReturn(22L);
+        given(launcher.enqueueStockCollection(any(), any(), anyLong())).willReturn(33L);
+        given(launcher.enqueueInvestorCollection(any(), any(), anyLong())).willReturn(55L);
+        given(launcher.reenqueue(anyLong(), anyLong())).willReturn(44L);
 
         CollectionTask task = new CollectionTask(CollectionType.PRICE, StockExchange.KOSPI,
                 LocalDate.of(2020, 1, 1), LocalDate.of(2020, 1, 31), 1L);

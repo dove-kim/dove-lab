@@ -1,12 +1,12 @@
-package com.dove.scheduler.service;
+package com.dove.stockcollection.application.service;
 
-import com.dove.krx.StockListing;
-import com.dove.krx.TradingDayPort;
 import com.dove.market.domain.enums.MarketType;
 import com.dove.stock.application.service.StockCommandService;
 import com.dove.stock.application.service.StockTagValueService;
 import com.dove.stock.domain.entity.Stock;
 import com.dove.stock.domain.enums.TagField;
+import com.dove.stockcollection.application.port.StockListing;
+import com.dove.stockcollection.application.port.TradingDayPort;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;

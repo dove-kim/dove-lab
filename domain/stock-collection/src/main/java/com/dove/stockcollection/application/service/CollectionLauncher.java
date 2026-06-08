@@ -5,18 +5,15 @@ import com.dove.stock.domain.enums.StockExchange;
 import com.dove.stockcollection.application.port.DailyPriceFetcher;
 import com.dove.stockcollection.domain.entity.CollectionTask;
 import com.dove.stockcollection.domain.enums.CollectionType;
-import jakarta.annotation.PreDestroy;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.LocalDate;
-import java.util.concurrent.ExecutorService;
-import java.util.concurrent.Executors;
 
 /**
- * 수집 작업을 백그라운드로 띄우는 진입점.
+ * 수집 태스크 생성(enqueue)과 실행(execute)을 제공하는 진입점.
  */
 @Slf4j
 @Service
@@ -30,83 +27,82 @@ public class CollectionLauncher {
     private final CollectionTaskService taskService;
     private final Clock clock;
 
-    private final ExecutorService background = Executors.newVirtualThreadPerTaskExecutor();
-
     /**
-     * 컨텍스트 종료 시 백그라운드 실행기를 닫는다(진행 중 작업 완료 후 정리).
-     */
-    @PreDestroy
-    void shutdown() {
-        background.shutdown();
-    }
-
-    /**
-     * 주가 재조회를 백그라운드로 시작하고 작업ID를 반환한다.
-     * 재조회는 어제까지로 제한한다(오늘은 일일 수집 잡 전담 → 두 경로가 같은 날짜를 안 건드림).
+     * 주가 재조회 태스크를 PENDING으로 등록하고 작업ID를 반환한다.
+     * 재조회는 어제까지로 제한한다.
      *
      * @throws IllegalArgumentException 요청 범위 전체가 오늘 이후인 경우 (INVALID_BACKFILL_RANGE)
      */
-    public Long launchPriceCollection(StockExchange exchange, LocalDate from, LocalDate to,
-                                      LocalDate adjustedFrom, Long requestedBy) {
+    public Long enqueuePriceCollection(StockExchange exchange, LocalDate from, LocalDate to, Long requestedBy) {
         LocalDate yesterday = LocalDate.now(clock).minusDays(1);
         LocalDate cappedTo = to.isAfter(yesterday) ? yesterday : to;
         if (from.isAfter(cappedTo)) throw new IllegalArgumentException("INVALID_BACKFILL_RANGE");
-
-        Long taskId = taskService.create(CollectionType.PRICE, exchange, from, cappedTo, requestedBy);
-        background.execute(() -> runGuarded(taskId, () ->
-                priceCollectionService.collect(exchange, from, cappedTo, new TaskProgress(taskService, taskId), adjustedFrom)));
-        return taskId;
+        return taskService.create(CollectionType.PRICE, exchange, from, cappedTo, requestedBy);
     }
 
     /**
-     * 권리 이벤트(KSD) 재조회를 백그라운드로 시작하고 작업ID를 반환한다.
+     * 권리 이벤트(KSD) 재조회 태스크를 PENDING으로 등록하고 작업ID를 반환한다.
+     *
+     * @throws IllegalArgumentException 날짜 범위가 역순인 경우 (INVALID_BACKFILL_RANGE)
      */
-    public Long launchEventCollection(LocalDate from, LocalDate to, Long requestedBy) {
+    public Long enqueueEventCollection(LocalDate from, LocalDate to, Long requestedBy) {
         if (from.isAfter(to)) throw new IllegalArgumentException("INVALID_BACKFILL_RANGE");
-        Long taskId = taskService.create(CollectionType.EVENT, null, from, to, requestedBy);
-        background.execute(() -> runGuarded(taskId, () ->
-                eventCollectionService.collect(from, to, new TaskProgress(taskService, taskId))));
-        return taskId;
+        return taskService.create(CollectionType.EVENT, null, from, to, requestedBy);
     }
 
     /**
-     * 종목 재조회를 백그라운드로 시작하고 작업ID를 반환한다.
+     * 종목 재조회 태스크를 PENDING으로 등록하고 작업ID를 반환한다.
+     *
+     * @throws IllegalArgumentException 날짜 범위가 역순인 경우 (INVALID_BACKFILL_RANGE)
      */
-    public Long launchStockCollection(LocalDate from, LocalDate to, Long requestedBy) {
+    public Long enqueueStockCollection(LocalDate from, LocalDate to, Long requestedBy) {
         if (from.isAfter(to)) throw new IllegalArgumentException("INVALID_BACKFILL_RANGE");
-        Long taskId = taskService.create(CollectionType.STOCK, null, from, to, requestedBy);
-        background.execute(() -> runGuarded(taskId, () ->
-                stockCollectionService.collect(from, to, new TaskProgress(taskService, taskId))));
-        return taskId;
+        return taskService.create(CollectionType.STOCK, null, from, to, requestedBy);
     }
 
     /**
-     * 투자자매매동향 재조회를 백그라운드로 시작하고 작업ID를 반환한다.
+     * 투자자매매동향 재조회 태스크를 PENDING으로 등록하고 작업ID를 반환한다.
+     *
+     * @throws IllegalArgumentException 날짜 범위가 역순인 경우 (INVALID_BACKFILL_RANGE)
      */
-    public Long launchInvestorCollection(LocalDate from, LocalDate to, Long requestedBy) {
+    public Long enqueueInvestorCollection(LocalDate from, LocalDate to, Long requestedBy) {
         if (from.isAfter(to)) throw new IllegalArgumentException("INVALID_BACKFILL_RANGE");
-        Long taskId = taskService.create(CollectionType.INVESTOR, null, from, to, requestedBy);
-        background.execute(() -> runGuarded(taskId, () ->
-                investorCollectionService.collect(from, to, new TaskProgress(taskService, taskId))));
-        return taskId;
+        return taskService.create(CollectionType.INVESTOR, null, from, to, requestedBy);
     }
 
     /**
-     * 실패한(또는 임의의) 작업을 같은 범위로 다시 실행한다.
+     * 실패한 태스크를 같은 범위로 다시 PENDING 등록하고 새 작업ID를 반환한다.
+     *
+     * @throws IllegalArgumentException 원본 태스크가 없는 경우 (TASK_NOT_FOUND)
      */
-    public Long relaunch(Long sourceTaskId, Long requestedBy) {
+    public Long reenqueue(Long sourceTaskId, Long requestedBy) {
         CollectionTask source = taskService.find(sourceTaskId)
                 .orElseThrow(() -> new IllegalArgumentException("TASK_NOT_FOUND"));
         LocalDate from = source.getFromDate();
         LocalDate to = source.getToDate();
         return switch (source.getType()) {
-            // 재시도는 정확성 우선 — 전체 ADJUSTED 재조회.
-            case PRICE -> launchPriceCollection(source.getExchange(), from, to,
-                    DailyPriceFetcher.ADJUSTED_DATA_START, requestedBy);
-            case STOCK -> launchStockCollection(from, to, requestedBy);
-            case EVENT -> launchEventCollection(from, to, requestedBy);
-            case INVESTOR -> launchInvestorCollection(from, to, requestedBy);
+            case PRICE -> enqueuePriceCollection(source.getExchange(), from, to, requestedBy);
+            case STOCK -> enqueueStockCollection(from, to, requestedBy);
+            case EVENT -> enqueueEventCollection(from, to, requestedBy);
+            case INVESTOR -> enqueueInvestorCollection(from, to, requestedBy);
         };
+    }
+
+    /**
+     * PENDING 태스크를 동기적으로 실행한다. 호출자(스케줄러)가 스레드를 제공한다.
+     */
+    public void executeTask(CollectionTask task) {
+        runGuarded(task.getId(), () -> {
+            CollectionProgress progress = new TaskProgress(taskService, task.getId());
+            switch (task.getType()) {
+                case PRICE -> priceCollectionService.collect(
+                        task.getExchange(), task.getFromDate(), task.getToDate(),
+                        progress, DailyPriceFetcher.ADJUSTED_DATA_START);
+                case STOCK -> stockCollectionService.collect(task.getFromDate(), task.getToDate(), progress);
+                case EVENT -> eventCollectionService.collect(task.getFromDate(), task.getToDate(), progress);
+                case INVESTOR -> investorCollectionService.collect(task.getFromDate(), task.getToDate(), progress);
+            }
+        });
     }
 
     private void runGuarded(Long taskId, Runnable work) {
