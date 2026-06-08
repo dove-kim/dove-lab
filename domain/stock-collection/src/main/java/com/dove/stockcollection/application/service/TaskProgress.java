@@ -5,7 +5,7 @@ import java.util.concurrent.atomic.AtomicLong;
 /**
  * COLLECTION_TASK에 진행률을 반영하는 {@link CollectionProgress} 구현.
  */
-class TaskProgress implements CollectionProgress {
+public class TaskProgress implements CollectionProgress {
 
     private static final long FLUSH_INTERVAL_MS = 5_000;
 
@@ -14,7 +14,7 @@ class TaskProgress implements CollectionProgress {
     private final AtomicLong lastFlush = new AtomicLong(0);
     private final AtomicLong lastAdjFlush = new AtomicLong(0);
 
-    TaskProgress(CollectionTaskService taskService, Long taskId) {
+    public TaskProgress(CollectionTaskService taskService, Long taskId) {
         this.taskService = taskService;
         this.taskId = taskId;
     }
