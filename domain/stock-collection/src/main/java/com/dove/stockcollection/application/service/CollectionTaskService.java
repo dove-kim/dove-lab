@@ -12,6 +12,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -82,5 +83,30 @@ public class CollectionTaskService {
     @Transactional(readOnly = true)
     public Page<CollectionTask> findByStatus(CollectionStatus status, Pageable pageable) {
         return repository.findByStatus(status, pageable);
+    }
+
+    /**
+     * 지정한 유형 중 가장 오래된 PENDING 태스크를 반환한다.
+     */
+    @Transactional(readOnly = true)
+    public Optional<CollectionTask> findOldestPending(List<CollectionType> types) {
+        return repository.findFirstByTypeInAndStatusOrderByCreatedAtAsc(types, CollectionStatus.PENDING);
+    }
+
+    /**
+     * 지정한 유형 중 RUNNING 태스크가 있는지 확인한다.
+     */
+    @Transactional(readOnly = true)
+    public boolean hasRunning(List<CollectionType> types) {
+        return repository.existsByTypeInAndStatus(types, CollectionStatus.RUNNING);
+    }
+
+    /**
+     * 기동 시점에 RUNNING 상태로 남은 태스크를 FAILED로 전환한다.
+     */
+    @Transactional
+    public void failStaleRunning() {
+        repository.findAllByStatus(CollectionStatus.RUNNING)
+                .forEach(t -> t.fail("INTERRUPTED", "스케줄러 재기동으로 중단"));
     }
 }

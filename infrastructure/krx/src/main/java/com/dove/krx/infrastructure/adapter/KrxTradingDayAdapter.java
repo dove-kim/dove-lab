@@ -1,7 +1,7 @@
 package com.dove.krx.infrastructure.adapter;
 
-import com.dove.krx.StockListing;
-import com.dove.krx.TradingDayPort;
+import com.dove.stockcollection.application.port.StockListing;
+import com.dove.stockcollection.application.port.TradingDayPort;
 import com.dove.krx.acl.KrxListedStockTranslator;
 import com.dove.krx.infrastructure.client.KrxListedStockResponse;
 import com.dove.krx.infrastructure.client.KrxStockClient;

@@ -53,7 +53,7 @@ public class CollectionController {
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_EXCHANGE");
         }
-        Long taskId = launcher.launchPriceCollection(exchange, req.from(), req.to(), req.adjustedFrom(), user.memberId());
+        Long taskId = launcher.enqueuePriceCollection(exchange, req.from(), req.to(), user.memberId());
         return Map.of("taskId", taskId);
     }
 
@@ -64,7 +64,7 @@ public class CollectionController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public Map<String, Long> collectEvent(@Valid @RequestBody EventCollectionRequest req,
                                           @AuthenticationPrincipal AuthenticatedUser user) {
-        Long taskId = launcher.launchEventCollection(req.from(), req.to(), user.memberId());
+        Long taskId = launcher.enqueueEventCollection(req.from(), req.to(), user.memberId());
         return Map.of("taskId", taskId);
     }
 
@@ -75,7 +75,7 @@ public class CollectionController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public Map<String, Long> collectStock(@Valid @RequestBody StockCollectionRequest req,
                                           @AuthenticationPrincipal AuthenticatedUser user) {
-        Long taskId = launcher.launchStockCollection(req.from(), req.to(), user.memberId());
+        Long taskId = launcher.enqueueStockCollection(req.from(), req.to(), user.memberId());
         return Map.of("taskId", taskId);
     }
 
@@ -86,7 +86,7 @@ public class CollectionController {
     @ResponseStatus(HttpStatus.ACCEPTED)
     public Map<String, Long> collectInvestor(@Valid @RequestBody InvestorCollectionRequest req,
                                              @AuthenticationPrincipal AuthenticatedUser user) {
-        Long taskId = launcher.launchInvestorCollection(req.from(), req.to(), user.memberId());
+        Long taskId = launcher.enqueueInvestorCollection(req.from(), req.to(), user.memberId());
         return Map.of("taskId", taskId);
     }
 
@@ -118,7 +118,7 @@ public class CollectionController {
         if (taskService.find(id).isEmpty()) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "TASK_NOT_FOUND");
         }
-        Long newTaskId = launcher.relaunch(id, user.memberId());
+        Long newTaskId = launcher.reenqueue(id, user.memberId());
         return Map.of("taskId", newTaskId);
     }
 }

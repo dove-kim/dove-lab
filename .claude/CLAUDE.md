@@ -85,7 +85,7 @@ domain/                Aggregate 단위 모듈 (entity + repo + JPA/QueryDSL + C
   user-feature         UserFeatureGrant, UserModuleDisplay, UserFeatureDisplay
   market               MarketType, Exchange, ExchangeTradingDate, MarketListingSync
   stock                Stock, StockDetail, StockEvent(권리이벤트), StockPrice, StockTagValue
-  stock-collection     KIS 주가/권리이벤트(KSD) 수집 코어 + 백필 런처(CollectionLauncher, CollectionTask)
+  stock-collection     KIS 주가/KSD 권리이벤트 수집 코어 + KRX 종목 동기화(StockSyncService) + TradingDayPort(KRX 포트) + 수집 태스크(CollectionLauncher, CollectionTask)
   indicator            TechnicalIndicator + 지표 계산기 + IndicatorCursor(+CAS)
   investor-flow        InvestorDaily (기관·외국인·개인 매매동향)
   system-event         수집·계산 운영 이벤트(KRX/KIS 실패 등) — ROOT 모니터링
