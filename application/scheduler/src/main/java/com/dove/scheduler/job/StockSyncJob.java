@@ -3,7 +3,7 @@ package com.dove.scheduler.job;
 import com.dove.jobstatus.JobStatusRegistry;
 import com.dove.market.domain.enums.MarketType;
 import com.dove.jobstatus.SchedulerJobName;
-import com.dove.scheduler.service.StockSyncService;
+import com.dove.stockcollection.application.service.StockSyncService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
