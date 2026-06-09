@@ -8,6 +8,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.Optional;
 
 /**
  * 수집 태스크를 PENDING으로 등록하는 진입점.
@@ -18,6 +19,10 @@ public class CollectionLauncher {
 
     private final CollectionTaskService taskService;
     private final Clock clock;
+    /**
+     * KIS 상세 수집 — KisStockDetailFetcher가 없는 컨텍스트(API 등)에선 empty.
+     */
+    private final Optional<StockDetailCollectionService> stockDetailCollectionService;
 
     /**
      * 주가 재조회 태스크를 PENDING으로 등록하고 작업ID를 반환한다.

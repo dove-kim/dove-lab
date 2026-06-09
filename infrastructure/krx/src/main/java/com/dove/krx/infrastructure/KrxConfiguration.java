@@ -1,5 +1,7 @@
 package com.dove.krx.infrastructure;
 
+import com.dove.krx.config.KrxProperties;
+import org.springframework.boot.context.properties.EnableConfigurationProperties;
 import org.springframework.cloud.openfeign.EnableFeignClients;
 import org.springframework.context.annotation.Configuration;
 
@@ -8,5 +10,6 @@ import org.springframework.context.annotation.Configuration;
  */
 @Configuration
 @EnableFeignClients(basePackages = "com.dove.krx")
+@EnableConfigurationProperties(KrxProperties.class)
 public class KrxConfiguration {
 }

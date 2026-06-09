@@ -21,6 +21,7 @@ public record CollectionTaskResponse(
         String errorDetail,
         LocalDateTime createdAt,
         LocalDateTime startedAt,
+        LocalDateTime progressAt,
         LocalDateTime finishedAt
 ) {
     public static CollectionTaskResponse from(CollectionTask t) {
@@ -39,6 +40,7 @@ public record CollectionTaskResponse(
                 t.getErrorDetail(),
                 t.getCreatedAt(),
                 t.getStartedAt(),
+                t.getProgressAt(),
                 t.getFinishedAt()
         );
     }

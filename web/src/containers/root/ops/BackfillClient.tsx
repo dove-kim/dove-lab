@@ -17,6 +17,7 @@ interface CollectionTask {
   errorDetail: string | null;
   createdAt: string;
   startedAt: string | null;
+  progressAt: string | null;
   finishedAt: string | null;
 }
 
@@ -56,10 +57,11 @@ function formatScope(t: CollectionTask): string {
   return rest.join(" · ");
 }
 
-/** 진행률·경과시간 기반 예상 남은 시간. 계산 불가하면 null. */
+/** 진행률·경과시간 기반 예상 남은 시간. progressAt 기준으로 계산 (현재 시각 사용 안 함). */
 function etaText(t: CollectionTask): string | null {
-  if (t.status !== "RUNNING" || !t.startedAt || t.done <= 0 || t.total <= 0 || t.done >= t.total) return null;
-  const elapsed = Date.now() - new Date(t.startedAt).getTime();
+  if (t.status !== "RUNNING" || !t.startedAt || !t.progressAt || t.done <= 0 || t.total <= 0 || t.done >= t.total) return null;
+  // speed = done / (progressAt - startedAt), ETA = remaining / speed
+  const elapsed = new Date(t.progressAt).getTime() - new Date(t.startedAt).getTime();
   if (elapsed <= 0) return null;
   const remainMs = (elapsed / t.done) * (t.total - t.done);
   const sec = Math.round(remainMs / 1000);

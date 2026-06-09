@@ -26,7 +26,7 @@ class CollectionLauncherTest {
             Clock.fixed(LocalDate.of(2026, 5, 31).atStartOfDay(SEOUL).toInstant(), SEOUL); // 오늘=5/31
 
     private final CollectionTaskService taskService = mock(CollectionTaskService.class);
-    private final CollectionLauncher launcher = new CollectionLauncher(taskService, CLOCK);
+    private final CollectionLauncher launcher = new CollectionLauncher(taskService, CLOCK, Optional.empty());
 
     @Test
     void shouldCapToYesterdayWhenRangeIncludesToday() {

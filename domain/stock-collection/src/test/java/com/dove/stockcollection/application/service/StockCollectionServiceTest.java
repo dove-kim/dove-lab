@@ -4,6 +4,7 @@ import com.dove.stockcollection.application.port.StockListing;
 import com.dove.stockcollection.application.port.TradingDayPort;
 import com.dove.market.domain.enums.MarketType;
 import com.dove.stock.application.service.StockCommandService;
+import com.dove.stock.application.service.StockTagValueService;
 import com.dove.stock.domain.entity.Stock;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -12,6 +13,8 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.ArgumentCaptor;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+
+import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.Clock;
 import java.time.Instant;
@@ -44,7 +47,15 @@ class StockCollectionServiceTest {
     @Mock
     private StockCommandService stockCommandService;
 
-    private StockCollectionService service;
+    @Mock
+    private StockTagValueService tagValueService;
+
+    private StockCollectionService createService() {
+        StockCollectionService svc =
+                new StockCollectionService(tradingDayPort, stockCommandService, tagValueService, clock);
+        ReflectionTestUtils.setField(svc, "concurrency", 4);
+        return svc;
+    }
 
     private StockListing listing(String ticker) {
         return new StockListing(ticker, "KR" + ticker, LocalDate.of(2000, 1, 1), "주권", "보통주");
@@ -57,8 +68,7 @@ class StockCollectionServiceTest {
         @Test
         @DisplayName("from이 오늘 이후면 total 0을 통보하고 수집하지 않는다")
         void shouldSkipWhenFromIsAfterToday() {
-            StockCollectionService service =
-                    new StockCollectionService(tradingDayPort, stockCommandService, clock);
+            StockCollectionService service = createService();
             CollectionProgress progress = mock();
 
             service.collect(LocalDate.of(2026, 6, 1), LocalDate.of(2026, 6, 5), progress);
@@ -69,13 +79,12 @@ class StockCollectionServiceTest {
         }
 
         @Test
-        @DisplayName("정상 기간이면 날짜×시장별 fetchListings 후 insertIfAbsent를 호출한다")
+        @DisplayName("정상 기간이면 날짜×시장별 fetchListings 후 insertIfAbsent를 1회 호출한다")
         void shouldFetchAndInsertPerDateAndMarketWhenRangeIsValid() {
-            StockCollectionService service =
-                    new StockCollectionService(tradingDayPort, stockCommandService, clock);
+            StockCollectionService service = createService();
             CollectionProgress progress = mock();
 
-            // 2일 × 3시장 = 6회 fetch. 모든 호출에 1건씩 반환.
+            // 2일 × 3시장 = 6회 fetch. 모든 호출에 동일 ticker 1건씩 반환.
             when(tradingDayPort.fetchListings(any(MarketType.class), any(LocalDate.class)))
                     .thenReturn(List.of(listing("005930")));
 
@@ -84,26 +93,24 @@ class StockCollectionServiceTest {
 
             service.collect(from, to, progress);
 
-            verify(progress).onTotal(2);
+            // 날짜×시장 평탄화: total = 2일 × 3시장 = 6
+            verify(progress).onTotal(6);
             verify(tradingDayPort, times(6))
                     .fetchListings(any(MarketType.class), any(LocalDate.class));
             for (MarketType market : MarketType.KRX_MARKETS) {
                 verify(tradingDayPort).fetchListings(market, from);
                 verify(tradingDayPort).fetchListings(market, to);
             }
-            verify(stockCommandService, times(6)).insertIfAbsent(any());
-
-            // 시장이 Stock에 그대로 매핑되는지 한 시장으로 확인
+            // 병렬 fetch 완료 후 단일 insert — ticker 중복 제거로 1건
             ArgumentCaptor<List<Stock>> captor = ArgumentCaptor.forClass(List.class);
-            verify(stockCommandService, times(6)).insertIfAbsent(captor.capture());
+            verify(stockCommandService, times(1)).insertIfAbsent(captor.capture());
             assertThat(captor.getValue()).hasSize(1);
         }
 
         @Test
         @DisplayName("어떤 날짜의 목록이 비어 있으면 그 호출은 insertIfAbsent를 건너뛴다")
         void shouldSkipInsertWhenListingsEmpty() {
-            StockCollectionService service =
-                    new StockCollectionService(tradingDayPort, stockCommandService, clock);
+            StockCollectionService service = createService();
 
             // 모든 시장/날짜에서 빈 목록
             when(tradingDayPort.fetchListings(any(MarketType.class), any(LocalDate.class)))
@@ -119,8 +126,7 @@ class StockCollectionServiceTest {
         @Test
         @DisplayName("to가 오늘 이후면 오늘로 캡한다")
         void shouldCapToToTodayWhenToIsAfterToday() {
-            StockCollectionService service =
-                    new StockCollectionService(tradingDayPort, stockCommandService, clock);
+            StockCollectionService service = createService();
             CollectionProgress progress = mock();
 
             when(tradingDayPort.fetchListings(any(MarketType.class), any(LocalDate.class)))
@@ -131,8 +137,8 @@ class StockCollectionServiceTest {
 
             service.collect(from, futureTo, progress);
 
-            // 5/30~5/31(오늘) = 2일로 캡
-            verify(progress).onTotal(2);
+            // 5/30~5/31(오늘) = 2일 × 3시장 = 6건으로 캡
+            verify(progress).onTotal(6);
             LocalDate today = LocalDate.of(2026, 5, 31);
             for (MarketType market : MarketType.KRX_MARKETS) {
                 verify(tradingDayPort).fetchListings(market, today);

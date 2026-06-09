@@ -22,6 +22,7 @@ dependencies {
     implementation project(":api-quota")
     implementation project(":stock-collection")
     implementation project(":job-status")
+    runtimeOnly project(":krx")
     implementation project(":investor-flow")
 
     implementation 'org.springframework.boot:spring-boot-starter-web'
