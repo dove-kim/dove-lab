@@ -93,13 +93,6 @@ function RecentActivityCard() {
   );
 }
 
-interface KrxUsage {
-  used: number;
-  quota: number;
-  remaining: number;
-  lastRateLimitAt: string | null;
-}
-
 interface JobStatus {
   name: string;
   state: "RUNNING" | "COMPLETED" | "FAILED";
@@ -144,42 +137,6 @@ function usePolling<T>(url: string, intervalMs: number, reloadToken = 0) {
     return () => { active = false; clearInterval(id); };
   }, [url, intervalMs, reloadToken]);
   return { data, error };
-}
-
-function KrxUsageCard({ reloadToken }: { reloadToken: number }) {
-  const { data: usage, error } = usePolling<KrxUsage>("/api/admin/ops/krx-usage", 60_000, reloadToken);
-
-  const ratio = usage && usage.quota > 0 ? Math.min(100, (usage.used / usage.quota) * 100) : 0;
-  const barColor = ratio >= 90 ? "bg-rose-500" : ratio >= 70 ? "bg-amber-400" : "bg-emerald-500";
-
-  return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-5 h-full">
-      <h3 className="text-slate-300 text-sm font-medium mb-4 flex items-center gap-2">
-        <svg className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <path d="M3 3v18h18" />
-          <path d="M7 14l4-4 4 4 5-5" />
-        </svg>
-        KRX API 사용량
-      </h3>
-      {error && <p className="text-rose-400 text-xs">{error}</p>}
-      {!error && !usage && <p className="text-slate-500 text-xs">불러오는 중...</p>}
-      {usage && (
-        <div className="flex flex-col gap-3">
-          <div className="flex flex-col gap-0.5">
-            <span className="text-white text-2xl font-semibold">{usage.used.toLocaleString()}</span>
-            <span className="text-slate-400 text-xs">/ {usage.quota.toLocaleString()}건</span>
-          </div>
-          <div className="h-2 rounded-full bg-white/10 overflow-hidden">
-            <div className={`h-full ${barColor} transition-all`} style={{ width: `${ratio}%` }} />
-          </div>
-          <span className="text-slate-300 text-xs">잔여 {usage.remaining.toLocaleString()}건</span>
-          {usage.lastRateLimitAt && (
-            <p className="text-amber-300 text-xs">마지막 한도 초과: {usage.lastRateLimitAt}</p>
-          )}
-        </div>
-      )}
-    </div>
-  );
 }
 
 function SchedulerStatusCard({ reloadToken }: { reloadToken: number }) {
@@ -296,14 +253,9 @@ export default function Dashboard({ role }: { role: string }) {
         </div>
       </div>
       {isRoot ? (
-        // ROOT: KRX 사용량(1/4) + 배치 작업 현황(3/4)
-        <div className="grid grid-cols-4 gap-4">
-          <div className="col-span-1">
-            <KrxUsageCard reloadToken={reloadToken} />
-          </div>
-          <div className="col-span-3">
-            <SchedulerStatusCard reloadToken={reloadToken} />
-          </div>
+        // ROOT: 배치 작업 현황 전체 폭
+        <div>
+          <SchedulerStatusCard reloadToken={reloadToken} />
         </div>
       ) : (
         // USER/ADMIN: 기능 준비 중 카드들

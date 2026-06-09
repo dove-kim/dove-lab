@@ -7,6 +7,7 @@ import com.dove.stockcollection.application.service.CollectionTaskService;
 import com.dove.stockcollection.application.service.InvestorCollectionService;
 import com.dove.stockcollection.application.service.PriceCollectionService;
 import com.dove.stockcollection.application.service.StockCollectionService;
+import com.dove.stockcollection.application.service.StockDetailCollectionService;
 import com.dove.stockcollection.application.service.StockEventCollectionService;
 import com.dove.stockcollection.application.service.TaskProgress;
 import com.dove.stockcollection.domain.entity.CollectionTask;
@@ -18,27 +19,33 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Component;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.ExecutorService;
 import java.util.concurrent.Executors;
+import java.util.concurrent.atomic.AtomicInteger;
 
 /**
- * PENDING 재조회 태스크를 폴링하여 KRX·KIS 트랙으로 분리 실행하는 잡.
+ * PENDING 재조회 태스크를 폴링하여 유형에 상관없이 한 번에 하나씩 직렬 실행하는 잡.
+ * STOCK 유형이 KIS를 함께 사용하므로 PRICE·EVENT와 병렬 실행 시 율제한이 충돌한다.
  */
 @Slf4j
 @Component
 @RequiredArgsConstructor
 public class PendingCollectionJob {
 
-    private static final List<CollectionType> KRX_TYPES = List.of(CollectionType.STOCK);
-    private static final List<CollectionType> KIS_TYPES = List.of(
-            CollectionType.PRICE, CollectionType.EVENT, CollectionType.INVESTOR);
+    private static final List<CollectionType> ALL_TYPES = Arrays.asList(CollectionType.values());
 
     private final PriceCollectionService priceCollectionService;
     private final StockCollectionService stockCollectionService;
     private final StockEventCollectionService eventCollectionService;
     private final InvestorCollectionService investorCollectionService;
     private final CollectionTaskService taskService;
+    /**
+     * KIS 상세 수집 — KisStockDetailFetcher가 없는 컨텍스트에선 empty.
+     */
+    private final Optional<StockDetailCollectionService> stockDetailCollectionService;
 
     private final ExecutorService background = Executors.newVirtualThreadPerTaskExecutor();
 
@@ -51,24 +58,15 @@ public class PendingCollectionJob {
     }
 
     /**
-     * 30초마다 PENDING 태스크를 확인하여 KRX·KIS 트랙 각각 하나씩 실행한다.
-     * 이미 같은 트랙이 RUNNING 중이면 해당 트랙은 건너뛴다.
+     * 30초마다 PENDING 태스크를 확인하여 실행 중인 태스크가 없을 때 가장 오래된 태스크를 하나 실행한다.
      */
     @Scheduled(fixedDelay = 30_000)
     public void poll() {
-        if (!taskService.hasRunning(KRX_TYPES)) {
-            taskService.findOldestPending(KRX_TYPES).ifPresent(task -> {
-                log.info("KRX 트랙 태스크 실행: id={} type={} {}~{}", task.getId(), task.getType(), task.getFromDate(), task.getToDate());
-                background.execute(() -> executeTask(task));
-            });
-        }
-
-        if (!taskService.hasRunning(KIS_TYPES)) {
-            taskService.findOldestPending(KIS_TYPES).ifPresent(task -> {
-                log.info("KIS 트랙 태스크 실행: id={} type={} {}~{}", task.getId(), task.getType(), task.getFromDate(), task.getToDate());
-                background.execute(() -> executeTask(task));
-            });
-        }
+        if (taskService.hasRunning(ALL_TYPES)) return;
+        taskService.findOldestPending(ALL_TYPES).ifPresent(task -> {
+            log.info("재조회 태스크 실행: id={} type={} {}~{}", task.getId(), task.getType(), task.getFromDate(), task.getToDate());
+            background.execute(() -> executeTask(task));
+        });
     }
 
     @PreDestroy
@@ -83,7 +81,15 @@ public class PendingCollectionJob {
                 case PRICE -> priceCollectionService.collect(
                         task.getExchange(), task.getFromDate(), task.getToDate(),
                         progress, DailyPriceFetcher.ADJUSTED_DATA_START);
-                case STOCK -> stockCollectionService.collect(task.getFromDate(), task.getToDate(), progress);
+                case STOCK -> {
+                    // 1단계: KRX 종목 목록 동기화 — total을 캡처해 KIS 단계 offset에 사용
+                    AtomicInteger krxTotal = new AtomicInteger();
+                    stockCollectionService.collect(task.getFromDate(), task.getToDate(),
+                            CollectionProgress.capturing(progress, krxTotal::set));
+                    // 2단계: KIS 종목 상세 upsert — krxTotal 이후로 이어서 진행률 표시
+                    stockDetailCollectionService.ifPresent(s ->
+                            s.updateAll(CollectionProgress.offset(progress, krxTotal.get())));
+                }
                 case EVENT -> eventCollectionService.collect(task.getFromDate(), task.getToDate(), progress);
                 case INVESTOR -> investorCollectionService.collect(task.getFromDate(), task.getToDate(), progress);
             }

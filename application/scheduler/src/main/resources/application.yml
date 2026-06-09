@@ -47,6 +47,9 @@ market:
   data:
     initial-date: ${MARKET_INITIAL_DATE:2010-01-01}
 
+collection:
+  concurrency: ${COLLECTION_CONCURRENCY:40}  # KIS·KRX 동시 실행 수. 실제 속도는 KisGate/per-second가 제어.
+
 indicator:
   concurrency: ${INDICATOR_CONCURRENCY:10}   # 지표 계산 동시 그룹 수. API 아님(DB/코어 기준). DB 풀(20) 이내.
   start-date: ${INDICATOR_START_DATE:}        # 계산 시작일 하한(비우면 전체 이력). 최초 계산량 제한용 — 예: 2026-01-01

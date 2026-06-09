@@ -4,9 +4,9 @@ import com.dove.apiquota.ApiQuotaStatus;
 import com.dove.apiquota.PerSecondApiQuota;
 import com.dove.apiquota.QuotaStatusProvider;
 import com.dove.apiquota.QuotaType;
+import com.dove.krx.config.KrxProperties;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
-import org.springframework.beans.factory.annotation.Value;
 import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
@@ -25,21 +25,16 @@ public class KrxApiQuotaService implements QuotaStatusProvider {
     private static final String NAMESPACE = "krx:api";
 
     private final StringRedisTemplate redis;
-
-    @Value("${krx.api.daily-quota:6000}")
-    private int configuredQuota;
-
-    @Value("${krx.api.per-second:50}")
-    private int perSecond;
+    private final KrxProperties props;
 
     private DailyApiQuota quota;
     private PerSecondApiQuota rateLimiter;
 
     @PostConstruct
     void init() {
-        this.quota = new DailyApiQuota(redis, NAMESPACE, configuredQuota);
-        quota.ensureLimit(configuredQuota, "KRX");
-        this.rateLimiter = new PerSecondApiQuota(perSecond);
+        this.quota = new DailyApiQuota(redis, NAMESPACE, props.getDailyQuota());
+        quota.ensureLimit(props.getDailyQuota(), "KRX");
+        this.rateLimiter = new PerSecondApiQuota(props.getPerSecond());
     }
 
     /**
