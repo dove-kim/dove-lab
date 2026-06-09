@@ -101,6 +101,10 @@ public class CollectionTask {
     @Column(name = "STARTED_AT")
     private LocalDateTime startedAt;
 
+    @Column(name = "PROGRESS_AT")
+    @Comment("진행률 마지막 갱신 시각 (ETA 계산 기준)")
+    private LocalDateTime progressAt;
+
     @Column(name = "FINISHED_AT")
     private LocalDateTime finishedAt;
 
@@ -140,10 +144,11 @@ public class CollectionTask {
     }
 
     /**
-     * 진행률(완료 작업 수)을 갱신한다.
+     * 진행률(완료 작업 수)과 갱신 시각을 기록한다.
      */
     public void updateProgress(int done) {
         this.done = done;
+        this.progressAt = LocalDateTime.now();
     }
 
     /**
