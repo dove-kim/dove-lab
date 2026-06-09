@@ -7,7 +7,7 @@ import java.util.concurrent.atomic.AtomicLong;
  */
 public class TaskProgress implements CollectionProgress {
 
-    private static final long FLUSH_INTERVAL_MS = 5_000;
+    private static final long FLUSH_INTERVAL_MS = 1_000;
 
     private final CollectionTaskService taskService;
     private final Long taskId;
