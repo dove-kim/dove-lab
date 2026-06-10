@@ -26,7 +26,7 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
   const [managerOpen, setManagerOpen]       = useState(false);
   const [panelOrderOpen, setPanelOrderOpen] = useState(false);
   const [mode, setMode]                     = useState<"candle" | "line">("candle");
-  const [source, setSource]                 = useState<"KRX" | "NXT" | "CONSOLIDATED">("KRX");
+  const [source, setSource]                 = useState<"KRX" | "NXT" | "INTEGRATED">("KRX");
   const [adjusted, setAdjusted]             = useState(true);
   const [latestBar, setLatestBar]           = useState<PriceBar | null>(null);
 
@@ -188,13 +188,13 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
 
             {/* 거래소 선택 */}
             <div className="flex rounded border border-white/10 overflow-hidden text-xs">
-              {(["CONSOLIDATED", "KRX", "NXT"] as const).map(s => (
+              {(["INTEGRATED", "KRX", "NXT"] as const).map(s => (
                 <button
                   key={s}
                   onClick={() => setSource(s)}
                   className={`px-2 py-1.5 transition ${source === s ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"}`}
                 >
-                  {s === "CONSOLIDATED" ? "통합" : s}
+                  {s === "INTEGRATED" ? "통합" : s}
                 </button>
               ))}
             </div>
