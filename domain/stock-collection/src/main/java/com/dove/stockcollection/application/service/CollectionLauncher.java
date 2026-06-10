@@ -28,13 +28,15 @@ public class CollectionLauncher {
      * 주가 재조회 태스크를 PENDING으로 등록하고 작업ID를 반환한다.
      * 재조회는 어제까지로 제한한다.
      *
+     * @param adjustedFrom 수정주가 재조회 시작일. null이면 이벤트 감지되어도 재조회 생략.
      * @throws IllegalArgumentException 요청 범위 전체가 오늘 이후인 경우 (INVALID_BACKFILL_RANGE)
      */
-    public Long enqueuePriceCollection(StockExchange exchange, LocalDate from, LocalDate to, Long requestedBy) {
+    public Long enqueuePriceCollection(StockExchange exchange, LocalDate from, LocalDate to,
+                                       Long requestedBy, LocalDate adjustedFrom) {
         LocalDate yesterday = LocalDate.now(clock).minusDays(1);
         LocalDate cappedTo = to.isAfter(yesterday) ? yesterday : to;
         if (from.isAfter(cappedTo)) throw new IllegalArgumentException("INVALID_BACKFILL_RANGE");
-        return taskService.create(CollectionType.PRICE, exchange, from, cappedTo, requestedBy);
+        return taskService.create(CollectionType.PRICE, exchange, from, cappedTo, requestedBy, adjustedFrom);
     }
 
     /**
@@ -48,13 +50,22 @@ public class CollectionLauncher {
     }
 
     /**
-     * 종목 재조회 태스크를 PENDING으로 등록하고 작업ID를 반환한다.
+     * 종목 목록 재조회(KRX) 태스크를 PENDING으로 등록하고 작업ID를 반환한다.
      *
      * @throws IllegalArgumentException 날짜 범위가 역순인 경우 (INVALID_BACKFILL_RANGE)
      */
-    public Long enqueueStockCollection(LocalDate from, LocalDate to, Long requestedBy) {
+    public Long enqueueStockSyncCollection(LocalDate from, LocalDate to, Long requestedBy) {
         if (from.isAfter(to)) throw new IllegalArgumentException("INVALID_BACKFILL_RANGE");
-        return taskService.create(CollectionType.STOCK, null, from, to, requestedBy);
+        return taskService.create(CollectionType.STOCK_SYNC, null, from, to, requestedBy);
+    }
+
+    /**
+     * 종목 상세 재수집(KIS) 태스크를 PENDING으로 등록하고 작업ID를 반환한다.
+     * 날짜 무관 — 전 종목 현재 상태를 upsert한다.
+     */
+    public Long enqueueStockDetailCollection(Long requestedBy) {
+        LocalDate today = LocalDate.now(clock);
+        return taskService.create(CollectionType.STOCK_DETAIL, null, today, today, requestedBy);
     }
 
     /**
@@ -78,8 +89,9 @@ public class CollectionLauncher {
         LocalDate from = source.getFromDate();
         LocalDate to = source.getToDate();
         return switch (source.getType()) {
-            case PRICE -> enqueuePriceCollection(source.getExchange(), from, to, requestedBy);
-            case STOCK -> enqueueStockCollection(from, to, requestedBy);
+            case PRICE -> enqueuePriceCollection(source.getExchange(), from, to, requestedBy, source.getAdjustedFrom());
+            case STOCK, STOCK_SYNC -> enqueueStockSyncCollection(from, to, requestedBy);
+            case STOCK_DETAIL -> enqueueStockDetailCollection(requestedBy);
             case EVENT -> enqueueEventCollection(from, to, requestedBy);
             case INVESTOR -> enqueueInvestorCollection(from, to, requestedBy);
         };

@@ -1,6 +1,7 @@
 package com.dove.krx.infrastructure.adapter;
 
 import com.dove.stockcollection.application.port.StockListing;
+import com.dove.krx.config.KrxProperties;
 import com.dove.krx.infrastructure.client.KrxListedStockItem;
 import com.dove.krx.infrastructure.client.KrxListedStockResponse;
 import com.dove.krx.infrastructure.client.KrxStockClient;
@@ -20,7 +21,6 @@ import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
 import java.util.Arrays;
@@ -49,8 +49,9 @@ class KrxTradingDayAdapterTest {
 
     @BeforeEach
     void setUp() {
-        adapter = new KrxTradingDayAdapter(krxStockClient, Optional.of(quotaService), systemEventService);
-        ReflectionTestUtils.setField(adapter, "krxApiAuthKey", AUTH_KEY);
+        KrxProperties props = new KrxProperties();
+        props.setAuthKey(AUTH_KEY);
+        adapter = new KrxTradingDayAdapter(props, krxStockClient, Optional.of(quotaService), systemEventService);
     }
 
     private KrxListedStockResponse listingOf(String... tickers) {

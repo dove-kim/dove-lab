@@ -270,8 +270,9 @@ function computeLayout(
 
   const pSpan   = (pMaxRaw - pMinRaw) || pMaxRaw * 0.01 || 1;
   const pad     = pSpan * 0.5;
-  const pBotVal = pMinRaw - pad;
-  const pRange  = pSpan + pad * 2;
+  // 주가는 음수가 없으므로 하한을 0 미만으로 내리지 않음
+  const pBotVal = Math.max(0, pMinRaw - pad);
+  const pRange  = pMaxRaw + pad - pBotVal;
 
   const toY   = (p: number) => cBot - ((p - pBotVal) / pRange) * CANDLE_H;
   const maxVol = Math.max(...rangeBars.map(b => b.volume ?? 0)) || 1;
@@ -355,6 +356,8 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
   useEffect(() => {
     const controller = new AbortController();
     perf.pipe.mark("④ prices useEffect 시작");
+    // 종목·소스 전환 시 헤더 가격을 즉시 비워 이전 종목 값이 잔류하지 않게 함
+    onLatestBarRef.current?.(null);
 
     function applyPriceData(arr: PriceBar[], fromCache: boolean) {
       const expanded = fromCache ? _priceCache.get(_cacheKey(code, source, adjusted))!.expandedBars

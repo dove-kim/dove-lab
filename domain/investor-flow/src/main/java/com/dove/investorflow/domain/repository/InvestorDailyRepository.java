@@ -2,11 +2,10 @@ package com.dove.investorflow.domain.repository;
 
 import com.dove.investorflow.domain.entity.InvestorDaily;
 import com.dove.investorflow.domain.entity.InvestorDailyId;
-import com.dove.stock.domain.enums.StockExchange;
-import org.springframework.data.domain.Pageable;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.time.LocalDate;
 import java.util.List;
 
 /**
@@ -16,8 +15,8 @@ import java.util.List;
 public interface InvestorDailyRepository extends JpaRepository<InvestorDaily, InvestorDailyId> {
 
     /**
-     * 거래소·종목코드 기준 매매동향을 거래일 내림차순으로 조회한다.
+     * 종목코드·날짜 범위 기준 매매동향을 거래일 오름차순으로 조회한다.
      */
-    List<InvestorDaily> findByIdExchangeAndIdStockCodeOrderByIdTradeDateDesc(
-            StockExchange exchange, String stockCode, Pageable pageable);
+    List<InvestorDaily> findByIdStockCodeAndIdTradeDateBetweenOrderByIdTradeDate(
+            String stockCode, LocalDate from, LocalDate to);
 }

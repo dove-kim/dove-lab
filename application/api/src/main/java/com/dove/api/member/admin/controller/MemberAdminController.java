@@ -7,6 +7,7 @@ import com.dove.api.member.admin.dto.MemberSummaryResponse;
 import com.dove.api.member.admin.service.MemberSummaryQueryService;
 import com.dove.api.global.security.authorization.RequireRole;
 import com.dove.api.global.security.authorization.Role;
+import com.dove.auth.application.service.ForcedLogoutService;
 import com.dove.user.application.service.MemberProfileCommandService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -29,6 +30,7 @@ public class MemberAdminController {
     private final MemberSummaryQueryService memberSummaryQueryService;
     private final MemberProfileCommandService memberProfileCommandService;
     private final AdminPasswordResetService adminPasswordResetService;
+    private final ForcedLogoutService forcedLogoutService;
 
     /**
      * 전체 회원 요약 목록을 반환한다.
@@ -50,6 +52,7 @@ public class MemberAdminController {
                            @RequestBody @Valid ChangeRoleRequest request) {
         try {
             memberProfileCommandService.changeRole(userId, request.role());
+            forcedLogoutService.markLogoutNow(userId);
         } catch (NoSuchElementException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND");
         } catch (IllegalStateException | IllegalArgumentException e) {

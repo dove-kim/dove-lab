@@ -1,5 +1,6 @@
 package com.dove.userfeature.application.service;
 
+import com.dove.auth.domain.enums.MemberRole;
 import com.dove.userfeature.application.dto.FeatureView;
 import com.dove.userfeature.application.dto.MemberMenuView;
 import com.dove.userfeature.application.dto.ModuleView;
@@ -15,6 +16,7 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.Arrays;
 import java.util.Comparator;
 import java.util.List;
 import java.util.Map;
@@ -36,9 +38,14 @@ public class MemberMenuDisplayQueryService {
 
     /**
      * 사용자의 메뉴 트리를 반환한다.
+     *
+     * @param memberId 회원 식별자
+     * @param role     회원 권한 (ROOT이면 모든 기능을 자동 부여)
      */
-    public MemberMenuView buildMenuForMember(Long memberId) {
-        Set<FeatureCode> activeFeatures = grantQueryService.findActiveFeatureCodes(memberId);
+    public MemberMenuView buildMenuForMember(Long memberId, MemberRole role) {
+        Set<FeatureCode> activeFeatures = role == MemberRole.ROOT
+                ? Arrays.stream(FeatureCode.values()).collect(Collectors.toSet())
+                : grantQueryService.findActiveFeatureCodes(memberId);
         Set<SubMenuCode> activeSubMenus = subMenuGrantQueryService.findActiveSubMenuCodes(memberId);
 
         Map<FeatureCode, MemberFeatureDisplay> featureDisplayMap =

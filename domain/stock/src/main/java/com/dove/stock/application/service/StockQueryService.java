@@ -94,6 +94,13 @@ public class StockQueryService {
     }
 
     /**
+     * 시장 목록에 해당하는 티커를 조회한다.
+     */
+    public List<String> findTickersByMarkets(List<MarketType> markets) {
+        return stockRepositorySupport.findTickersByMarkets(markets);
+    }
+
+    /**
      * 거래소별 조회 대상 티커 목록.
      * NXT·INTEGRATED는 넥스트레이드 미취급인 KONEX를 제외하고 KOSPI·KOSDAQ만 반환.
      */

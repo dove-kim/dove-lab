@@ -1,9 +1,9 @@
 package com.dove.krx.quota;
 
 import com.dove.apiquota.ApiQuotaStatus;
-import com.dove.apiquota.PerSecondApiQuota;
 import com.dove.apiquota.QuotaStatusProvider;
 import com.dove.apiquota.QuotaType;
+import com.dove.apiquota.RateLimiter;
 import com.dove.krx.config.KrxProperties;
 import jakarta.annotation.PostConstruct;
 import lombok.RequiredArgsConstructor;
@@ -26,15 +26,14 @@ public class KrxApiQuotaService implements QuotaStatusProvider {
 
     private final StringRedisTemplate redis;
     private final KrxProperties props;
+    private final RateLimiter krxRateLimiter;
 
     private DailyApiQuota quota;
-    private PerSecondApiQuota rateLimiter;
 
     @PostConstruct
     void init() {
         this.quota = new DailyApiQuota(redis, NAMESPACE, props.getDailyQuota());
         quota.ensureLimit(props.getDailyQuota(), "KRX");
-        this.rateLimiter = new PerSecondApiQuota(props.getPerSecond());
     }
 
     /**
@@ -44,7 +43,7 @@ public class KrxApiQuotaService implements QuotaStatusProvider {
      */
     public void tryAcquire() {
         try {
-            rateLimiter.acquire();
+            krxRateLimiter.acquire();
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new KrxRemoteRateLimitException("KRX 초당 제한 대기 중 인터럽트");
