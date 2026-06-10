@@ -150,7 +150,7 @@ function SchedulerStatusCard({ reloadToken }: { reloadToken: number }) {
 
   function formatTime(epochMs: number) {
     if (!epochMs) return "-";
-    return new Date(epochMs).toLocaleString("ko-KR", { month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
+    return new Date(epochMs).toLocaleString("ko-KR", { timeZone: "Asia/Seoul", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" });
   }
 
   /** 진행률·경과시간 기반 예상 남은 시간. 계산 불가하면 null. */
