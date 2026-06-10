@@ -20,8 +20,8 @@ import java.util.List;
 public class KisInvestorFetcher implements InvestorFetcher {
 
     private static final String TR_ID = "FHKST01010900";
-    // FHKST01010900은 마켓 코드(J/NX/UN)에 무관하게 동일한 통합 데이터를 반환한다.
-    private static final String MARKET_CODE = "J";
+    // FHKST01010900은 J/NX/UN 모두 동일한 통합 집계를 반환 — UN(통합)으로 요청
+    private static final String MARKET_CODE = "UN";
     private static final DateTimeFormatter DATE_FMT = DateTimeFormatter.BASIC_ISO_DATE;
 
     private final KisStockClient kisStockClient;

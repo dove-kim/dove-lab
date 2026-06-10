@@ -1,5 +1,6 @@
 package com.dove.userfeature.application.service;
 
+import com.dove.auth.domain.enums.MemberRole;
 import com.dove.userfeature.application.dto.MemberMenuView;
 import com.dove.userfeature.application.dto.ModuleView;
 import com.dove.userfeature.domain.entity.MemberFeatureDisplay;
@@ -52,7 +53,7 @@ class MemberMenuDisplayQueryServiceTest {
                     MemberModuleDisplay.create(MEMBER_ID, ModuleCode.STOCK, 0)
             ));
 
-            MemberMenuView menu = service.buildMenuForMember(MEMBER_ID);
+            MemberMenuView menu = service.buildMenuForMember(MEMBER_ID, MemberRole.USER);
 
             assertThat(menu.modules()).hasSize(1);
             ModuleView stockModule = menu.modules().get(0);
@@ -71,7 +72,7 @@ class MemberMenuDisplayQueryServiceTest {
             given(featureDisplayRepository.findAllByMemberId(MEMBER_ID)).willReturn(List.of());
             given(moduleDisplayRepository.findAllByMemberId(MEMBER_ID)).willReturn(List.of());
 
-            MemberMenuView menu = service.buildMenuForMember(MEMBER_ID);
+            MemberMenuView menu = service.buildMenuForMember(MEMBER_ID, MemberRole.USER);
 
             assertThat(menu.modules()).isEmpty();
         }
@@ -85,7 +86,7 @@ class MemberMenuDisplayQueryServiceTest {
             given(featureDisplayRepository.findAllByMemberId(MEMBER_ID)).willReturn(List.of());
             given(moduleDisplayRepository.findAllByMemberId(MEMBER_ID)).willReturn(List.of());
 
-            MemberMenuView menu = service.buildMenuForMember(MEMBER_ID);
+            MemberMenuView menu = service.buildMenuForMember(MEMBER_ID, MemberRole.USER);
 
             ModuleView module = menu.modules().get(0);
             assertThat(module.hidden()).isFalse();
@@ -105,7 +106,7 @@ class MemberMenuDisplayQueryServiceTest {
             hiddenModule.setHidden(true);
             given(moduleDisplayRepository.findAllByMemberId(MEMBER_ID)).willReturn(List.of(hiddenModule));
 
-            MemberMenuView menu = service.buildMenuForMember(MEMBER_ID);
+            MemberMenuView menu = service.buildMenuForMember(MEMBER_ID, MemberRole.USER);
 
             assertThat(menu.modules().get(0).hidden()).isTrue();
             assertThat(menu.modules().get(0).features().get(0).hidden()).isTrue();

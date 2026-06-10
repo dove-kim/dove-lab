@@ -1,7 +1,6 @@
 package com.dove.investorflow.application.service;
 
 import com.dove.investorflow.domain.entity.InvestorDaily;
-import com.dove.stock.domain.enums.StockExchange;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -22,27 +21,27 @@ class InvestorDailyServiceTest {
     @Autowired
     InvestorDailyService service;
 
-    private InvestorDaily daily(StockExchange exchange, String code, LocalDate date,
+    private InvestorDaily daily(String code, LocalDate date,
                                 long indBuy, long indSell,
                                 long instBuy, long instSell,
                                 long forBuy, long forSell) {
-        return new InvestorDaily(exchange, code, date,
+        return new InvestorDaily(code, date,
                 indBuy, indSell, instBuy, instSell, forBuy, forSell);
     }
 
     @Nested
-    @DisplayName("findBySourceAndCodeAndDate")
-    class FindBySourceAndCodeAndDate {
+    @DisplayName("findByCodeAndDate")
+    class FindByCodeAndDate {
 
         @Test
-        @DisplayName("저장한 데이터를 거래소·코드·날짜로 조회한다")
+        @DisplayName("저장한 데이터를 종목코드·날짜로 조회한다")
         void shouldReturnDataWhenExists() {
             service.saveAll(List.of(
-                    daily(StockExchange.KOSPI, "005930", LocalDate.of(2024, 1, 1),
+                    daily("005930", LocalDate.of(2024, 1, 1),
                             100L, 50L, 200L, 100L, 300L, 150L)));
 
-            Optional<InvestorDaily> result = service.findBySourceAndCodeAndDate(
-                    StockExchange.KOSPI, "005930", LocalDate.of(2024, 1, 1));
+            Optional<InvestorDaily> result =
+                    service.findByCodeAndDate("005930", LocalDate.of(2024, 1, 1));
 
             assertThat(result).isPresent();
             assertThat(result.get().individualNet()).isEqualTo(50L);
@@ -53,66 +52,57 @@ class InvestorDailyServiceTest {
         @Test
         @DisplayName("없는 날짜는 empty를 반환한다")
         void shouldReturnEmptyWhenNotExists() {
-            Optional<InvestorDaily> result = service.findBySourceAndCodeAndDate(
-                    StockExchange.KOSPI, "005930", LocalDate.of(2024, 1, 1));
-
-            assertThat(result).isEmpty();
-        }
-
-        @Test
-        @DisplayName("같은 종목이라도 다른 거래소면 조회되지 않는다")
-        void shouldReturnEmptyWhenExchangeDiffers() {
-            service.saveAll(List.of(
-                    daily(StockExchange.KOSPI, "005930", LocalDate.of(2024, 1, 1),
-                            100L, 50L, 200L, 100L, 300L, 150L)));
-
-            Optional<InvestorDaily> result = service.findBySourceAndCodeAndDate(
-                    StockExchange.KOSDAQ, "005930", LocalDate.of(2024, 1, 1));
+            Optional<InvestorDaily> result =
+                    service.findByCodeAndDate("005930", LocalDate.of(2024, 1, 1));
 
             assertThat(result).isEmpty();
         }
     }
 
     @Nested
-    @DisplayName("findRecent")
-    class FindRecent {
+    @DisplayName("findByCodeAndDateRange")
+    class FindByCodeAndDateRange {
 
         @Test
-        @DisplayName("거래일 내림차순으로 최대 limit건 반환한다")
-        void shouldReturnRecentInDescOrderUpToLimit() {
+        @DisplayName("날짜 범위 내 데이터를 거래일 오름차순으로 반환한다")
+        void shouldReturnDataInAscOrderWithinRange() {
             service.saveAll(List.of(
-                    daily(StockExchange.KOSPI, "005930", LocalDate.of(2024, 1, 1), 1, 0, 1, 0, 1, 0),
-                    daily(StockExchange.KOSPI, "005930", LocalDate.of(2024, 1, 3), 1, 0, 1, 0, 1, 0),
-                    daily(StockExchange.KOSPI, "005930", LocalDate.of(2024, 1, 2), 1, 0, 1, 0, 1, 0)));
+                    daily("005930", LocalDate.of(2024, 1, 1), 1, 0, 1, 0, 1, 0),
+                    daily("005930", LocalDate.of(2024, 1, 3), 1, 0, 1, 0, 1, 0),
+                    daily("005930", LocalDate.of(2024, 1, 2), 1, 0, 1, 0, 1, 0)));
 
-            List<InvestorDaily> result = service.findRecent(StockExchange.KOSPI, "005930", 2);
+            List<InvestorDaily> result = service.findByCodeAndDateRange(
+                    "005930", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 3));
 
-            assertThat(result).hasSize(2);
-            assertThat(result.get(0).getTradeDate()).isEqualTo(LocalDate.of(2024, 1, 3));
-            assertThat(result.get(1).getTradeDate()).isEqualTo(LocalDate.of(2024, 1, 2));
+            assertThat(result).hasSize(3);
+            assertThat(result.get(0).getTradeDate()).isEqualTo(LocalDate.of(2024, 1, 1));
+            assertThat(result.get(2).getTradeDate()).isEqualTo(LocalDate.of(2024, 1, 3));
         }
 
         @Test
-        @DisplayName("다른 거래소 데이터는 포함하지 않는다")
-        void shouldNotIncludeOtherExchange() {
+        @DisplayName("범위 밖 날짜는 포함하지 않는다")
+        void shouldExcludeDatesOutsideRange() {
             service.saveAll(List.of(
-                    daily(StockExchange.KOSPI, "005930", LocalDate.of(2024, 1, 1), 1, 0, 1, 0, 1, 0),
-                    daily(StockExchange.KOSDAQ, "005930", LocalDate.of(2024, 1, 1), 1, 0, 1, 0, 1, 0)));
+                    daily("005930", LocalDate.of(2023, 12, 31), 1, 0, 1, 0, 1, 0),
+                    daily("005930", LocalDate.of(2024, 1, 1), 1, 0, 1, 0, 1, 0),
+                    daily("005930", LocalDate.of(2024, 1, 5), 1, 0, 1, 0, 1, 0)));
 
-            List<InvestorDaily> result = service.findRecent(StockExchange.KOSPI, "005930", 10);
+            List<InvestorDaily> result = service.findByCodeAndDateRange(
+                    "005930", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 3));
 
             assertThat(result).hasSize(1);
-            assertThat(result.get(0).getExchange()).isEqualTo(StockExchange.KOSPI);
+            assertThat(result.get(0).getTradeDate()).isEqualTo(LocalDate.of(2024, 1, 1));
         }
 
         @Test
         @DisplayName("다른 종목 데이터는 포함하지 않는다")
         void shouldNotIncludeOtherStock() {
             service.saveAll(List.of(
-                    daily(StockExchange.KOSPI, "005930", LocalDate.of(2024, 1, 1), 1, 0, 1, 0, 1, 0),
-                    daily(StockExchange.KOSPI, "000660", LocalDate.of(2024, 1, 1), 1, 0, 1, 0, 1, 0)));
+                    daily("005930", LocalDate.of(2024, 1, 1), 1, 0, 1, 0, 1, 0),
+                    daily("000660", LocalDate.of(2024, 1, 1), 1, 0, 1, 0, 1, 0)));
 
-            List<InvestorDaily> result = service.findRecent(StockExchange.KOSPI, "005930", 10);
+            List<InvestorDaily> result = service.findByCodeAndDateRange(
+                    "005930", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 1));
 
             assertThat(result).hasSize(1);
             assertThat(result.get(0).getStockCode()).isEqualTo("005930");
@@ -121,7 +111,8 @@ class InvestorDailyServiceTest {
         @Test
         @DisplayName("데이터가 없으면 빈 리스트를 반환한다")
         void shouldReturnEmptyWhenNoData() {
-            List<InvestorDaily> result = service.findRecent(StockExchange.KOSPI, "005930", 10);
+            List<InvestorDaily> result = service.findByCodeAndDateRange(
+                    "005930", LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 31));
 
             assertThat(result).isEmpty();
         }

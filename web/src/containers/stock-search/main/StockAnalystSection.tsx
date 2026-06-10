@@ -24,6 +24,13 @@ interface Estimate {
 const INCOME_LABELS = ["매출액", "매출액 증감율", "영업이익", "영업이익 증감율", "순이익", "순이익 증감율"];
 const INDICATOR_LABELS = ["EBITDA(십억)", "EPS(원)", "EPS 증감율", "PER", "EV/EBITDA", "ROE", "부채비율", "이자보상배율"];
 
+function fmtCell(v: string): { text: string; negative: boolean } {
+  if (!v || v === "-") return { text: "-", negative: false };
+  const n = parseFloat(v);
+  if (isNaN(n)) return { text: v, negative: false };
+  return { text: n.toLocaleString("ko-KR"), negative: n < 0 };
+}
+
 /**
  * 종목 애널리스트 정보(투자의견·추정실적) — 버튼 눌러야 KIS 조회(무분별 호출 방지).
  */
@@ -138,17 +145,27 @@ export default function StockAnalystSection({ code }: { code: string }) {
                     {estimate.income.map((row, i) => (
                       <tr key={"inc" + i} className={cx.table.tr}>
                         <td className={cx.table.td + " whitespace-nowrap"}>{INCOME_LABELS[i] ?? `항목${i + 1}`}</td>
-                        {row.map((v, j) => (
-                          <td key={j} className={cx.table.td + " text-right tabular-nums"}>{v || "-"}</td>
-                        ))}
+                        {row.map((v, j) => {
+                          const { text, negative } = fmtCell(v);
+                          return (
+                            <td key={j} className={cx.table.td + " text-right tabular-nums" + (negative ? " !text-red-400" : "")}>
+                              {text}
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                     {estimate.indicators.map((row, i) => (
                       <tr key={"ind" + i} className={cx.table.tr}>
-                        <td className={cx.table.td + " whitespace-nowrap text-slate-400"}>{INDICATOR_LABELS[i] ?? `지표${i + 1}`}</td>
-                        {row.map((v, j) => (
-                          <td key={j} className={cx.table.td + " text-right tabular-nums text-slate-400"}>{v || "-"}</td>
-                        ))}
+                        <td className={cx.table.td + " whitespace-nowrap !text-slate-400"}>{INDICATOR_LABELS[i] ?? `지표${i + 1}`}</td>
+                        {row.map((v, j) => {
+                          const { text, negative } = fmtCell(v);
+                          return (
+                            <td key={j} className={cx.table.td + " text-right tabular-nums" + (negative ? " !text-red-400" : " !text-slate-400")}>
+                              {text}
+                            </td>
+                          );
+                        })}
                       </tr>
                     ))}
                   </tbody>

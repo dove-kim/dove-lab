@@ -3,9 +3,7 @@ package com.dove.investorflow.application.service;
 import com.dove.investorflow.domain.entity.InvestorDaily;
 import com.dove.investorflow.domain.entity.InvestorDailyId;
 import com.dove.investorflow.domain.repository.InvestorDailyRepository;
-import com.dove.stock.domain.enums.StockExchange;
 import lombok.RequiredArgsConstructor;
-import org.springframework.data.domain.PageRequest;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -24,20 +22,18 @@ public class InvestorDailyService {
     private final InvestorDailyRepository investorDailyRepository;
 
     /**
-     * 거래소·종목코드·거래일로 단건 매매동향을 조회한다.
+     * 종목코드·거래일로 단건 매매동향을 조회한다.
      */
-    public Optional<InvestorDaily> findBySourceAndCodeAndDate(
-            StockExchange exchange, String stockCode, LocalDate tradeDate) {
-        return investorDailyRepository.findById(
-                new InvestorDailyId(exchange, stockCode, tradeDate));
+    public Optional<InvestorDaily> findByCodeAndDate(String stockCode, LocalDate tradeDate) {
+        return investorDailyRepository.findById(new InvestorDailyId(stockCode, tradeDate));
     }
 
     /**
-     * 거래소·종목코드 기준 최근 N건 매매동향을 거래일 내림차순으로 반환한다.
+     * 종목코드·날짜 범위 기준 매매동향을 거래일 오름차순으로 반환한다.
      */
-    public List<InvestorDaily> findRecent(StockExchange exchange, String stockCode, int limit) {
-        return investorDailyRepository.findByIdExchangeAndIdStockCodeOrderByIdTradeDateDesc(
-                exchange, stockCode, PageRequest.of(0, limit));
+    public List<InvestorDaily> findByCodeAndDateRange(String stockCode, LocalDate from, LocalDate to) {
+        return investorDailyRepository.findByIdStockCodeAndIdTradeDateBetweenOrderByIdTradeDate(
+                stockCode, from, to);
     }
 
     /**

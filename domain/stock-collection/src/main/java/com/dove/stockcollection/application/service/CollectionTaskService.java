@@ -31,6 +31,19 @@ public class CollectionTaskService {
         return task.getId();
     }
 
+    /**
+     * 수정주가 재조회 시작일을 포함한 태스크를 생성한다. PRICE 유형 전용.
+     *
+     * @param adjustedFrom 수정주가 재조회 시작일, null이면 재조회 생략
+     */
+    @Transactional
+    public Long create(CollectionType type, StockExchange exchange,
+                       LocalDate from, LocalDate to, Long requestedBy, LocalDate adjustedFrom) {
+        CollectionTask task = repository.save(
+                new CollectionTask(type, exchange, from, to, requestedBy, adjustedFrom));
+        return task.getId();
+    }
+
     @Transactional
     public void start(Long taskId, int total) {
         repository.findById(taskId).ifPresent(t -> t.start(total));

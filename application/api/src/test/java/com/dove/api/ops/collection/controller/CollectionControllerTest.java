@@ -49,7 +49,8 @@ class CollectionControllerTest {
         given(launcher.enqueuePriceCollection(any(StockExchange.class), any(), any(), anyLong()))
                 .willReturn(11L);
         given(launcher.enqueueEventCollection(any(), any(), anyLong())).willReturn(22L);
-        given(launcher.enqueueStockCollection(any(), any(), anyLong())).willReturn(33L);
+        given(launcher.enqueueStockSyncCollection(any(), any(), anyLong())).willReturn(33L);
+        given(launcher.enqueueStockDetailCollection(anyLong())).willReturn(34L);
         given(launcher.enqueueInvestorCollection(any(), any(), anyLong())).willReturn(55L);
         given(launcher.reenqueue(anyLong(), anyLong())).willReturn(44L);
 
@@ -129,6 +130,49 @@ class CollectionControllerTest {
                                     """))
                     .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.taskId").value(22));
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /admin/ops/collection/stock-sync")
+    class StartStockSyncCollection {
+
+        @Test
+        @DisplayName("인증 없으면 401")
+        void shouldReturn401WhenUnauthenticated() throws Exception {
+            mockMvc.perform(post("/admin/ops/collection/stock-sync")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"from":"2024-01-01","to":"2024-12-31"}
+                                    """))
+                    .andExpect(status().isUnauthorized());
+        }
+
+        @Test
+        @WithApiUser(role = "ROOT")
+        @DisplayName("ROOT 권한이면 종목 목록 재조회 시작 202 + 작업ID")
+        void shouldStartStockSyncWhenRoot() throws Exception {
+            mockMvc.perform(post("/admin/ops/collection/stock-sync")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"from":"2024-01-01","to":"2024-12-31"}
+                                    """))
+                    .andExpect(status().isAccepted())
+                    .andExpect(jsonPath("$.taskId").value(33));
+        }
+    }
+
+    @Nested
+    @DisplayName("POST /admin/ops/collection/stock-detail")
+    class StartStockDetailCollection {
+
+        @Test
+        @WithApiUser(role = "ROOT")
+        @DisplayName("ROOT 권한이면 종목 상세 재수집 시작 202 + 작업ID")
+        void shouldStartStockDetailWhenRoot() throws Exception {
+            mockMvc.perform(post("/admin/ops/collection/stock-detail"))
+                    .andExpect(status().isAccepted())
+                    .andExpect(jsonPath("$.taskId").value(34));
         }
     }
 

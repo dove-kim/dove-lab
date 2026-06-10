@@ -40,8 +40,8 @@ public class CollectionTask {
     private Long id;
 
     @Enumerated(EnumType.STRING)
-    @Column(name = "TYPE", nullable = false, length = 10)
-    @Comment("수집 유형 (STOCK/PRICE/EVENT/INVESTOR)")
+    @Column(name = "TYPE", nullable = false, length = 20)
+    @Comment("수집 유형 (STOCK_SYNC/STOCK_DETAIL/PRICE/EVENT/INVESTOR)")
     private CollectionType type;
 
     @Column(name = "SCOPE", nullable = false, length = 100)
@@ -73,6 +73,10 @@ public class CollectionTask {
     @Column(name = "DONE", nullable = false)
     @Comment("완료된 작업 수 (5초 단위 갱신)")
     private int done;
+
+    @Column(name = "ADJUSTED_FROM")
+    @Comment("수정주가 재조회 시작일 (NULL=재조회 생략)")
+    private LocalDate adjustedFrom;
 
     @Column(name = "ADJUSTED_TOTAL", nullable = false)
     @Comment("수정주가 재조회 대상 종목 수 (이벤트 감지 시 발생, 0=없음)")
@@ -110,10 +114,22 @@ public class CollectionTask {
 
     public CollectionTask(CollectionType type, StockExchange exchange,
                           LocalDate fromDate, LocalDate toDate, Long requestedBy) {
+        this(type, exchange, fromDate, toDate, requestedBy, null);
+    }
+
+    /**
+     * 수정주가 재조회 시작일을 포함한 생성자. PRICE 유형에서 사용한다.
+     *
+     * @param adjustedFrom 수정주가 재조회 시작일, null이면 재조회 생략
+     */
+    public CollectionTask(CollectionType type, StockExchange exchange,
+                          LocalDate fromDate, LocalDate toDate, Long requestedBy,
+                          LocalDate adjustedFrom) {
         this.type = type;
         this.exchange = exchange;
         this.fromDate = fromDate;
         this.toDate = toDate;
+        this.adjustedFrom = adjustedFrom;
         this.scope = buildScope(type, exchange, fromDate, toDate);
         this.requestedBy = requestedBy;
         this.status = CollectionStatus.PENDING;

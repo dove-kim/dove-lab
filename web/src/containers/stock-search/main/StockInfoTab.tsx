@@ -104,7 +104,7 @@ export default function StockInfoTab({ code }: { code: string }) {
   }
 
   return (
-    <div className="h-full overflow-y-auto px-5 py-4 space-y-6 max-w-3xl">
+    <div className="h-full overflow-y-auto px-5 py-4 space-y-6">
       <Section title="기본 정보">
         <Row label="종목명" value={text(detail.name)} />
         <Row label="코드" value={text(detail.ticker)} />

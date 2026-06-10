@@ -5,6 +5,8 @@ import com.dove.api.member.featuregrant.dto.UpdateUserSubMenuRequest;
 import com.dove.api.global.security.AuthenticatedUser;
 import com.dove.api.global.security.authorization.RequireRole;
 import com.dove.api.global.security.authorization.Role;
+import com.dove.auth.domain.enums.MemberRole;
+import com.dove.user.application.service.MemberProfileQueryService;
 import com.dove.userfeature.application.service.MemberFeatureGrantCommandService;
 import com.dove.userfeature.application.dto.MemberMenuView;
 import com.dove.userfeature.application.service.MemberMenuDisplayQueryService;
@@ -27,6 +29,7 @@ public class MemberFeatureGrantController {
     private final MemberFeatureGrantCommandService grantCommandService;
     private final MemberSubMenuGrantCommandService subMenuGrantCommandService;
     private final MemberMenuDisplayQueryService menuQueryService;
+    private final MemberProfileQueryService memberProfileQueryService;
 
     /**
      * 회원에게 기능 권한을 부여하거나 회수한다.
@@ -63,6 +66,9 @@ public class MemberFeatureGrantController {
      */
     @GetMapping("/{userId}/menu")
     public MemberMenuView getMemberMenu(@PathVariable("userId") Long memberId) {
-        return menuQueryService.buildMenuForMember(memberId);
+        MemberRole role = memberProfileQueryService.findById(memberId)
+                .map(p -> p.getRole())
+                .orElse(MemberRole.USER);
+        return menuQueryService.buildMenuForMember(memberId, role);
     }
 }

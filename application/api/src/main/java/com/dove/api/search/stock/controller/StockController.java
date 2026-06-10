@@ -16,6 +16,7 @@ import com.dove.stock.domain.entity.Stock;
 import com.dove.stock.domain.enums.PriceType;
 import com.dove.stock.domain.enums.StockExchange;
 import lombok.RequiredArgsConstructor;
+import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -137,17 +138,17 @@ public class StockController {
     }
 
     /**
-     * 투자자별 일별 순매수 조회 — 최신순.
+     * 투자자별 일별 순매수 조회. 거래일 오름차순 반환.
      *
-     * @param source KRX | NXT | INTEGRATED (대소문자 무관)
-     * @param limit  최대 거래일 수 (기본 60)
+     * @param from 조회 시작일 (inclusive)
+     * @param to   조회 종료일 (inclusive)
      */
     @GetMapping("/{ticker}/investor-flow")
-    public List<InvestorFlowBar> getInvestorFlow(@PathVariable String ticker,
-                                                 @RequestParam String source,
-                                                 @RequestParam(defaultValue = "60") int limit) {
-        StockExchange exchange = resolveExchange(source, ticker);
-        return investorDailyService.findRecent(exchange, ticker, limit).stream()
+    public List<InvestorFlowBar> getInvestorFlow(
+            @PathVariable String ticker,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate from,
+            @RequestParam @DateTimeFormat(iso = DateTimeFormat.ISO.DATE) LocalDate to) {
+        return investorDailyService.findByCodeAndDateRange(ticker, from, to).stream()
                 .map(d -> new InvestorFlowBar(
                         d.getTradeDate().toString(),
                         d.individualNet(),

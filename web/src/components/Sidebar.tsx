@@ -302,76 +302,60 @@ export default function Sidebar({ role, menu, mobileOpen, onMobileClose }: Props
 
       {/* 메뉴 */}
       <nav className="flex flex-col flex-1 py-2 gap-0.5 px-1.5 overflow-y-auto">
-        {isRoot ? (
-          /* ROOT: 대시보드 → 사용자 관리 → 초대 코드 → 기능 권한 관리 → 데이터 → 운영 */
-          <>
-            <NavLink item={DASHBOARD_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
-            <div className="my-2 border-t border-white/10 mx-1" />
-            <NavLink item={ROOT_USER_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
-            <NavLink item={ROOT_INVITE_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
-            <NavLink item={ADMIN_USER_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
-            <div className="my-2 border-t border-white/10 mx-1" />
-            {showLabel && (
-              <div className="px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                데이터
-              </div>
-            )}
-            <NavLink item={ROOT_STOCK_LIST_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
-            <NavLink item={ROOT_STOCK_FILTERS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
-            <div className="my-2 border-t border-white/10 mx-1" />
-            {showLabel && (
-              <div className="px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
-                운영
-              </div>
-            )}
-            <NavLink item={ROOT_BACKFILL_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
-            <NavLink item={ROOT_STOCK_TAGS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
-            <NavLink item={ROOT_SYSTEM_EVENTS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
-          </>
-        ) : (
-          /* USER / ADMIN: 대시보드 → 기능 그룹 → (ADMIN) 기능 권한 관리 */
-          <>
-            <NavLink item={DASHBOARD_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+        <>
+          <NavLink item={DASHBOARD_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
 
-            {featureGroups.map((group) =>
-              group.subMenus.length === 0 ? (
-                // 하위 메뉴 없음 → 기능 자체가 직접 링크
-                <NavLink
-                  key={group.featureCode}
-                  item={{ href: "#", label: group.label, icon: group.icon }}
-                  pathname={pathname}
-                  collapsed={collapsed}
-                  mobileOpen={mobileOpen}
-                />
-              ) : (
-                // 하위 메뉴 있음 → 섹션 헤더 + 하위 메뉴
-                <FeatureSection
-                  key={group.featureCode}
-                  group={group}
-                  pathname={pathname}
-                  collapsed={collapsed}
-                  showLabel={showLabel}
-                />
-              )
-            )}
+          {featureGroups.map((group) =>
+            group.subMenus.length === 0 ? (
+              <NavLink
+                key={group.featureCode}
+                item={{ href: "#", label: group.label, icon: group.icon }}
+                pathname={pathname}
+                collapsed={collapsed}
+                mobileOpen={mobileOpen}
+              />
+            ) : (
+              <FeatureSection
+                key={group.featureCode}
+                group={group}
+                pathname={pathname}
+                collapsed={collapsed}
+                showLabel={showLabel}
+              />
+            )
+          )}
 
-            {isAdmin && (
-              <>
-                <div className="my-2 border-t border-white/10 mx-1" />
-                <NavLink item={ADMIN_USER_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
-              </>
-            )}
-          </>
-        )}
+          {isAdmin && (
+            <>
+              <div className="my-2 border-t border-white/10 mx-1" />
+              <NavLink item={ADMIN_USER_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+            </>
+          )}
+
+          {isRoot && (
+            <>
+              <div className="my-2 border-t border-white/10 mx-1" />
+              <NavLink item={ROOT_USER_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+              <NavLink item={ROOT_INVITE_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+              <div className="my-2 border-t border-white/10 mx-1" />
+              {showLabel && (
+                <div className="px-2.5 py-1 text-xs font-semibold uppercase tracking-wide text-slate-500">
+                  운영
+                </div>
+              )}
+              <NavLink item={ROOT_BACKFILL_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+              <NavLink item={ROOT_STOCK_TAGS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+              <NavLink item={ROOT_SYSTEM_EVENTS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+            </>
+          )}
+        </>
 
         <div className="flex-1" />
 
-        {/* 메뉴 설정 — 하단 고정 (ROOT 제외) */}
-        {!isRoot && (
-          <div className="border-t border-white/10 mx-1 mt-1 pt-1">
-            <NavLink item={SETTINGS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
-          </div>
-        )}
+        {/* 메뉴 설정 — 하단 고정 */}
+        <div className="border-t border-white/10 mx-1 mt-1 pt-1">
+          <NavLink item={SETTINGS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+        </div>
       </nav>
     </aside>
   );

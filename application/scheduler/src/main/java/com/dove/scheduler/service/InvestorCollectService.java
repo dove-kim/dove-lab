@@ -6,9 +6,9 @@ import com.dove.investorflow.application.service.InvestorDailyService;
 import com.dove.investorflow.domain.entity.InvestorDaily;
 import com.dove.jobstatus.JobStatusRegistry;
 import com.dove.jobstatus.SchedulerJobName;
+import com.dove.market.domain.enums.MarketType;
 import com.dove.stock.application.service.StockQueryService;
 import com.dove.stock.domain.entity.Stock;
-import com.dove.stock.domain.enums.StockExchange;
 import com.dove.stockcollection.application.port.InvestorDailyRow;
 import com.dove.stockcollection.application.port.InvestorFetcher;
 import com.dove.systemevent.application.service.SystemEventService;
@@ -42,7 +42,10 @@ public class InvestorCollectService {
      * 전 종목의 당일 투자자동향을 수집한다.
      */
     public void collectAll(LocalDate today) {
-        List<Stock> stocks = stockQueryService.findAll();
+        // FHKST01010900은 KOSPI·KOSDAQ만 제공 — KONEX 제외
+        List<Stock> stocks = stockQueryService.findAll().stream()
+                .filter(s -> s.getMarket() != MarketType.KONEX)
+                .toList();
         log.info("투자자동향 수집 시작: {}종목 / {}", stocks.size(), today);
         jobStatusRegistry.start(SchedulerJobName.INVESTOR_FLOW.name(), stocks.size());
 
@@ -50,13 +53,11 @@ public class InvestorCollectService {
         try {
             Parallel.run(stocks, concurrency, stock -> {
                 String ticker = stock.getTicker();
-                StockExchange exchange = StockExchange.fromMarket(stock.getMarket());
-
                 List<InvestorDailyRow> rows = fetcher.fetch(ticker, today, today);
                 if (rows.isEmpty()) return;
 
                 investorDailyService.saveAll(rows.stream()
-                        .map(r -> new InvestorDaily(exchange, ticker, r.tradeDate(),
+                        .map(r -> new InvestorDaily(ticker, r.tradeDate(),
                                 r.individualBuy(), r.individualSell(),
                                 r.institutionBuy(), r.institutionSell(),
                                 r.foreignBuy(), r.foreignSell()))
