@@ -1,7 +1,9 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { cx } from "@/utils/cx";
+
+// ── 타입 ──────────────────────────────────────────────────────────────────────
 
 interface InvestorFlowBar {
   date: string;
@@ -10,88 +12,60 @@ interface InvestorFlowBar {
   foreignNet: number;
 }
 
-const SOURCE_OPTIONS = ["KRX", "NXT"] as const;
-type Source = (typeof SOURCE_OPTIONS)[number];
+type Period = "1M" | "3M" | "6M" | "1Y" | "ALL";
 
-const CHART_H = 140;
-const LABEL_H = 18;
-const BAR_W = 3;
+// ── 상수 ──────────────────────────────────────────────────────────────────────
+
+const PERIODS: { label: string; value: Period }[] = [
+  { label: "1개월", value: "1M" },
+  { label: "3개월", value: "3M" },
+  { label: "6개월", value: "6M" },
+  { label: "1년",   value: "1Y" },
+  { label: "전체",  value: "ALL" },
+];
+
+const COLORS = ["#60a5fa", "#f59e0b", "#34d399"]; // 개인·기관·외국인
+
+const BAR_W   = 5;
 const BAR_GAP = 1;
-const GROUP_GAP = 4;
-const GROUP_W = 3 * BAR_W + 2 * BAR_GAP + GROUP_GAP;
-const AXIS_Y = CHART_H / 2;
-const MAX_BAR_H = AXIS_Y - 4;
-const INVESTOR_COLORS = ["#60a5fa", "#f59e0b", "#34d399"];
+const GRP_GAP = 6;
+const GRP_W   = 3 * BAR_W + 2 * BAR_GAP + GRP_GAP; // 23px
+const CHART_H = 200;
 
-function InvestorFlowChart({ data }: { data: InvestorFlowBar[] }) {
-  // chart displays oldest → newest (left → right); API returns newest first
-  const sorted = [...data].reverse();
-  const maxAbs = Math.max(
-    1,
-    ...sorted.flatMap((d) => [
-      Math.abs(d.individualNet),
-      Math.abs(d.institutionNet),
-      Math.abs(d.foreignNet),
-    ])
-  );
-  const totalW = Math.max(sorted.length * GROUP_W, 1);
+// ── 유틸 ──────────────────────────────────────────────────────────────────────
 
-  function bh(value: number) {
-    return Math.max(1, (Math.abs(value) / maxAbs) * MAX_BAR_H);
+function toDateStr(d: Date): string {
+  return d.toISOString().slice(0, 10);
+}
+
+function getFromDate(period: Period): string {
+  const d = new Date();
+  switch (period) {
+    case "1M":  d.setMonth(d.getMonth() - 1);       break;
+    case "3M":  d.setMonth(d.getMonth() - 3);       break;
+    case "6M":  d.setMonth(d.getMonth() - 6);       break;
+    case "1Y":  d.setFullYear(d.getFullYear() - 1); break;
+    case "ALL": return "2010-01-01";
   }
-
-  function by(value: number) {
-    return value >= 0 ? AXIS_Y - bh(value) : AXIS_Y;
-  }
-
-  return (
-    <div className="overflow-x-auto rounded bg-white/[0.02] border border-white/5 p-2">
-      <svg width={totalW} height={CHART_H + LABEL_H} style={{ display: "block", minWidth: "100%" }}>
-        <line
-          x1={0} y1={AXIS_Y} x2={totalW} y2={AXIS_Y}
-          stroke="rgba(255,255,255,0.12)" strokeWidth={1}
-        />
-        {sorted.map((d, i) => {
-          const x = i * GROUP_W;
-          const nets = [d.individualNet, d.institutionNet, d.foreignNet];
-          return (
-            <g key={d.date}>
-              {nets.map((v, j) => (
-                <rect
-                  key={j}
-                  x={x + j * (BAR_W + BAR_GAP)}
-                  y={by(v)}
-                  width={BAR_W}
-                  height={bh(v)}
-                  fill={INVESTOR_COLORS[j]}
-                  opacity={0.75}
-                />
-              ))}
-              {i % 10 === 0 && (
-                <text
-                  x={x + GROUP_W / 2}
-                  y={CHART_H + LABEL_H - 2}
-                  fontSize={9}
-                  textAnchor="middle"
-                  fill="#475569"
-                >
-                  {d.date.slice(5)}
-                </text>
-              )}
-            </g>
-          );
-        })}
-      </svg>
-    </div>
-  );
+  return toDateStr(d);
 }
 
 function fmtNet(v: number): string {
   if (v === 0) return "0";
   const sign = v > 0 ? "+" : "-";
-  const abs = Math.abs(v);
-  if (abs >= 1_000_000) return sign + (abs / 1_000_000).toFixed(1) + "M";
-  if (abs >= 1_000) return sign + (abs / 1_000).toFixed(0) + "K";
+  const abs  = Math.abs(v);
+  if (abs >= 100_000_000) {
+    const n = abs / 100_000_000;
+    return sign + (n === Math.floor(n) ? n.toFixed(0) : n.toFixed(1)) + "억";
+  }
+  if (abs >= 10_000) {
+    const n = abs / 10_000;
+    return sign + (n === Math.floor(n) ? n.toFixed(0) : n.toFixed(1)) + "만";
+  }
+  if (abs >= 1_000) {
+    const n = abs / 1_000;
+    return sign + (n === Math.floor(n) ? n.toFixed(0) : n.toFixed(1)) + "천";
+  }
   return (v > 0 ? "+" : "") + v.toLocaleString();
 }
 
@@ -101,124 +75,330 @@ function netColor(v: number) {
   return "text-slate-500";
 }
 
-function InvestorFlowTable({ data }: { data: InvestorFlowBar[] }) {
-  const thBase = "text-xs text-slate-400 px-4 py-2.5 font-medium";
-  const tdBase = "px-4 py-2.5";
+// ── Canvas 차트 ───────────────────────────────────────────────────────────────
+
+function InvestorCanvas({ data }: { data: InvestorFlowBar[] }) {
+  const containerRef = useRef<HTMLDivElement>(null);
+  const canvasRef    = useRef<HTMLCanvasElement>(null);
+  const dragRef      = useRef<{ startX: number; startScrollLeft: number } | null>(null);
+
+  // 그리기
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas || data.length === 0) return;
+
+    const dpr    = window.devicePixelRatio || 1;
+    const W      = data.length * GRP_W;
+    const H      = CHART_H;
+    const labelH = 20;
+    const chartH = H - labelH;
+    const axisY  = chartH / 2;
+    const maxBarH = axisY - 4;
+
+    canvas.width        = W * dpr;
+    canvas.height       = H * dpr;
+    canvas.style.width  = `${W}px`;
+    canvas.style.height = `${H}px`;
+
+    const ctx = canvas.getContext("2d")!;
+    ctx.scale(dpr, dpr);
+    ctx.clearRect(0, 0, W, H);
+
+    const maxAbs = Math.max(1, ...data.flatMap(d => [
+      Math.abs(d.individualNet),
+      Math.abs(d.institutionNet),
+      Math.abs(d.foreignNet),
+    ]));
+
+    // ── 배경: 5거래일(주) 단위 교대 음영 ─────────────────────────────────
+    data.forEach((_, i) => {
+      const week = Math.floor(i / 5);
+      if (week % 2 === 0) {
+        ctx.fillStyle = "rgba(255,255,255,0.025)";
+        ctx.fillRect(i * GRP_W, 0, GRP_W, chartH);
+      }
+    });
+
+    // ── 수평 보조선 (25% / 50% / 75%) ────────────────────────────────────
+    [0.25, 0.5, 0.75].forEach(r => {
+      const y = r * chartH;
+      ctx.strokeStyle = "rgba(255,255,255,0.05)";
+      ctx.lineWidth   = 1;
+      ctx.setLineDash([2, 4]);
+      ctx.beginPath();
+      ctx.moveTo(0, y);
+      ctx.lineTo(W, y);
+      ctx.stroke();
+    });
+    ctx.setLineDash([]);
+
+    // ── 제로 축 ───────────────────────────────────────────────────────────
+    ctx.strokeStyle = "rgba(255,255,255,0.18)";
+    ctx.lineWidth   = 1;
+    ctx.beginPath();
+    ctx.moveTo(0, axisY);
+    ctx.lineTo(W, axisY);
+    ctx.stroke();
+
+    // ── 바 + 일 구분선 + 날짜 레이블 ─────────────────────────────────────
+    data.forEach((d, i) => {
+      const x    = i * GRP_W;
+      const nets = [d.individualNet, d.institutionNet, d.foreignNet];
+
+      // 일 구분 세로선
+      ctx.strokeStyle = "rgba(255,255,255,0.07)";
+      ctx.lineWidth   = 1;
+      ctx.beginPath();
+      ctx.moveTo(x, 0);
+      ctx.lineTo(x, chartH);
+      ctx.stroke();
+
+      // 바
+      nets.forEach((v, j) => {
+        const bh = Math.max(2, (Math.abs(v) / maxAbs) * maxBarH);
+        const by = v >= 0 ? axisY - bh : axisY;
+        ctx.fillStyle = COLORS[j] + "CC";
+        ctx.fillRect(x + j * (BAR_W + BAR_GAP), by, BAR_W, bh);
+      });
+
+      // 날짜 레이블 — 5일마다
+      if (i % 5 === 0) {
+        ctx.fillStyle    = "#94a3b8";
+        ctx.font         = "9px monospace";
+        ctx.textAlign    = "left";
+        ctx.textBaseline = "alphabetic";
+        ctx.fillText(d.date.slice(5), x + 2, H - 3);
+      }
+    });
+  }, [data]);
+
+  // 데이터 바뀌면 오른쪽 끝(최신)으로 스크롤
+  useEffect(() => {
+    if (data.length === 0) return;
+    requestAnimationFrame(() => {
+      if (containerRef.current)
+        containerRef.current.scrollLeft = containerRef.current.scrollWidth;
+    });
+  }, [data]);
+
+  // 드래그 — window에 달아야 빠른 이동에서 끊기지 않음
+  useEffect(() => {
+    const onMove = (e: MouseEvent) => {
+      if (!dragRef.current || !containerRef.current) return;
+      containerRef.current.scrollLeft =
+        dragRef.current.startScrollLeft - (e.clientX - dragRef.current.startX);
+    };
+    const onUp = () => {
+      if (!dragRef.current) return;
+      dragRef.current = null;
+      if (containerRef.current) containerRef.current.style.cursor = "grab";
+    };
+    window.addEventListener("mousemove", onMove);
+    window.addEventListener("mouseup",   onUp);
+    return () => {
+      window.removeEventListener("mousemove", onMove);
+      window.removeEventListener("mouseup",   onUp);
+    };
+  }, []);
+
+  const onMouseDown = (e: React.MouseEvent<HTMLDivElement>) => {
+    const container = containerRef.current;
+    if (!container) return;
+    dragRef.current = { startX: e.clientX, startScrollLeft: container.scrollLeft };
+    container.style.cursor = "grabbing";
+    e.preventDefault();
+  };
 
   return (
-    <div className="overflow-x-auto">
-      <table className={cx.table.root + " min-w-[400px]"}>
-        <thead className={cx.table.head}>
-          <tr>
-            <th className={thBase + " text-left"}>날짜</th>
-            <th className={thBase + " text-right text-blue-400"}>개인</th>
-            <th className={thBase + " text-right text-amber-400"}>기관</th>
-            <th className={thBase + " text-right text-emerald-400"}>외국인</th>
-          </tr>
-        </thead>
-        <tbody className={cx.table.body}>
-          {data.map((d) => (
-            <tr key={d.date} className={cx.table.tr}>
-              <td className={tdBase + " font-mono text-xs text-slate-400"}>{d.date}</td>
-              <td className={tdBase + " text-right font-mono text-xs " + netColor(d.individualNet)}>
-                {fmtNet(d.individualNet)}
-              </td>
-              <td className={tdBase + " text-right font-mono text-xs " + netColor(d.institutionNet)}>
-                {fmtNet(d.institutionNet)}
-              </td>
-              <td className={tdBase + " text-right font-mono text-xs " + netColor(d.foreignNet)}>
-                {fmtNet(d.foreignNet)}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
+    <div className="rounded bg-white/[0.02] border border-white/5 overflow-hidden">
+      <div
+        ref={containerRef}
+        className="overflow-x-auto overflow-y-hidden select-none"
+        style={{ height: CHART_H, cursor: "grab" }}
+        onMouseDown={onMouseDown}
+      >
+        <canvas ref={canvasRef} style={{ display: "block" }} />
+      </div>
     </div>
   );
 }
 
-/**
- * 투자자별 일별 순매수 동향 탭 (개인·기관·외국인).
- */
-export default function InvestorFlowTab({ code }: { code: string }) {
-  const [data, setData]     = useState<InvestorFlowBar[] | null>(null);
-  const [loading, setLoading] = useState(false);
-  const [limit, setLimit]   = useState(60);
-  const [source, setSource] = useState<Source>("KRX");
+// ── 메인 컴포넌트 ─────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    setData(null);
-    setLimit(60);
+const PAGE_SIZE = 30; // 한 페이지 = 30거래일
+
+export default function InvestorFlowTab({ code }: { code: string }) {
+  const [data,       setData]       = useState<InvestorFlowBar[]>([]);
+  const [loading,    setLoading]    = useState(false);
+  const [period,     setPeriod]     = useState<Period>("6M");
+  const [useCustom,  setUseCustom]  = useState(false);
+  const [customFrom, setCustomFrom] = useState("");
+  const [customTo,   setCustomTo]   = useState(toDateStr(new Date()));
+  const [page,       setPage]       = useState(0);
+
+  const fetchData = useCallback(async (from: string, to: string) => {
+    setLoading(true);
+    try {
+      const res  = await fetch(`/api/stocks/${code}/investor-flow?from=${from}&to=${to}`);
+      const rows: InvestorFlowBar[] = res.ok ? await res.json() : [];
+      setData(rows);
+      setPage(0);
+    } finally {
+      setLoading(false);
+    }
   }, [code]);
 
+  // 종목 변경 시 초기화
   useEffect(() => {
-    let cancelled = false;
-    setLoading(true);
-    fetch(`/api/stocks/${code}/investor-flow?source=${source}&limit=${limit}`)
-      .then((r) => (r.ok ? r.json() : []))
-      .catch(() => [])
-      .then((d: InvestorFlowBar[]) => {
-        if (!cancelled) {
-          setData(d);
-          setLoading(false);
-        }
-      });
-    return () => { cancelled = true; };
-  }, [code, limit, source]);
+    setPeriod("6M");
+    setUseCustom(false);
+    setData([]);
+    setPage(0);
+    fetchData(getFromDate("6M"), toDateStr(new Date()));
+  }, [code]); // eslint-disable-line react-hooks/exhaustive-deps
+
+  const handlePeriod = (p: Period) => {
+    setPeriod(p);
+    setUseCustom(false);
+    fetchData(getFromDate(p), toDateStr(new Date()));
+  };
+
+  const handleCustomApply = () => {
+    if (!customFrom || !customTo) return;
+    setUseCustom(true);
+    fetchData(customFrom, customTo);
+  };
+
+  // 최신순 정렬 후 페이지 슬라이스
+  const reversedData = [...data].reverse();
+  const totalPages   = Math.max(1, Math.ceil(reversedData.length / PAGE_SIZE));
+  const pagedRows    = reversedData.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  // 차트는 시간순(오래된→최신)으로 표시
+  const chartData    = [...pagedRows].reverse();
 
   return (
     <div className="flex flex-col h-full overflow-hidden">
-      {/* 툴바 */}
-      <div className="flex items-center gap-3 px-4 py-2 border-b border-white/10 flex-shrink-0">
-        <div className="flex rounded border border-white/10 overflow-hidden text-xs">
-          {SOURCE_OPTIONS.map((s) => (
-            <button
-              key={s}
-              onClick={() => setSource(s)}
-              className={`px-2.5 py-1.5 transition ${
-                source === s ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"
-              }`}
-            >
-              {s}
+
+      {/* ── 툴바 ─────────────────────────────────────────────────────────── */}
+      <div className="flex-shrink-0 border-b border-white/10 px-4 py-2">
+        <div className="flex items-center gap-2 flex-wrap">
+          {/* 기간 버튼 */}
+          <div className="flex rounded border border-white/10 overflow-hidden text-xs">
+            {PERIODS.map(({ label, value }) => (
+              <button
+                key={value}
+                onClick={() => handlePeriod(value)}
+                className={`px-2.5 py-1.5 transition ${
+                  !useCustom && period === value
+                    ? "bg-white/10 text-white"
+                    : "text-slate-500 hover:text-slate-300"
+                }`}
+              >
+                {label}
+              </button>
+            ))}
+          </div>
+
+          {/* 직접 날짜 입력 */}
+          <div className="flex items-center gap-1 text-xs">
+            <input
+              type="date"
+              value={customFrom}
+              onChange={e => setCustomFrom(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white w-32 focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
+            />
+            <span className="text-slate-500">~</span>
+            <input
+              type="date"
+              value={customTo}
+              onChange={e => setCustomTo(e.target.value)}
+              className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white w-32 focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
+            />
+            <button onClick={handleCustomApply} className={cx.btnSecondary}>
+              조회
             </button>
-          ))}
-        </div>
-        <div className="flex items-center gap-3 ml-auto text-xs text-slate-500">
-          {(
-            [
-              { label: "개인", color: "bg-blue-400" },
-              { label: "기관", color: "bg-amber-400" },
+          </div>
+
+          {/* 범례 */}
+          <div className="flex items-center gap-3 ml-auto text-xs text-slate-500">
+            {[
+              { label: "개인",   color: "bg-blue-400"    },
+              { label: "기관",   color: "bg-amber-400"   },
               { label: "외국인", color: "bg-emerald-400" },
-            ] as const
-          ).map(({ label, color }) => (
-            <span key={label} className="flex items-center gap-1">
-              <span className={`w-2 h-2 rounded-full ${color} inline-block`} />
-              {label}
-            </span>
-          ))}
+            ].map(({ label, color }) => (
+              <span key={label} className="flex items-center gap-1">
+                <span className={`w-2 h-2 rounded-full ${color}`} />
+                {label}
+              </span>
+            ))}
+          </div>
         </div>
       </div>
 
+      {/* ── 콘텐츠 ────────────────────────────────────────────────────────── */}
       <div className="flex-1 overflow-y-auto px-4 py-3 space-y-3">
-        {loading && data === null && (
+        {loading && (
           <p className="text-slate-500 text-sm py-8 text-center">불러오는 중…</p>
         )}
-        {!loading && data !== null && data.length === 0 && (
+        {!loading && data.length === 0 && (
           <p className="text-slate-500 text-sm py-8 text-center">데이터가 없습니다.</p>
         )}
-        {data !== null && data.length > 0 && (
+
+        {!loading && data.length > 0 && (
           <>
-            <InvestorFlowChart data={data} />
-            <InvestorFlowTable data={data} />
-            <div className="flex justify-center pb-2">
-              <button
-                onClick={() => setLimit((l) => l + 60)}
-                disabled={loading}
-                className={cx.btnSecondary}
-              >
-                {loading ? "불러오는 중…" : "60일 더 보기"}
-              </button>
+            {/* 차트 — 현재 페이지 30일만 표시 */}
+            <InvestorCanvas data={chartData} />
+
+            {/* 페이지네이션 */}
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500">
+                총 {data.length}일 · 페이지 {page + 1} / {totalPages}
+              </span>
+              <div className="flex items-center gap-2">
+                <button
+                  onClick={() => setPage(p => Math.max(0, p - 1))}
+                  disabled={page === 0}
+                  className={cx.btnSecondary + " disabled:opacity-30"}
+                >
+                  이전
+                </button>
+                <button
+                  onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))}
+                  disabled={page >= totalPages - 1}
+                  className={cx.btnSecondary + " disabled:opacity-30"}
+                >
+                  다음
+                </button>
+              </div>
             </div>
+
+            {/* 테이블 */}
+            <table className={cx.table.root + " w-full"}>
+              <thead className={cx.table.head}>
+                <tr>
+                  <th className="text-xs text-slate-400   px-2 sm:px-4 py-2 font-medium text-left">날짜</th>
+                  <th className="text-xs text-blue-400    px-2 sm:px-4 py-2 font-medium text-right">개인</th>
+                  <th className="text-xs text-amber-400   px-2 sm:px-4 py-2 font-medium text-right">기관</th>
+                  <th className="text-xs text-emerald-400 px-2 sm:px-4 py-2 font-medium text-right">외국인</th>
+                </tr>
+              </thead>
+              <tbody className={cx.table.body}>
+                {pagedRows.map(d => (
+                  <tr key={d.date} className={cx.table.tr}>
+                    <td className="px-2 sm:px-4 py-2 font-mono text-xs text-slate-400">{d.date}</td>
+                    <td className={`px-2 sm:px-4 py-2 text-right font-mono text-xs ${netColor(d.individualNet)}`}>
+                      {fmtNet(d.individualNet)}
+                    </td>
+                    <td className={`px-2 sm:px-4 py-2 text-right font-mono text-xs ${netColor(d.institutionNet)}`}>
+                      {fmtNet(d.institutionNet)}
+                    </td>
+                    <td className={`px-2 sm:px-4 py-2 text-right font-mono text-xs ${netColor(d.foreignNet)}`}>
+                      {fmtNet(d.foreignNet)}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
           </>
         )}
       </div>

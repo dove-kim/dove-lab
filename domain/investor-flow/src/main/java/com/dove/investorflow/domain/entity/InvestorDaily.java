@@ -1,6 +1,5 @@
 package com.dove.investorflow.domain.entity;
 
-import com.dove.stock.domain.enums.StockExchange;
 import jakarta.persistence.Column;
 import jakarta.persistence.EmbeddedId;
 import jakarta.persistence.Entity;
@@ -19,8 +18,7 @@ import java.time.LocalDate;
 @Getter
 @Entity
 @Table(name = "INVESTOR_DAILY",
-        indexes = @Index(name = "IDX_INVESTOR_DAILY_SOURCE_DATE",
-                columnList = "EXCHANGE, TRADE_DATE"))
+        indexes = @Index(name = "IDX_INVESTOR_DAILY_DATE", columnList = "TRADE_DATE"))
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class InvestorDaily {
 
@@ -51,11 +49,14 @@ public class InvestorDaily {
     @Comment("외국인 매도 수량")
     private Long foreignSell;
 
-    public InvestorDaily(StockExchange exchange, String stockCode, LocalDate tradeDate,
+    /**
+     * 투자자 일별 매매동향 엔티티를 생성한다.
+     */
+    public InvestorDaily(String stockCode, LocalDate tradeDate,
                          Long individualBuy, Long individualSell,
                          Long institutionBuy, Long institutionSell,
                          Long foreignBuy, Long foreignSell) {
-        this.id = new InvestorDailyId(exchange, stockCode, tradeDate);
+        this.id = new InvestorDailyId(stockCode, tradeDate);
         this.individualBuy = individualBuy;
         this.individualSell = individualSell;
         this.institutionBuy = institutionBuy;
@@ -64,11 +65,15 @@ public class InvestorDaily {
         this.foreignSell = foreignSell;
     }
 
-    public StockExchange getExchange() { return id.getExchange(); }
-    public String getStockCode()        { return id.getStockCode(); }
-    public LocalDate getTradeDate()     { return id.getTradeDate(); }
+    public String getStockCode()    { return id.getStockCode(); }
+    public LocalDate getTradeDate() { return id.getTradeDate(); }
 
+    /** 개인 순매수 (매수 - 매도). */
     public long individualNet() { return individualBuy - individualSell; }
+
+    /** 기관 순매수 (매수 - 매도). */
     public long institutionNet() { return institutionBuy - institutionSell; }
-    public long foreignNet()     { return foreignBuy - foreignSell; }
+
+    /** 외국인 순매수 (매수 - 매도). */
+    public long foreignNet() { return foreignBuy - foreignSell; }
 }

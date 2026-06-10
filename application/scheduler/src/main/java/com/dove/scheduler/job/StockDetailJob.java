@@ -53,6 +53,7 @@ public class StockDetailJob {
             throw e;
         }
 
+        // 투자자 지표 수집
         investorCollectService.collectAll(today);
 
         // 당일 권리 이벤트(KSD) 수집 — 보조 정보라 실패해도 본 잡을 막지 않음

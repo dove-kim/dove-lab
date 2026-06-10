@@ -1,7 +1,6 @@
 package com.dove.scheduler.job;
 
 import com.dove.concurrent.ParallelException;
-import com.dove.stockcollection.application.port.DailyPriceFetcher;
 import com.dove.stockcollection.application.service.CollectionProgress;
 import com.dove.stockcollection.application.service.CollectionTaskService;
 import com.dove.stockcollection.application.service.InvestorCollectionService;
@@ -80,16 +79,21 @@ public class PendingCollectionJob {
             switch (task.getType()) {
                 case PRICE -> priceCollectionService.collect(
                         task.getExchange(), task.getFromDate(), task.getToDate(),
-                        progress, DailyPriceFetcher.ADJUSTED_DATA_START);
+                        progress, task.getAdjustedFrom()); // null이면 수정주가 재조회 생략
                 case STOCK -> {
-                    // 1단계: KRX 종목 목록 동기화 — total을 캡처해 KIS 단계 offset에 사용
+                    // legacy: KRX + KIS 통합 (기존 레코드 역호환)
                     AtomicInteger krxTotal = new AtomicInteger();
                     stockCollectionService.collect(task.getFromDate(), task.getToDate(),
                             CollectionProgress.capturing(progress, krxTotal::set));
-                    // 2단계: KIS 종목 상세 upsert — krxTotal 이후로 이어서 진행률 표시
                     stockDetailCollectionService.ifPresent(s ->
                             s.updateAll(CollectionProgress.offset(progress, krxTotal.get())));
                 }
+                case STOCK_SYNC ->
+                    // KRX 종목 목록 동기화만
+                    stockCollectionService.collect(task.getFromDate(), task.getToDate(), progress);
+                case STOCK_DETAIL ->
+                    // KIS 종목 상세 upsert만 (날짜 무관)
+                    stockDetailCollectionService.ifPresent(s -> s.updateAll(progress));
                 case EVENT -> eventCollectionService.collect(task.getFromDate(), task.getToDate(), progress);
                 case INVESTOR -> investorCollectionService.collect(task.getFromDate(), task.getToDate(), progress);
             }

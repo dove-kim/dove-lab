@@ -9,6 +9,7 @@ import com.dove.auth.infrastructure.security.JwtProvider;
 import com.dove.user.application.service.MemberProfileCommandService;
 import com.dove.user.application.service.MemberProfileQueryService;
 import com.dove.user.domain.entity.MemberProfile;
+import com.dove.auth.domain.enums.MemberRole;
 import com.dove.userfeature.application.service.MemberFeatureGrantQueryService;
 import com.dove.userfeature.domain.enums.FeatureCode;
 import lombok.RequiredArgsConstructor;
@@ -18,6 +19,7 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.util.Arrays;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -61,7 +63,7 @@ public class AuthService {
         credential.recordSuccessfulLogin();
         credentialService.save(credential);
 
-        Set<String> features = loadFeatureNames(profile.getId());
+        Set<String> features = loadFeatureNames(profile.getId(), profile.getRole());
         String accessToken = jwtProvider.generateAccessToken(
                 profile.getId(), credential.getUsername(), profile.getName(),
                 profile.getRole().name(), mustChangePassword, features);
@@ -91,7 +93,7 @@ public class AuthService {
                 Credential.create(profile.getId(), username, passwordEncoder.encode(password)));
         inviteCodeService.use(code);
 
-        Set<String> features = loadFeatureNames(profile.getId());
+        Set<String> features = loadFeatureNames(profile.getId(), profile.getRole());
         String accessToken = jwtProvider.generateAccessToken(
                 profile.getId(), username, name, profile.getRole().name(), false, features);
         String refreshToken = jwtProvider.generateRefreshToken(profile.getId());
@@ -113,7 +115,7 @@ public class AuthService {
         }
         boolean mustChangePassword = credential.isPasswordResetRequired();
 
-        Set<String> features = loadFeatureNames(memberId);
+        Set<String> features = loadFeatureNames(memberId, profile.getRole());
         String accessToken = jwtProvider.generateAccessToken(
                 profile.getId(), credential.getUsername(), profile.getName(),
                 profile.getRole().name(), mustChangePassword, features);
@@ -122,7 +124,12 @@ public class AuthService {
                 profile.getName(), profile.getRole(), false, mustChangePassword);
     }
 
-    private Set<String> loadFeatureNames(Long memberId) {
+    private Set<String> loadFeatureNames(Long memberId, MemberRole role) {
+        if (role == MemberRole.ROOT) {
+            return Arrays.stream(FeatureCode.values())
+                    .map(FeatureCode::name)
+                    .collect(Collectors.toUnmodifiableSet());
+        }
         return memberFeatureGrantQueryService.findActiveFeatureCodes(memberId).stream()
                 .map(FeatureCode::name)
                 .collect(Collectors.toUnmodifiableSet());

@@ -1,17 +1,19 @@
-﻿import { cookies } from "next/headers";
+﻿import { cookies, headers } from "next/headers";
+import { redirect } from "next/navigation";
 import Header from "./Header";
 import ContentLayout from "./ContentLayout";
 import { decodeJwtPayload } from "@/utils/jwt";
 import { backendFetch } from "@/services/backend";
 import type { UserMenu } from "@/types/user";
 
-async function fetchMenu(): Promise<UserMenu> {
+async function fetchMenu(): Promise<UserMenu | "unauthorized"> {
   try {
     const res = await backendFetch("/account/menu");
-    if (!res || !res.ok) return { modules: [] };
+    if (!res) return { modules: [] };
+    if (res.status === 401) return "unauthorized";
+    if (!res.ok) return { modules: [] };
     return res.json();
   } catch {
-    // 백엔드 지연/타임아웃 시 빈 메뉴로 degrade — 페이지가 멈추지 않게.
     return { modules: [] };
   }
 }
@@ -21,7 +23,16 @@ export default async function AppShell({ children }: { children: React.ReactNode
   const payload = token ? decodeJwtPayload(token) : null;
   const role = payload?.role ?? "";
   const mustChangePassword = payload?.mustChangePassword ?? false;
-  const menu = token ? await fetchMenu() : { modules: [] };
+
+  let menu: UserMenu = { modules: [] };
+  if (token) {
+    const result = await fetchMenu();
+    if (result === "unauthorized") {
+      const pathname = (await headers()).get("x-pathname") ?? "/";
+      redirect(`/api/auth/refresh-and-redirect?to=${encodeURIComponent(pathname)}`);
+    }
+    menu = result;
+  }
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-gray-950 via-slate-900 to-indigo-950">

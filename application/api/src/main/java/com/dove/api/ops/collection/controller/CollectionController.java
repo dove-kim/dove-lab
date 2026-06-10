@@ -26,6 +26,7 @@ import org.springframework.web.bind.annotation.ResponseStatus;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
+import java.time.LocalDate;
 import java.util.Map;
 
 /**
@@ -53,7 +54,10 @@ public class CollectionController {
         } catch (IllegalArgumentException e) {
             throw new ResponseStatusException(HttpStatus.BAD_REQUEST, "INVALID_EXCHANGE");
         }
-        Long taskId = launcher.enqueuePriceCollection(exchange, req.from(), req.to(), user.memberId());
+        LocalDate adjustedFrom = req.adjustedFromYear() != null
+                ? LocalDate.of(req.adjustedFromYear(), 1, 1)
+                : null;
+        Long taskId = launcher.enqueuePriceCollection(exchange, req.from(), req.to(), user.memberId(), adjustedFrom);
         return Map.of("taskId", taskId);
     }
 
@@ -69,13 +73,23 @@ public class CollectionController {
     }
 
     /**
-     * 종목 재조회 시작 → 작업ID 반환.
+     * 종목 목록(KRX) 재조회 시작 → 작업ID 반환.
      */
-    @PostMapping("/stock")
+    @PostMapping("/stock-sync")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public Map<String, Long> collectStock(@Valid @RequestBody StockCollectionRequest req,
-                                          @AuthenticationPrincipal AuthenticatedUser user) {
-        Long taskId = launcher.enqueueStockCollection(req.from(), req.to(), user.memberId());
+    public Map<String, Long> collectStockSync(@Valid @RequestBody StockCollectionRequest req,
+                                              @AuthenticationPrincipal AuthenticatedUser user) {
+        Long taskId = launcher.enqueueStockSyncCollection(req.from(), req.to(), user.memberId());
+        return Map.of("taskId", taskId);
+    }
+
+    /**
+     * 종목 상세(KIS) 재수집 시작 → 작업ID 반환. 날짜 무관.
+     */
+    @PostMapping("/stock-detail")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public Map<String, Long> collectStockDetail(@AuthenticationPrincipal AuthenticatedUser user) {
+        Long taskId = launcher.enqueueStockDetailCollection(user.memberId());
         return Map.of("taskId", taskId);
     }
 

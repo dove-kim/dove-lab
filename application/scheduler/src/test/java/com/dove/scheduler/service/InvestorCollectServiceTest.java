@@ -7,7 +7,6 @@ import com.dove.jobstatus.SchedulerJobName;
 import com.dove.market.domain.enums.MarketType;
 import com.dove.stock.application.service.StockQueryService;
 import com.dove.stock.domain.entity.Stock;
-import com.dove.stock.domain.enums.StockExchange;
 import com.dove.stockcollection.application.port.InvestorDailyRow;
 import com.dove.stockcollection.application.port.InvestorFetcher;
 import com.dove.systemevent.application.service.SystemEventService;
@@ -81,7 +80,6 @@ class InvestorCollectServiceTest {
             List<InvestorDaily> rows = captor.getValue();
             assertThat(rows).hasSize(1);
             InvestorDaily saved = rows.get(0);
-            assertThat(saved.getExchange()).isEqualTo(StockExchange.KOSPI);
             assertThat(saved.getStockCode()).isEqualTo("005930");
             assertThat(saved.getTradeDate()).isEqualTo(LocalDate.of(2026, 6, 7));
             assertThat(saved.getIndividualBuy()).isEqualTo(10L);
@@ -152,12 +150,12 @@ class InvestorCollectServiceTest {
     }
 
     @Nested
-    @DisplayName("collectAll — 거래소 매핑")
-    class ExchangeMapping {
+    @DisplayName("collectAll — 종목 코드 매핑")
+    class StockCodeMapping {
 
         @Test
-        @DisplayName("KOSDAQ 종목은 StockExchange.KOSDAQ로 매핑된다")
-        void shouldMapKosdaqMarketToKosdaqExchangeWhenSaving() {
+        @DisplayName("KOSDAQ 종목의 stockCode가 정확히 저장된다")
+        void shouldSaveCorrectStockCodeWhenKosdaqStock() {
             given(stockQueryService.findAll()).willReturn(List.of(stock("035720", MarketType.KOSDAQ)));
             given(fetcher.fetch(anyString(), any(), any())).willReturn(List.of(row(TODAY)));
 
@@ -165,7 +163,7 @@ class InvestorCollectServiceTest {
 
             ArgumentCaptor<List<InvestorDaily>> captor = ArgumentCaptor.forClass(List.class);
             verify(investorDailyService).saveAll(captor.capture());
-            assertThat(captor.getValue().get(0).getExchange()).isEqualTo(StockExchange.KOSDAQ);
+            assertThat(captor.getValue().get(0).getStockCode()).isEqualTo("035720");
         }
     }
 }
