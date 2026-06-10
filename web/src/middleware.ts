@@ -74,14 +74,20 @@ export function middleware(req: NextRequest) {
   const isPublic = PUBLIC_PATHS.some((p) => req.nextUrl.pathname.startsWith(p));
 
   if (!valid && !isPublic) {
-    const res = NextResponse.redirect(new URL("/login", req.url));
-    if (tokenCookie) res.cookies.delete("token");
+    // refresh token 경유 갱신 시도 → 성공 시 원래 경로, 실패 시 /login
+    const to = req.nextUrl.pathname + req.nextUrl.search;
+    const refreshUrl = new URL("/api/auth/refresh-and-redirect", req.url);
+    refreshUrl.searchParams.set("to", to);
+    const res = NextResponse.redirect(refreshUrl);
+    if (tokenCookie) res.cookies.delete("token"); // 만료 토큰 즉시 제거
     return res;
   }
   if (valid && req.nextUrl.pathname === "/login") {
     return NextResponse.redirect(new URL("/", req.url));
   }
-  return NextResponse.next();
+  const res = NextResponse.next();
+  res.headers.set("x-pathname", req.nextUrl.pathname);
+  return res;
 }
 
 export const config = {

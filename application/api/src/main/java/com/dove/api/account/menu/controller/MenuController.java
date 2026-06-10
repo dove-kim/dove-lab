@@ -4,6 +4,7 @@ import com.dove.api.account.menu.dto.FeatureReorderRequest;
 import com.dove.api.account.menu.dto.ModuleReorderRequest;
 import com.dove.api.account.menu.dto.SetHiddenRequest;
 import com.dove.api.global.security.AuthenticatedUser;
+import com.dove.auth.domain.enums.MemberRole;
 import com.dove.userfeature.application.service.MemberMenuDisplayCommandService;
 import com.dove.userfeature.application.dto.MemberMenuView;
 import com.dove.userfeature.application.service.MemberMenuDisplayQueryService;
@@ -34,7 +35,8 @@ public class MenuController {
      */
     @GetMapping
     public MemberMenuView getMenu(@AuthenticationPrincipal AuthenticatedUser user) {
-        return menuQueryService.buildMenuForMember(user.memberId());
+        MemberRole role = MemberRole.valueOf(user.role());
+        return menuQueryService.buildMenuForMember(user.memberId(), role);
     }
 
     /**

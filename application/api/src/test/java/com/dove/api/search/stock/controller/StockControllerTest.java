@@ -7,7 +7,6 @@ import com.dove.investorflow.domain.entity.InvestorDaily;
 import com.dove.market.domain.enums.MarketType;
 import com.dove.stock.application.service.StockCommandService;
 import com.dove.stock.domain.entity.Stock;
-import com.dove.stock.domain.enums.StockExchange;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -120,7 +119,7 @@ class StockControllerTest {
 
         @Test
         @WithApiUser
-        @DisplayName("KRX source로 없는 종목이면 404")
+        @DisplayName("없는 종목이면 404")
         void shouldReturn404WhenPricesForUnknownStock() throws Exception {
             mockMvc.perform(get("/stocks/000000/prices")
                             .param("source", "KRX"))
@@ -153,7 +152,8 @@ class StockControllerTest {
         @DisplayName("인증 없으면 401")
         void shouldReturn401WhenUnauthenticated() throws Exception {
             mockMvc.perform(get("/stocks/" + TICKER + "/investor-flow")
-                            .param("source", "KRX"))
+                            .param("from", "2024-01-01")
+                            .param("to", "2024-01-31"))
                     .andExpect(status().isUnauthorized());
         }
 
@@ -162,7 +162,8 @@ class StockControllerTest {
         @DisplayName("데이터 없으면 빈 배열")
         void shouldReturnEmptyWhenNoData() throws Exception {
             mockMvc.perform(get("/stocks/" + TICKER + "/investor-flow")
-                            .param("source", "KRX"))
+                            .param("from", "2024-01-01")
+                            .param("to", "2024-01-31"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$").isArray())
                     .andExpect(jsonPath("$").isEmpty());
@@ -170,25 +171,45 @@ class StockControllerTest {
 
         @Test
         @WithApiUser
-        @DisplayName("시드 데이터를 날짜 내림차순으로 반환")
-        void shouldReturnInvestorFlowOrderedByDateDesc() throws Exception {
-            // 005930은 KOSPI — source=KRX 파라미터가 내부적으로 KOSPI로 resolve됨
+        @DisplayName("날짜 범위 내 데이터를 거래일 오름차순으로 반환")
+        void shouldReturnInvestorFlowAscendingByDate() throws Exception {
             investorDailyService.saveAll(List.of(
-                    new InvestorDaily(StockExchange.KOSPI, TICKER, LocalDate.of(2024, 1, 1),
+                    new InvestorDaily(TICKER, LocalDate.of(2024, 1, 1),
                             800L, 900L, 150L, 200L, 100L, 50L),
-                    new InvestorDaily(StockExchange.KOSPI, TICKER, LocalDate.of(2024, 1, 2),
+                    new InvestorDaily(TICKER, LocalDate.of(2024, 1, 2),
                             1000L, 500L, 200L, 100L, 300L, 150L)
             ));
 
             mockMvc.perform(get("/stocks/" + TICKER + "/investor-flow")
-                            .param("source", "KRX"))
+                            .param("from", "2024-01-01")
+                            .param("to", "2024-01-31"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$[0].date").value("2024-01-02"))
-                    .andExpect(jsonPath("$[0].individualNet").value(500))
-                    .andExpect(jsonPath("$[0].institutionNet").value(100))
-                    .andExpect(jsonPath("$[0].foreignNet").value(150))
-                    .andExpect(jsonPath("$[1].date").value("2024-01-01"))
-                    .andExpect(jsonPath("$[1].individualNet").value(-100));
+                    .andExpect(jsonPath("$[0].date").value("2024-01-01"))
+                    .andExpect(jsonPath("$[0].individualNet").value(-100))
+                    .andExpect(jsonPath("$[1].date").value("2024-01-02"))
+                    .andExpect(jsonPath("$[1].individualNet").value(500))
+                    .andExpect(jsonPath("$[1].institutionNet").value(100))
+                    .andExpect(jsonPath("$[1].foreignNet").value(150));
+        }
+
+        @Test
+        @WithApiUser
+        @DisplayName("범위 밖 날짜 데이터는 포함하지 않음")
+        void shouldExcludeDataOutsideDateRange() throws Exception {
+            investorDailyService.saveAll(List.of(
+                    new InvestorDaily(TICKER, LocalDate.of(2023, 12, 31),
+                            100L, 50L, 50L, 50L, 50L, 50L),
+                    new InvestorDaily(TICKER, LocalDate.of(2024, 1, 15),
+                            1000L, 500L, 200L, 100L, 300L, 150L)
+            ));
+
+            mockMvc.perform(get("/stocks/" + TICKER + "/investor-flow")
+                            .param("from", "2024-01-01")
+                            .param("to", "2024-01-31"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$").isArray())
+                    .andExpect(jsonPath("$.length()").value(1))
+                    .andExpect(jsonPath("$[0].date").value("2024-01-15"));
         }
     }
 }

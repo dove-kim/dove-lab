@@ -6,11 +6,11 @@ export async function GET(
   { params }: { params: Promise<{ code: string }> }
 ) {
   const { code } = await params;
-  const source = req.nextUrl.searchParams.get("source") ?? "KRX";
-  const limit = req.nextUrl.searchParams.get("limit") ?? "60";
-  const res = await backendFetch(
-    `/stocks/${code}/investor-flow?source=${source}&limit=${limit}`
-  );
+  const from = req.nextUrl.searchParams.get("from");
+  const to = req.nextUrl.searchParams.get("to");
+  if (!from || !to) return NextResponse.json([], { status: 400 });
+
+  const res = await backendFetch(`/stocks/${code}/investor-flow?from=${from}&to=${to}`);
   if (!res) return unauthorized();
   return NextResponse.json(await safeJson(res), { status: res.status });
 }

@@ -43,7 +43,7 @@ export default function StockEventsTab({ code }: { code: string }) {
   }
 
   return (
-    <div className="h-full overflow-y-auto px-5 py-4 max-w-3xl">
+    <div className="h-full overflow-y-auto px-5 py-4">
       <p className="text-[11px] text-slate-500 mb-3">
         날짜는 <span className="text-slate-300">배정기준일</span> 기준입니다. (배당 등 <span className="text-slate-300">권리락일</span>은 보통 기준일의 직전 거래일)
       </p>

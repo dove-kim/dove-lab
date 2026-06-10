@@ -52,6 +52,46 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
   const [listST, setListST] = useState(0);   // scrollTop
   const [listH,  setListH]  = useState(600); // 스크롤 컨테이너 높이
 
+  // ── 키보드 종목 이동 (↑↓) ───────────────────────────────────────────────────
+  // ref에 최신 클로저를 담아 단일 리스너로 처리 (stale closure 방지)
+  const keyNavRef = useRef<(e: KeyboardEvent) => void>(() => {});
+  keyNavRef.current = (e: KeyboardEvent) => {
+    if (e.key !== "ArrowUp" && e.key !== "ArrowDown") return;
+    if (!selectedResult || filteredResults.length === 0) return;
+    // 텍스트 입력 중에는 무시
+    const tag = (e.target as HTMLElement).tagName;
+    if (tag === "INPUT" || tag === "TEXTAREA" || tag === "SELECT") return;
+
+    e.preventDefault();
+    const cur = filteredResults.findIndex(
+      s => s.code === selectedResult.code && s.marketType === selectedResult.marketType
+    );
+    if (cur === -1) return;
+    const next = e.key === "ArrowUp"
+      ? Math.max(0, cur - 1)
+      : Math.min(filteredResults.length - 1, cur + 1);
+    if (next === cur) return;
+
+    setSelectedResult(filteredResults[next]);
+
+    // 가상 리스트 — 선택된 행이 화면 안에 오도록 스크롤
+    const el = listRef.current;
+    if (el) {
+      const top    = next * ROW_HEIGHT;
+      const bottom = top + ROW_HEIGHT;
+      if (top < el.scrollTop) {
+        el.scrollTop = top;
+      } else if (bottom > el.scrollTop + el.clientHeight) {
+        el.scrollTop = bottom - el.clientHeight;
+      }
+    }
+  };
+  useEffect(() => {
+    const handler = (e: KeyboardEvent) => keyNavRef.current(e);
+    window.addEventListener("keydown", handler);
+    return () => window.removeEventListener("keydown", handler);
+  }, []);
+
   useEffect(() => {
     const el = listRef.current;
     if (!el) return;
