@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from "next/server";
 import { decodeJwtPayload } from "@/utils/jwt";
+import { relativeRedirect } from "@/utils/redirect";
 
 const PUBLIC_PATHS = ["/login", "/register"];
 
@@ -76,14 +77,12 @@ export function middleware(req: NextRequest) {
   if (!valid && !isPublic) {
     // refresh token 경유 갱신 시도 → 성공 시 원래 경로, 실패 시 /login
     const to = req.nextUrl.pathname + req.nextUrl.search;
-    const refreshUrl = new URL("/api/auth/refresh-and-redirect", req.url);
-    refreshUrl.searchParams.set("to", to);
-    const res = NextResponse.redirect(refreshUrl);
+    const res = relativeRedirect(`/api/auth/refresh-and-redirect?to=${encodeURIComponent(to)}`);
     if (tokenCookie) res.cookies.delete("token"); // 만료 토큰 즉시 제거
     return res;
   }
   if (valid && req.nextUrl.pathname === "/login") {
-    return NextResponse.redirect(new URL("/", req.url));
+    return relativeRedirect("/");
   }
   const res = NextResponse.next();
   res.headers.set("x-pathname", req.nextUrl.pathname);
