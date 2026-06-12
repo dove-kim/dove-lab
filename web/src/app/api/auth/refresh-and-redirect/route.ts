@@ -1,6 +1,6 @@
 import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
-import { relativeRedirect } from "@/utils/redirect";
+import { redirectTo } from "@/utils/redirect";
 
 const BASE               = process.env.INTERNAL_API_URL ?? "http://localhost:8081";
 const ACCESS_MAX_AGE     = 60 * 15;
@@ -19,7 +19,7 @@ export async function GET(req: NextRequest) {
 
   const refreshToken = (await cookies()).get("refreshToken")?.value;
   if (!refreshToken) {
-    return relativeRedirect("/login");
+    return redirectTo(req, "/login");
   }
 
   const apiRes = await fetch(`${BASE}/auth/refresh`, {
@@ -30,14 +30,14 @@ export async function GET(req: NextRequest) {
   });
 
   if (!apiRes.ok) {
-    const res = relativeRedirect("/login");
+    const res = redirectTo(req, "/login");
     res.cookies.delete("token");
     res.cookies.set("refreshToken", "", { path: REFRESH_COOKIE_PATH, maxAge: 0 });
     return res;
   }
 
   const data = (await apiRes.json()) as { accessToken: string; refreshToken: string };
-  const res  = relativeRedirect(to);
+  const res  = redirectTo(req, to);
   res.cookies.set("token", data.accessToken, {
     httpOnly: true,
     secure:   process.env.NODE_ENV === "production",
