@@ -5,6 +5,9 @@ import org.redisson.api.RateIntervalUnit;
 import org.redisson.api.RateType;
 import org.redisson.api.RedissonClient;
 
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+
 /**
  * 모든 인스턴스가 슬롯을 공유하는 Redisson 기반 분산 rate limiter.
  */
@@ -20,7 +23,7 @@ public class RedissonRateLimiter implements RateLimiter {
     }
 
     @Override
-    public void acquire() throws InterruptedException {
-        rateLimiter.acquire();
+    public boolean tryAcquire(Duration timeout) throws InterruptedException {
+        return rateLimiter.tryAcquire(timeout.toMillis(), TimeUnit.MILLISECONDS);
     }
 }

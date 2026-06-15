@@ -11,6 +11,7 @@ import org.springframework.boot.autoconfigure.condition.ConditionalOnProperty;
 import org.springframework.data.redis.core.StringRedisTemplate;
 import org.springframework.stereotype.Service;
 
+import java.time.Duration;
 import java.time.ZonedDateTime;
 import java.util.Optional;
 
@@ -23,6 +24,9 @@ import java.util.Optional;
 public class KrxApiQuotaService implements QuotaStatusProvider {
 
     private static final String NAMESPACE = "krx:api";
+
+    /** rate 슬롯 1회 획득 최대 대기 시간. 초과 시 무한 대기 방지를 위해 예외를 던진다. */
+    private static final Duration ACQUIRE_TIMEOUT = Duration.ofSeconds(30);
 
     private final StringRedisTemplate redis;
     private final KrxProperties props;
@@ -42,11 +46,15 @@ public class KrxApiQuotaService implements QuotaStatusProvider {
      * @throws KrxDailyQuotaExceededException 일일 한도 초과 시
      */
     public void tryAcquire() {
+        boolean acquired;
         try {
-            krxRateLimiter.acquire();
+            acquired = krxRateLimiter.tryAcquire(ACQUIRE_TIMEOUT);
         } catch (InterruptedException e) {
             Thread.currentThread().interrupt();
             throw new KrxRemoteRateLimitException("KRX 초당 제한 대기 중 인터럽트");
+        }
+        if (!acquired) {
+            throw new KrxRemoteRateLimitException("KRX rate 슬롯 획득 타임아웃");
         }
         if (!quota.tryAcquire()) {
             throw new KrxDailyQuotaExceededException();

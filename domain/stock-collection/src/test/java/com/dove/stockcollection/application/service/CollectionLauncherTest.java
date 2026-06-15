@@ -14,6 +14,7 @@ import java.util.Optional;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.ArgumentMatchers.isNull;
 import static org.mockito.Mockito.mock;
 import static org.mockito.Mockito.never;
 import static org.mockito.Mockito.verify;
@@ -30,20 +31,20 @@ class CollectionLauncherTest {
 
     @Test
     void shouldCapToYesterdayWhenRangeIncludesToday() {
-        when(taskService.create(any(), any(), any(), any(), any())).thenReturn(1L);
+        when(taskService.create(any(), any(), any(), any(), any(), any())).thenReturn(1L);
 
         launcher.enqueuePriceCollection(StockExchange.KOSPI,
-                LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), 7L); // to=오늘
+                LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), 7L, null); // to=오늘
 
         // to 가 어제(5/30)로 캡되어 구조화 파라미터로 전달
         verify(taskService).create(eq(CollectionType.PRICE), eq(StockExchange.KOSPI),
-                eq(LocalDate.of(2026, 5, 1)), eq(LocalDate.of(2026, 5, 30)), eq(7L));
+                eq(LocalDate.of(2026, 5, 1)), eq(LocalDate.of(2026, 5, 30)), eq(7L), isNull());
     }
 
     @Test
     void shouldRejectWhenEntireRangeIsTodayOrFuture() {
         assertThatThrownBy(() -> launcher.enqueuePriceCollection(StockExchange.KOSPI,
-                LocalDate.of(2026, 5, 31), LocalDate.of(2026, 6, 30), 7L))
+                LocalDate.of(2026, 5, 31), LocalDate.of(2026, 6, 30), 7L, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("INVALID_BACKFILL_RANGE");
 
@@ -55,13 +56,13 @@ class CollectionLauncherTest {
         CollectionTask source = new CollectionTask(CollectionType.PRICE, StockExchange.KOSDAQ,
                 LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31), 7L);
         when(taskService.find(1L)).thenReturn(Optional.of(source));
-        when(taskService.create(any(), any(), any(), any(), any())).thenReturn(99L);
+        when(taskService.create(any(), any(), any(), any(), any(), any())).thenReturn(99L);
 
         launcher.reenqueue(1L, 7L);
 
         // 문자열 파싱 없이 구조화 컬럼(거래소·기간) 그대로 재등록
         verify(taskService).create(eq(CollectionType.PRICE), eq(StockExchange.KOSDAQ),
-                eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 12, 31)), eq(7L));
+                eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 12, 31)), eq(7L), isNull());
     }
 
     @Test
