@@ -1,5 +1,9 @@
 package com.dove.concurrent;
 
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Queue;
+import java.util.concurrent.ConcurrentLinkedQueue;
 import java.util.concurrent.Executors;
 import java.util.concurrent.Semaphore;
 import java.util.concurrent.atomic.AtomicReference;
@@ -57,5 +61,58 @@ public final class Parallel {
         if (error != null) {
             throw new ParallelException(error);
         }
+    }
+
+    /**
+     * {@link #run}과 같되, 개별 작업 실패를 모아 나머지를 계속 진행한다 (한 작업 실패가 배치 전체를 죽이지 않음).
+     * 실패 수가 {@code maxFailures}에 도달하면 체계적 장애로 보고 남은 작업을 중단하고 예외를 던진다.
+     *
+     * @param tasks       처리할 작업 목록 (lazy 평가)
+     * @param concurrency 동시 실행 가상 스레드 상한
+     * @param maxFailures 이 수만큼 실패하면 배치를 중단한다 (1 이상)
+     * @param handler     각 작업 처리 로직
+     * @return 실패한 작업 목록 (maxFailures 미만으로 끝난 경우)
+     * @throws ParallelException 실패 수가 {@code maxFailures}에 도달한 경우
+     */
+    public static <T> List<T> runResilient(Iterable<T> tasks, int concurrency, int maxFailures, Consumer<T> handler) {
+        Semaphore slots = new Semaphore(concurrency);
+        Queue<T> failed = new ConcurrentLinkedQueue<>();
+        AtomicReference<Throwable> abortError = new AtomicReference<>();
+
+        try (var executor = Executors.newVirtualThreadPerTaskExecutor()) {
+            for (T task : tasks) {
+                if (abortError.get() != null) break; // 임계 초과 → 제출 중단
+
+                try {
+                    slots.acquire();
+                } catch (InterruptedException e) {
+                    Thread.currentThread().interrupt();
+                    abortError.compareAndSet(null, e);
+                    break;
+                }
+
+                if (abortError.get() != null) {
+                    slots.release();
+                    break;
+                }
+
+                executor.execute(() -> {
+                    try {
+                        handler.accept(task);
+                    } catch (Throwable t) {
+                        failed.add(task);
+                        if (failed.size() >= maxFailures) abortError.compareAndSet(null, t);
+                    } finally {
+                        slots.release();
+                    }
+                });
+            }
+        } // try-with-resources: 제출된 모든 작업 완료까지 대기
+
+        Throwable error = abortError.get();
+        if (error != null) {
+            throw new ParallelException(error);
+        }
+        return new ArrayList<>(failed);
     }
 }

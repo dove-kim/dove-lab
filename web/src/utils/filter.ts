@@ -48,6 +48,16 @@ export function createEmptyRoot(): GroupNode {
   return { id: generateId(), nodeType: "GROUP", negated: false, children: [], childOps: [] };
 }
 
+/**
+ * 백엔드 식(@JsonRawValue라 JSON 객체로 내려옴, 또는 문자열)을 GroupNode로 파싱한다. 실패 시 null.
+ */
+export function parseExpression(expression: unknown): GroupNode | null {
+  if (!expression) return null;
+  if (typeof expression === "object") return expression as GroupNode;
+  try { return JSON.parse(expression as string) as GroupNode; }
+  catch { return null; }
+}
+
 export function addNodeToGroup(root: GroupNode, groupId: string, node: ExpressionNode): GroupNode {
   if (root.id === groupId) {
     const newChildOps = root.children.length > 0

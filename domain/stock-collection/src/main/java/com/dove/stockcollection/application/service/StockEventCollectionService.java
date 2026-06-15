@@ -83,11 +83,16 @@ public class StockEventCollectionService {
                                                     List<String> tickers,
                                                     CollectionProgress progress, AtomicInteger done) {
         List<Map<String, Object>> all = Collections.synchronizedList(new ArrayList<>());
-        Parallel.run(tickers, concurrency, ticker -> {
+        int maxFailures = Math.max(20, tickers.size() / 10);
+        List<String> failed = Parallel.runResilient(tickers, concurrency, maxFailures, ticker -> {
             List<Map<String, Object>> rows = fetcher.fetch(type, from, to, ticker);
             if (!rows.isEmpty()) all.addAll(rows);
             if (progress != null) progress.onProgress(done.incrementAndGet());
         });
+        if (!failed.isEmpty()) {
+            log.warn("[EVENT] {} {}종목 중 {}건 실패(건너뜀): {}", type, tickers.size(), failed.size(),
+                    failed.stream().distinct().limit(10).toList());
+        }
         return all;
     }
 

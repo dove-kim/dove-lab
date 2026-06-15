@@ -8,7 +8,7 @@ import {
   SearchFilter,
   MarketTypeFilter,
 } from "@/types/filter";
-import { createEmptyRoot } from "@/utils/filter";
+import { createEmptyRoot, parseExpression } from "@/utils/filter";
 import ExpressionTree from "./ExpressionTree";
 import ConditionPalette from "./ConditionPalette";
 import Select from "@/components/Select";
@@ -52,11 +52,7 @@ function FilterEditorContent({
   stockFilters: Array<{ id: number; name: string; scope: "SYSTEM" | "MEMBER" }>;
 }) {
   const [initialData] = useState(() => {
-    const r: GroupNode = (() => {
-      if (!initial?.expression) return createEmptyRoot();
-      try { return JSON.parse(initial.expression) as GroupNode; }
-      catch { return createEmptyRoot(); }
-    })();
+    const r: GroupNode = parseExpression(initial?.expression) ?? createEmptyRoot();
     return { root: r, id: r.id };
   });
 
