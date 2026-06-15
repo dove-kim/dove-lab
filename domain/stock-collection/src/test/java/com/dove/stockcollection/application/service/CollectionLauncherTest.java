@@ -33,7 +33,7 @@ class CollectionLauncherTest {
         when(taskService.create(any(), any(), any(), any(), any())).thenReturn(1L);
 
         launcher.enqueuePriceCollection(StockExchange.KOSPI,
-                LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), 7L); // to=오늘
+                LocalDate.of(2026, 5, 1), LocalDate.of(2026, 5, 31), 7L, null); // to=오늘
 
         // to 가 어제(5/30)로 캡되어 구조화 파라미터로 전달
         verify(taskService).create(eq(CollectionType.PRICE), eq(StockExchange.KOSPI),
@@ -43,7 +43,7 @@ class CollectionLauncherTest {
     @Test
     void shouldRejectWhenEntireRangeIsTodayOrFuture() {
         assertThatThrownBy(() -> launcher.enqueuePriceCollection(StockExchange.KOSPI,
-                LocalDate.of(2026, 5, 31), LocalDate.of(2026, 6, 30), 7L))
+                LocalDate.of(2026, 5, 31), LocalDate.of(2026, 6, 30), 7L, null))
                 .isInstanceOf(IllegalArgumentException.class)
                 .hasMessage("INVALID_BACKFILL_RANGE");
 

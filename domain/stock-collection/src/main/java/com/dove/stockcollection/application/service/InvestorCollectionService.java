@@ -44,13 +44,18 @@ public class InvestorCollectionService {
         progress.onTotal(tickers.size());
 
         AtomicInteger done = new AtomicInteger();
-        Parallel.run(tickers, concurrency, ticker -> {
+        int maxFailures = Math.max(20, tickers.size() / 10);
+        List<String> failed = Parallel.runResilient(tickers, concurrency, maxFailures, ticker -> {
             List<InvestorDailyRow> rows = fetcher.fetch(ticker, from, to);
             if (!rows.isEmpty()) {
                 investorDailyService.saveAll(toEntities(ticker, rows));
             }
             progress.onProgress(done.incrementAndGet());
         });
+        if (!failed.isEmpty()) {
+            log.warn("투자자동향 {}종목 중 {}건 실패(건너뜀): {}", tickers.size(), failed.size(),
+                    failed.stream().distinct().limit(10).toList());
+        }
     }
 
     private List<InvestorDaily> toEntities(String ticker, List<InvestorDailyRow> rows) {

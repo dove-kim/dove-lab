@@ -49,11 +49,16 @@ public class StockDetailCollectionService {
         // (field+value) 조합 중복 등록 방지
         Set<String> seenTags = ConcurrentHashMap.newKeySet();
 
-        Parallel.run(tickers, concurrency, ticker -> {
+        int maxFailures = Math.max(20, tickers.size() / 10);
+        List<String> failed = Parallel.runResilient(tickers, concurrency, maxFailures, ticker -> {
             applyStockInfo(ticker, seenTags);
             applyProductInfo(ticker, seenTags);
             progress.onProgress(done.incrementAndGet());
         });
+        if (!failed.isEmpty()) {
+            log.warn("종목 상세 {}종목 중 {}건 실패(건너뜀): {}", tickers.size(), failed.size(),
+                    failed.stream().distinct().limit(10).toList());
+        }
 
         log.info("종목 상세 수집 완료");
     }
