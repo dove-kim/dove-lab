@@ -83,6 +83,19 @@ public class StockPriceQueryService {
         return support.findNthRecentTradeDate(exchanges, priceType, onOrBefore, offset);
     }
 
+    /** 거래소 집합·날짜의 전 종목 주가 (검색 필터 평가용, NXT·INTEGRATED 포함). key=ticker. */
+    public Map<String, StockPrice> findByExchangesAndDate(Collection<StockExchange> exchanges,
+                                                          PriceType priceType, LocalDate date) {
+        return support.findByExchangesAndDate(exchanges, priceType, date).stream()
+                .collect(Collectors.toMap(StockPrice::getTicker, p -> p, (a, b) -> a));
+    }
+
+    /** 거래소 집합에서 onOrBefore 이하 offset번째(0-based) 최근 거래일. 없으면 null. */
+    public LocalDate findNthRecentTradeDateByExchanges(Collection<StockExchange> exchanges,
+                                                       PriceType priceType, LocalDate onOrBefore, int offset) {
+        return support.findNthRecentTradeDate(exchanges, priceType, onOrBefore, offset);
+    }
+
     /** 종목+시장의 최근 N 거래일 주가 (오름차순). 차트용. */
     public List<StockPrice> findRecent(String ticker, MarketType market, PriceType priceType, int limit) {
         return findRecent(ticker, StockExchange.fromMarket(market), priceType, limit);

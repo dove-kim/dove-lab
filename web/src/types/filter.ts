@@ -2,6 +2,20 @@ export type LogicOperator = "AND" | "OR";
 export type CompareOp = "GT" | "GTE" | "LT" | "LTE" | "EQ" | "NEQ";
 export type PriceField = "OPEN" | "HIGH" | "LOW" | "CLOSE";
 export type MarketTypeFilter = "KOSPI" | "KOSDAQ" | "KONEX";
+export type PriceTypeFilter = "RAW" | "ADJUSTED";
+
+export const PRICE_TYPE_LABELS: Record<PriceTypeFilter, string> = {
+  RAW: "비수정",
+  ADJUSTED: "수정",
+};
+
+export type VenueFilter = "KRX" | "NXT" | "INTEGRATED";
+
+export const VENUE_LABELS: Record<VenueFilter, string> = {
+  KRX: "KRX",
+  NXT: "NXT",
+  INTEGRATED: "통합",
+};
 
 export type IndicatorType =
   | "SMA_5" | "SMA_10" | "SMA_20" | "SMA_50" | "SMA_60" | "SMA_120" | "SMA_200"
@@ -136,6 +150,8 @@ export interface SearchFilter {
   name: string;
   dateRule: DateRule;
   markets: string[];
+  priceType: PriceTypeFilter;
+  exchange: VenueFilter;
   expression: string;
   stockFilterId: number | null;
   createdAt: string;
