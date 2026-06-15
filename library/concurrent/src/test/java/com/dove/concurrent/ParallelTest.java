@@ -104,4 +104,47 @@ class ParallelTest {
             });
         }
     }
+
+    @Nested
+    @DisplayName("runResilient")
+    class RunResilient {
+
+        @Test
+        @DisplayName("shouldProcessAllAndReturnEmptyWhenNoFailure")
+        void shouldProcessAllAndReturnEmptyWhenNoFailure() {
+            List<Integer> items = IntStream.range(0, 200).boxed().toList();
+            ConcurrentLinkedQueue<Integer> processed = new ConcurrentLinkedQueue<>();
+
+            List<Integer> failed = Parallel.runResilient(items, 8, 10, processed::add);
+
+            assertThat(processed).hasSize(200);
+            assertThat(failed).isEmpty();
+        }
+
+        @Test
+        @DisplayName("shouldIsolateFailuresAndContinueWhenUnderThreshold")
+        void shouldIsolateFailuresAndContinueWhenUnderThreshold() {
+            List<Integer> items = IntStream.range(0, 100).boxed().toList();
+            AtomicInteger succeeded = new AtomicInteger();
+
+            // 3·7만 실패, 임계(50) 미만 → 나머지는 모두 처리되고 실패 목록만 반환
+            List<Integer> failed = Parallel.runResilient(items, 4, 50, i -> {
+                if (i == 3 || i == 7) throw new IllegalStateException("boom");
+                succeeded.incrementAndGet();
+            });
+
+            assertThat(succeeded.get()).isEqualTo(98);
+            assertThat(failed).containsExactlyInAnyOrder(3, 7);
+        }
+
+        @Test
+        @DisplayName("shouldAbortWhenFailuresReachThreshold")
+        void shouldAbortWhenFailuresReachThreshold() {
+            List<Integer> items = IntStream.range(0, 100_000).boxed().toList();
+
+            assertThatThrownBy(() -> Parallel.runResilient(items, 4, 3, i -> {
+                throw new RuntimeException("systemic");
+            })).isInstanceOf(ParallelException.class);
+        }
+    }
 }

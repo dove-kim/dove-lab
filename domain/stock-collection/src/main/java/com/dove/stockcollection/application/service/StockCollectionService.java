@@ -69,7 +69,8 @@ public class StockCollectionService {
         Set<String> secugrps = ConcurrentHashMap.newKeySet();
         Set<String> kinds = ConcurrentHashMap.newKeySet();
 
-        Parallel.run(tasks, concurrency, entry -> {
+        int maxFailures = Math.max(20, tasks.size() / 10);
+        List<Map.Entry<LocalDate, MarketType>> failed = Parallel.runResilient(tasks, concurrency, maxFailures, entry -> {
             LocalDate date = entry.getKey();
             MarketType market = entry.getValue();
             List<StockListing> listings = tradingDayPort.fetchListings(market, date);
@@ -82,6 +83,9 @@ public class StockCollectionService {
             });
             progress.onProgress(processed.incrementAndGet());
         });
+        if (!failed.isEmpty()) {
+            log.warn("종목 수집 {}건 중 {}건 실패(건너뜀)", tasks.size(), failed.size());
+        }
 
         // 모두 끝난 뒤 한 번만 insert
         if (!stockMap.isEmpty()) {

@@ -7,6 +7,8 @@ import org.redisson.api.RedissonClient;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 
+import java.time.Duration;
+
 /**
  * KIS 주식 API 게이트 구성 (Redis 분산 rate limiter + 동시 상한 세마포어).
  */
@@ -16,6 +18,7 @@ public class KisRateLimiterConfig {
     @Bean
     public KisGate stockGate(KisProperties props, RedissonClient redisson) {
         RateLimiter rateLimiter = new RedissonRateLimiter(redisson, "kis:stock:rate", props.getStockPerSecond());
-        return new KisGate(rateLimiter, props.getStockMaxConcurrent(), props.getStockMaxRetries());
+        return new KisGate(rateLimiter, props.getStockMaxConcurrent(), props.getStockMaxRetries(),
+                Duration.ofSeconds(props.getStockAcquireTimeoutSeconds()));
     }
 }

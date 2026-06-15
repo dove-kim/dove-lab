@@ -11,6 +11,7 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { SearchFilter, GroupNode, DATE_RULE_LABELS, DateRule } from "@/types/filter";
+import { parseExpression } from "@/utils/filter";
 import FilterEditorModal from "./FilterEditorModal";
 
 interface StockFilterSummary { id: number; name: string; scope: "SYSTEM" | "MEMBER"; }
@@ -25,11 +26,6 @@ function countNodes(node: GroupNode): number {
     if (c.nodeType === "GROUP") return acc + countNodes(c);
     return acc + 1;
   }, 0);
-}
-
-function parseRoot(expression: string): GroupNode | null {
-  try { return JSON.parse(expression) as GroupNode; }
-  catch { return null; }
 }
 
 function FilterCard({
@@ -62,7 +58,7 @@ function FilterCard({
     opacity: isDragging ? 0.5 : 1,
   };
 
-  const root = parseRoot(filter.expression);
+  const root = parseExpression(filter.expression);
   const condCount = root ? countNodes(root) : 0;
   const stockFilterName = filter.stockFilterId
     ? stockFilterMap.get(filter.stockFilterId) ?? "?"

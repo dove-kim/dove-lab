@@ -71,8 +71,10 @@ public class PriceCollectionService {
         Set<String> adjEventTickers = ConcurrentHashMap.newKeySet();
         AtomicInteger done = new AtomicInteger();
 
-        // 병렬 수집·저장 (청크 단위로 즉시 저장 → 메모리 = 청크 1개치)
-        Parallel.run(units, concurrency, unit -> {
+        // 병렬 수집·저장 (청크 단위로 즉시 저장 → 메모리 = 청크 1개치).
+        // 한 종목 실패는 건너뛰고 계속, 실패가 임계(10%·최소 20)에 달하면 체계적 장애로 보고 중단.
+        int maxFailures = Math.max(20, units.size() / 10);
+        List<CollectionUnit> failedUnits = Parallel.runResilient(units, concurrency, maxFailures, unit -> {
             fetcher.fetchInWindows(exchange, unit.ticker(), unit.from(), unit.to(), unit.priceType(),
                     chunk -> {
                         List<StockPrice> prices = new ArrayList<>(chunk.size());
@@ -87,6 +89,10 @@ public class PriceCollectionService {
                     });
             progress.onProgress(done.incrementAndGet());
         });
+        if (!failedUnits.isEmpty()) {
+            log.warn("[{}] {}작업 중 {}건 실패(건너뜀): {}", exchange, units.size(), failedUnits.size(),
+                    failedUnits.stream().map(CollectionUnit::ticker).distinct().limit(10).toList());
+        }
 
         // 재수집 구간의 지표 커서를 from 직전으로 일괄 되돌림 (거래소 전체 1문장, RAW·ADJUSTED 동시)
         cursorService.rewindExchangeBefore(exchange, from);
@@ -109,7 +115,8 @@ public class PriceCollectionService {
     private void refetchAdjusted(StockExchange exchange, Set<String> tickers, LocalDate from, LocalDate upTo,
                                  CollectionProgress progress) {
         AtomicInteger adjDone = new AtomicInteger();
-        Parallel.run(tickers, concurrency, ticker -> {
+        int maxFailures = Math.max(20, tickers.size() / 10);
+        List<String> failed = Parallel.runResilient(tickers, concurrency, maxFailures, ticker -> {
             fetcher.fetchAdjustedBackward(exchange, ticker, from, upTo, (List<DailyCandle> chunk) -> {
                 List<StockPrice> prices = chunk.stream()
                         .map(c -> toPrice(ticker, exchange, PriceType.ADJUSTED, c))
@@ -119,6 +126,10 @@ public class PriceCollectionService {
             cursorService.clearAdjusted(ticker, exchange);
             progress.onAdjustedProgress(adjDone.incrementAndGet());
         });
+        if (!failed.isEmpty()) {
+            log.warn("[{}] ADJUSTED 재조회 {}종목 중 {}건 실패(건너뜀): {}", exchange, tickers.size(), failed.size(),
+                    failed.stream().distinct().limit(10).toList());
+        }
     }
 
     private StockPrice toPrice(String ticker, StockExchange exchange, PriceType type, DailyCandle c) {

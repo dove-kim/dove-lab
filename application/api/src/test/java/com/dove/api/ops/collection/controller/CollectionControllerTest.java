@@ -46,7 +46,7 @@ class CollectionControllerTest {
 
     @BeforeEach
     void setUp() {
-        given(launcher.enqueuePriceCollection(any(StockExchange.class), any(), any(), anyLong()))
+        given(launcher.enqueuePriceCollection(any(StockExchange.class), any(), any(), anyLong(), any()))
                 .willReturn(11L);
         given(launcher.enqueueEventCollection(any(), any(), anyLong())).willReturn(22L);
         given(launcher.enqueueStockSyncCollection(any(), any(), anyLong())).willReturn(33L);

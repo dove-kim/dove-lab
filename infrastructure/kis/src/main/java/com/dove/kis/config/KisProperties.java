@@ -36,4 +36,7 @@ public class KisProperties {
 
     /** KIS 주식 API 최대 동시 호출 수 상한. */
     private int stockMaxConcurrent = 20;
+
+    /** rate 슬롯 1회 획득 최대 대기 시간(초). 초과 시 일시오류로 간주해 재시도한다(무한 대기 방지). */
+    private int stockAcquireTimeoutSeconds = 30;
 }
