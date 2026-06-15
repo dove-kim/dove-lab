@@ -20,7 +20,9 @@ import org.springframework.test.util.ReflectionTestUtils;
 
 import java.util.List;
 import java.util.Optional;
+import java.util.stream.IntStream;
 
+import static org.assertj.core.api.Assertions.assertThatNoException;
 import static org.assertj.core.api.Assertions.assertThatThrownBy;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.anyString;
@@ -125,10 +127,22 @@ class StockDetailCollectionServiceTest {
     class UpdateAllFailure {
 
         @Test
-        @DisplayName("fetch 예외 시 ParallelException을 rethrow한다")
-        void shouldRethrowParallelExceptionWhenFetchThrows() {
+        @DisplayName("소수 종목 fetch 실패는 격리하고 배치를 완료한다")
+        void shouldIsolateFewFailuresAndComplete() {
             given(stockQueryService.findAllTickers()).willReturn(List.of("005930"));
             given(fetcher.fetchStockInfo("005930")).willThrow(new RuntimeException("KIS down"));
+
+            // 임계 미만의 실패는 예외 없이 격리 — 배치는 정상 완료
+            assertThatNoException().isThrownBy(() -> service.updateAll(CollectionProgress.NOOP));
+        }
+
+        @Test
+        @DisplayName("실패가 임계를 넘으면 ParallelException으로 배치를 중단한다")
+        void shouldAbortWhenFailuresExceedThreshold() {
+            List<String> tickers = IntStream.range(0, 30)
+                    .mapToObj(i -> String.format("%06d", i)).toList();
+            given(stockQueryService.findAllTickers()).willReturn(tickers);
+            given(fetcher.fetchStockInfo(anyString())).willThrow(new RuntimeException("KIS down"));
 
             assertThatThrownBy(() -> service.updateAll(CollectionProgress.NOOP))
                     .isInstanceOf(ParallelException.class);
