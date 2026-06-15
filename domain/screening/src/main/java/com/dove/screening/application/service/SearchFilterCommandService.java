@@ -3,6 +3,7 @@ package com.dove.screening.application.service;
 import com.dove.market.domain.enums.MarketType;
 import com.dove.screening.domain.entity.SearchFilter;
 import com.dove.screening.domain.enums.DateRule;
+import com.dove.screening.domain.enums.FilterVenue;
 import com.dove.screening.domain.repository.SearchFilterRepository;
 import com.dove.screening.domain.value.FilterExpression;
 import com.dove.stock.domain.enums.PriceType;
@@ -26,13 +27,33 @@ public class SearchFilterCommandService {
     private final SearchFilterRepository searchFilterRepository;
 
     /**
-     * 새 검색 필터를 생성한다.
+     * 새 검색 필터를 생성한다. 거래소는 KRX로 둔다.
      */
     public SearchFilter create(Long memberId, String name, DateRule dateRule,
                                 List<MarketType> markets, PriceType priceType, FilterExpression expression,
                                 Long stockFilterId) {
+        return create(memberId, name, dateRule, markets, priceType, FilterVenue.KRX, expression, stockFilterId);
+    }
+
+    /**
+     * 새 검색 필터를 생성한다.
+     */
+    public SearchFilter create(Long memberId, String name, DateRule dateRule,
+                                List<MarketType> markets, PriceType priceType, FilterVenue exchange,
+                                FilterExpression expression, Long stockFilterId) {
         return searchFilterRepository.save(
-                SearchFilter.create(memberId, name, dateRule, markets, priceType, expression, stockFilterId));
+                SearchFilter.create(memberId, name, dateRule, markets, priceType, exchange, expression, stockFilterId));
+    }
+
+    /**
+     * 회원이 소유한 검색 필터를 수정한다. 거래소는 KRX로 둔다.
+     *
+     * @throws NoSuchElementException 해당 필터가 없을 때
+     */
+    public SearchFilter update(Long memberId, Long id, String name, DateRule dateRule,
+                                List<MarketType> markets, PriceType priceType, FilterExpression expression,
+                                Long stockFilterId) {
+        return update(memberId, id, name, dateRule, markets, priceType, FilterVenue.KRX, expression, stockFilterId);
     }
 
     /**
@@ -41,11 +62,11 @@ public class SearchFilterCommandService {
      * @throws NoSuchElementException 해당 필터가 없을 때
      */
     public SearchFilter update(Long memberId, Long id, String name, DateRule dateRule,
-                                List<MarketType> markets, PriceType priceType, FilterExpression expression,
-                                Long stockFilterId) {
+                                List<MarketType> markets, PriceType priceType, FilterVenue exchange,
+                                FilterExpression expression, Long stockFilterId) {
         SearchFilter filter = searchFilterRepository.findByIdAndMemberId(id, memberId)
                 .orElseThrow(() -> new NoSuchElementException("FILTER_NOT_FOUND"));
-        filter.update(name, dateRule, markets, priceType, expression, stockFilterId);
+        filter.update(name, dateRule, markets, priceType, exchange, expression, stockFilterId);
         return filter;
     }
 

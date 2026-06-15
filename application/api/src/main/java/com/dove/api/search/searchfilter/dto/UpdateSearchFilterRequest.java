@@ -2,6 +2,7 @@ package com.dove.api.search.searchfilter.dto;
 
 import com.dove.market.domain.enums.MarketType;
 import com.dove.screening.domain.enums.DateRule;
+import com.dove.screening.domain.enums.FilterVenue;
 import com.dove.stock.domain.enums.PriceType;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotEmpty;
@@ -17,6 +18,7 @@ import java.util.List;
  * @param dateRule      날짜 규칙
  * @param markets       대상 시장 목록
  * @param priceType     주가 유형 (RAW=비수정/ADJUSTED=수정, 미지정 시 RAW)
+ * @param exchange      지표 데이터 거래소 (KRX/NXT/INTEGRATED, 미지정 시 KRX)
  * @param expression    검색식
  * @param stockFilterId 종목 필터 ID
  */
@@ -25,6 +27,7 @@ public record UpdateSearchFilterRequest(
         @NotNull DateRule dateRule,
         @NotEmpty List<MarketType> markets,
         PriceType priceType,
+        FilterVenue exchange,
         @NotBlank String expression,
         Long stockFilterId
 ) {}

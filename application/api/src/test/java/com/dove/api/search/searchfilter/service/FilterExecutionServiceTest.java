@@ -84,6 +84,7 @@ class FilterExecutionServiceTest {
             FeatureMatch row = new FeatureMatch("005930", StockExchange.KOSPI, 70000L, 5000L);
             given(featureFilterQueryService.findMatchingByExpression(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE), any()))
                     .willReturn(Optional.of(List.of(row)));
+            given(stockQueryService.findByTickers(any())).willReturn(Map.of("005930", stock("005930")));
             given(stockQueryService.findNamesByTickers(any())).willReturn(Map.of("005930", "삼성전자"));
             given(featureFilterQueryService.countByExchangesAndDate(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE)))
                     .willReturn(900L);
@@ -109,7 +110,7 @@ class FilterExecutionServiceTest {
             SearchFilter filter = filter(VOLUME_GT_1000, null);
             given(featureFilterQueryService.findMatchingByExpression(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE), any()))
                     .willReturn(Optional.empty());
-            given(priceQueryService.findByMarketsAndDate(KOSPI, PriceType.RAW, EVAL_DATE))
+            given(priceQueryService.findByExchangesAndDate(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE)))
                     .willReturn(Map.of("AAA", price("AAA", 5000L), "BBB", price("BBB", 500L)));
             given(featureDailyService.findAllByExchangeAndDate(StockExchange.KOSPI, PriceType.RAW, EVAL_DATE))
                     .willReturn(Map.of());
@@ -135,7 +136,7 @@ class FilterExecutionServiceTest {
         void shouldThrowUnprocessableWhenNoTradeDate() {
             SearchFilter filter = SearchFilter.create(1L, "필터", DateRule.LATEST, KOSPI, PriceType.RAW,
                     FilterExpression.parse(VOLUME_GT_1000), null);
-            given(priceQueryService.findNthRecentTradeDate(any(), eq(PriceType.RAW), any(), eq(0)))
+            given(priceQueryService.findNthRecentTradeDateByExchanges(any(), eq(PriceType.RAW), any(), eq(0)))
                     .willReturn(null);
 
             assertThatThrownBy(() -> service.execute(filter, EVAL_DATE))
@@ -157,6 +158,7 @@ class FilterExecutionServiceTest {
             FeatureMatch b = new FeatureMatch("BBB", StockExchange.KOSPI, 200L, 6000L);
             given(featureFilterQueryService.findMatchingByExpression(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE), any()))
                     .willReturn(Optional.of(List.of(a, b)));
+            given(stockQueryService.findByTickers(any())).willReturn(Map.of("AAA", stock("AAA"), "BBB", stock("BBB")));
             given(stockQueryService.findNamesByTickers(any())).willReturn(Map.of("AAA", "에이", "BBB", "비"));
             given(featureFilterQueryService.countByExchangesAndDate(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE)))
                     .willReturn(2L);
@@ -180,6 +182,7 @@ class FilterExecutionServiceTest {
             FeatureMatch row = new FeatureMatch("AAA", StockExchange.KOSPI, 100L, 5000L);
             given(featureFilterQueryService.findMatchingByExpression(anyCollection(), eq(PriceType.ADJUSTED), eq(EVAL_DATE), any()))
                     .willReturn(Optional.of(List.of(row)));
+            given(stockQueryService.findByTickers(any())).willReturn(Map.of("AAA", stock("AAA")));
             given(stockQueryService.findNamesByTickers(any())).willReturn(Map.of("AAA", "에이"));
             given(featureFilterQueryService.countByExchangesAndDate(anyCollection(), eq(PriceType.ADJUSTED), eq(EVAL_DATE)))
                     .willReturn(1L);
