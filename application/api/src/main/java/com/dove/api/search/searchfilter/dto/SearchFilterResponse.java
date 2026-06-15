@@ -15,6 +15,7 @@ import java.util.List;
  * @param dateRule      날짜 규칙
  * @param markets       대상 시장 목록
  * @param priceType     주가 유형 (RAW=비수정/ADJUSTED=수정)
+ * @param exchange      지표 데이터 거래소 (KRX/NXT/INTEGRATED)
  * @param expression    검색식(원본 JSON)
  * @param stockFilterId 종목 필터 ID
  * @param createdAt     생성 일시
@@ -26,6 +27,7 @@ public record SearchFilterResponse(
         String dateRule,
         List<String> markets,
         String priceType,
+        String exchange,
         @JsonRawValue String expression,
         Long stockFilterId,
         LocalDateTime createdAt,
@@ -38,6 +40,7 @@ public record SearchFilterResponse(
                 f.getDateRule().name(),
                 f.getMarkets().stream().map(Enum::name).toList(),
                 f.getPriceType().name(),
+                f.getExchange().name(),
                 root != null ? root.toString() : "{}",
                 f.getStockFilterId(),
                 f.getCreatedAt(), f.getUpdatedAt()

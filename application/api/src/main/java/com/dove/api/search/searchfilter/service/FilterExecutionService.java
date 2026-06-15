@@ -56,14 +56,14 @@ public class FilterExecutionService {
     public FilterExecutionResult execute(SearchFilter filter, LocalDate referenceDate) {
         List<MarketType> markets = filter.getMarkets();
         PriceType priceType = filter.getPriceType();
-        LocalDate evalDate = resolveDate(filter.getDateRule(), markets, priceType, referenceDate);
+        List<StockExchange> exchanges = filter.getExchange().resolveExchanges(markets);
+        LocalDate evalDate = resolveDate(filter.getDateRule(), exchanges, priceType, referenceDate);
         if (evalDate == null) {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "NO_DATA_FOR_DATE");
         }
 
         JsonNode root = filter.getExpression() != null ? filter.getExpression().root() : null;
         FilterNode model = root != null ? FilterModel.parse(root) : null;
-        List<StockExchange> exchanges = markets.stream().map(StockExchange::fromMarket).toList();
         Optional<List<FeatureMatch>> dbMatched = model != null
                 ? featureFilterQueryService.findMatchingByExpression(exchanges, priceType, evalDate, model)
                 : Optional.empty();
@@ -73,19 +73,21 @@ public class FilterExecutionService {
         if (dbMatched.isPresent()) {
             // 검색식을 wide 테이블 WHERE로 밀어넣어 DB가 매칭 종목만 반환 (전 종목 인메모리 로드 없음)
             List<FeatureMatch> rows = dbMatched.get();
-            Map<String, String> names = stockQueryService.findNamesByTickers(
-                    rows.stream().map(FeatureMatch::ticker).toList());
+            List<String> tickers = rows.stream().map(FeatureMatch::ticker).toList();
+            Map<String, Stock> stockByTicker = stockQueryService.findByTickers(tickers);
+            Map<String, String> names = stockQueryService.findNamesByTickers(tickers);
             matches = new ArrayList<>();
             for (FeatureMatch r : rows) {
-                String ticker = r.ticker();
-                matches.add(new MatchedStock(ticker, names.getOrDefault(ticker, ticker),
-                        r.exchange().name(), r.closePrice(), r.volume()));
+                Stock stock = stockByTicker.get(r.ticker());
+                if (stock == null || !markets.contains(stock.getMarket())) continue; // 시장 유니버스 제한
+                matches.add(new MatchedStock(r.ticker(), names.getOrDefault(r.ticker(), r.ticker()),
+                        stock.getMarket().name(), r.closePrice(), r.volume()));
             }
             total = (int) featureFilterQueryService.countByExchangesAndDate(exchanges, priceType, evalDate);
         } else {
             // 폴백: SQL로 못 미는 조건(또는 식 없음) — 전 종목 로드 후 인메모리 평가
-            Map<String, StockPrice> prices = priceQueryService.findByMarketsAndDate(markets, priceType, evalDate);
-            Map<String, Map<IndicatorType, Double>> indicators = loadIndicators(markets, priceType, evalDate);
+            Map<String, StockPrice> prices = priceQueryService.findByExchangesAndDate(exchanges, priceType, evalDate);
+            Map<String, Map<IndicatorType, Double>> indicators = loadIndicators(exchanges, priceType, evalDate);
             Map<String, Stock> stockByTicker = stockQueryService.findByTickers(prices.keySet());
             Map<String, String> nameByTicker = stockQueryService.findNamesByTickers(prices.keySet());
             matches = new ArrayList<>();
@@ -93,7 +95,7 @@ public class FilterExecutionService {
                 String ticker = entry.getKey();
                 StockPrice price = entry.getValue();
                 Stock stock = stockByTicker.get(ticker);
-                if (stock == null) continue;
+                if (stock == null || !markets.contains(stock.getMarket())) continue; // 시장 유니버스 제한
                 EvalContext ctx = new EvalContext(stock.getMarket(), indicators.get(ticker), price);
                 if (model != null && FilterEvaluator.evaluate(model, ctx)) {
                     matches.add(new MatchedStock(ticker, nameByTicker.getOrDefault(ticker, ticker),
@@ -113,26 +115,25 @@ public class FilterExecutionService {
     }
 
     /**
-     * 시장별 거래소의 지표를 병합해 ticker→지표맵으로 반환한다.
+     * 거래소별 지표를 병합해 ticker→지표맵으로 반환한다.
      */
-    private Map<String, Map<IndicatorType, Double>> loadIndicators(List<MarketType> markets, PriceType priceType, LocalDate date) {
+    private Map<String, Map<IndicatorType, Double>> loadIndicators(List<StockExchange> exchanges, PriceType priceType, LocalDate date) {
         Map<String, Map<IndicatorType, Double>> merged = new java.util.HashMap<>();
-        for (MarketType market : markets) {
-            StockExchange exchange = StockExchange.fromMarket(market);
+        for (StockExchange exchange : exchanges) {
             merged.putAll(featureDailyService.findAllByExchangeAndDate(exchange, priceType, date));
         }
         return merged;
     }
 
-    private LocalDate resolveDate(DateRule rule, List<MarketType> markets, PriceType priceType, LocalDate reference) {
+    private LocalDate resolveDate(DateRule rule, List<StockExchange> exchanges, PriceType priceType, LocalDate reference) {
         LocalDate ref = reference != null ? reference : LocalDate.now();
         return switch (rule) {
-            case LATEST -> priceQueryService.findNthRecentTradeDate(markets, priceType, LocalDate.now(), 0);
+            case LATEST -> priceQueryService.findNthRecentTradeDateByExchanges(exchanges, priceType, LocalDate.now(), 0);
             case SPECIFIC_DATE -> ref;
-            case PREV_1D -> priceQueryService.findNthRecentTradeDate(markets, priceType, ref, 0);
-            case PREV_3D -> priceQueryService.findNthRecentTradeDate(markets, priceType, ref, 2);
-            case PREV_5D -> priceQueryService.findNthRecentTradeDate(markets, priceType, ref, 4);
-            case PREV_10D -> priceQueryService.findNthRecentTradeDate(markets, priceType, ref, 9);
+            case PREV_1D -> priceQueryService.findNthRecentTradeDateByExchanges(exchanges, priceType, ref, 0);
+            case PREV_3D -> priceQueryService.findNthRecentTradeDateByExchanges(exchanges, priceType, ref, 2);
+            case PREV_5D -> priceQueryService.findNthRecentTradeDateByExchanges(exchanges, priceType, ref, 4);
+            case PREV_10D -> priceQueryService.findNthRecentTradeDateByExchanges(exchanges, priceType, ref, 9);
         };
     }
 
