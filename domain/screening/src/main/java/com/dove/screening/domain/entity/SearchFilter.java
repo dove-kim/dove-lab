@@ -4,6 +4,7 @@ import com.dove.market.domain.enums.MarketType;
 import com.dove.screening.domain.converter.FilterExpressionConverter;
 import com.dove.screening.domain.converter.MarketTypeListConverter;
 import com.dove.screening.domain.enums.DateRule;
+import com.dove.screening.domain.enums.FilterVenue;
 import com.dove.screening.domain.value.FilterExpression;
 import com.dove.stock.domain.enums.PriceType;
 import jakarta.persistence.*;
@@ -62,6 +63,11 @@ public class SearchFilter {
     @Comment("주가 유형 (RAW=비수정/ADJUSTED=수정)")
     private PriceType priceType;
 
+    @Enumerated(EnumType.STRING)
+    @Column(name = "EXCHANGE", nullable = false, length = 20)
+    @Comment("지표 데이터 거래소 (KRX/NXT/INTEGRATED)")
+    private FilterVenue exchange;
+
     @Convert(converter = FilterExpressionConverter.class)
     @Column(name = "EXPRESSION", nullable = false, columnDefinition = "TEXT")
     @Comment("지표 검색 식 (JSON 트리)")
@@ -84,17 +90,27 @@ public class SearchFilter {
     private LocalDateTime updatedAt;
 
     /**
-     * 새 검색 필터를 생성한다.
+     * 새 검색 필터를 생성한다. 거래소는 KRX로 둔다.
      */
     public static SearchFilter create(Long memberId, String name, DateRule dateRule,
                                        List<MarketType> markets, PriceType priceType, FilterExpression expression,
                                        Long stockFilterId) {
+        return create(memberId, name, dateRule, markets, priceType, FilterVenue.KRX, expression, stockFilterId);
+    }
+
+    /**
+     * 새 검색 필터를 생성한다.
+     */
+    public static SearchFilter create(Long memberId, String name, DateRule dateRule,
+                                       List<MarketType> markets, PriceType priceType, FilterVenue exchange,
+                                       FilterExpression expression, Long stockFilterId) {
         SearchFilter f = new SearchFilter();
         f.memberId = memberId;
         f.name = name;
         f.dateRule = dateRule;
         f.markets = markets;
         f.priceType = priceType != null ? priceType : PriceType.RAW;
+        f.exchange = exchange != null ? exchange : FilterVenue.KRX;
         f.expression = expression;
         f.stockFilterId = stockFilterId;
         f.createdAt = LocalDateTime.now();
@@ -103,14 +119,23 @@ public class SearchFilter {
     }
 
     /**
-     * 필터 이름·날짜 규칙·시장·주가 유형·표현식·종목 필터 연결을 갱신한다.
+     * 필터 속성을 갱신한다. 거래소는 KRX로 둔다.
      */
     public void update(String name, DateRule dateRule, List<MarketType> markets, PriceType priceType,
                        FilterExpression expression, Long stockFilterId) {
+        update(name, dateRule, markets, priceType, FilterVenue.KRX, expression, stockFilterId);
+    }
+
+    /**
+     * 필터 이름·날짜 규칙·시장·주가 유형·거래소·표현식·종목 필터 연결을 갱신한다.
+     */
+    public void update(String name, DateRule dateRule, List<MarketType> markets, PriceType priceType,
+                       FilterVenue exchange, FilterExpression expression, Long stockFilterId) {
         this.name = name;
         this.dateRule = dateRule;
         this.markets = markets;
         this.priceType = priceType != null ? priceType : PriceType.RAW;
+        this.exchange = exchange != null ? exchange : FilterVenue.KRX;
         this.expression = expression;
         this.stockFilterId = stockFilterId;
         this.updatedAt = LocalDateTime.now();

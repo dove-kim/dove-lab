@@ -7,6 +7,10 @@ import {
   ConditionType,
   SearchFilter,
   MarketTypeFilter,
+  PriceTypeFilter,
+  PRICE_TYPE_LABELS,
+  VenueFilter,
+  VENUE_LABELS,
 } from "@/types/filter";
 import { createEmptyRoot, parseExpression } from "@/utils/filter";
 import ExpressionTree from "./ExpressionTree";
@@ -63,6 +67,8 @@ function FilterEditorContent({
   const [stockFilterId, setStockFilterId] = useState<number | null>(
     initial?.stockFilterId ?? null
   );
+  const [priceType, setPriceType] = useState<PriceTypeFilter>(initial?.priceType ?? "RAW");
+  const [exchange, setExchange] = useState<VenueFilter>(initial?.exchange ?? "KRX");
   const [root, setRoot] = useState<GroupNode>(initialData.root);
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(initialData.id);
   const [pendingAddType, setPendingAddType] = useState<ConditionType | null>(null);
@@ -86,6 +92,20 @@ function FilterEditorContent({
     });
   }
 
+  // NXT·통합은 코넥스를 취급하지 않으므로 거래소 변경 시 코넥스를 해제한다.
+  function selectExchange(v: VenueFilter) {
+    setExchange(v);
+    if (v !== "KRX") {
+      setSelectedMarkets((prev) => {
+        if (!prev.has("KONEX")) return prev;
+        const next = new Set(prev);
+        next.delete("KONEX");
+        if (next.size === 0) next.add("KOSPI");
+        return next;
+      });
+    }
+  }
+
   async function handleSave() {
     if (!name.trim()) { setError("이름을 입력하세요"); return; }
     if (selectedMarkets.size === 0) { setError("시장을 하나 이상 선택하세요"); return; }
@@ -96,6 +116,8 @@ function FilterEditorContent({
       name: name.trim(),
       dateRule: "LATEST",
       markets: Array.from(selectedMarkets),
+      priceType,
+      exchange,
       expression: JSON.stringify(root),
       stockFilterId,
     };
@@ -154,18 +176,56 @@ function FilterEditorContent({
             {error && <p className="text-xs text-red-400 mt-1">{error}</p>}
           </div>
 
+          {/* 거래소 */}
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block">거래소</label>
+            <div className="flex gap-2">
+              {(["KRX", "NXT", "INTEGRATED"] as VenueFilter[]).map((v) => (
+                <button
+                  key={v}
+                  type="button"
+                  onClick={() => selectExchange(v)}
+                  className={exchange === v ? cx.btnToggleOn : cx.btnToggleOff}
+                >
+                  {VENUE_LABELS[v]}
+                </button>
+              ))}
+            </div>
+          </div>
+
           {/* 시장 */}
           <div>
             <label className="text-xs text-slate-400 mb-1 block">대상 시장</label>
             <div className="flex gap-2">
-              {ALL_MARKETS.map((m) => (
+              {ALL_MARKETS.map((m) => {
+                const disabled = exchange !== "KRX" && m === "KONEX";
+                return (
+                  <button
+                    key={m}
+                    type="button"
+                    disabled={disabled}
+                    onClick={() => toggleMarket(m)}
+                    className={`${selectedMarkets.has(m) ? cx.btnToggleOn : cx.btnToggleOff}${disabled ? " opacity-40 cursor-not-allowed" : ""}`}
+                  >
+                    {m}
+                  </button>
+                );
+              })}
+            </div>
+          </div>
+
+          {/* 주가 유형 */}
+          <div>
+            <label className="text-xs text-slate-400 mb-1 block">주가 유형</label>
+            <div className="flex gap-2">
+              {(["ADJUSTED", "RAW"] as PriceTypeFilter[]).map((pt) => (
                 <button
-                  key={m}
+                  key={pt}
                   type="button"
-                  onClick={() => toggleMarket(m)}
-                  className={selectedMarkets.has(m) ? cx.btnToggleOn : cx.btnToggleOff}
+                  onClick={() => setPriceType(pt)}
+                  className={priceType === pt ? cx.btnToggleOn : cx.btnToggleOff}
                 >
-                  {m}
+                  {PRICE_TYPE_LABELS[pt]}
                 </button>
               ))}
             </div>
