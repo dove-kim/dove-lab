@@ -17,7 +17,7 @@ import java.util.List;
 public class IndicatorPresetItemListConverter
         implements AttributeConverter<List<IndicatorPresetItem>, String> {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = com.dove.jpa.JsonSupport.MAPPER;
     private static final TypeReference<List<IndicatorPresetItem>> TYPE = new TypeReference<>() {};
 
     @Override

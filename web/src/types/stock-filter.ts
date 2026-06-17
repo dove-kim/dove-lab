@@ -19,6 +19,14 @@ export interface StockCondition {
   mode: FilterMode;
 }
 
+export type NameMatchType = "CONTAINS" | "STARTS_WITH" | "ENDS_WITH";
+
+export interface NamePatternCondition {
+  pattern: string;
+  mode: FilterMode;
+  matchType: NameMatchType;
+}
+
 export interface StockFilterResponse {
   id: number;
   scope: FilterScope;
@@ -28,6 +36,7 @@ export interface StockFilterResponse {
   tagConditions: TagCondition[];
   numericConditions: NumericCondition[];
   stockConditions: StockCondition[];
+  namePatternConditions: NamePatternCondition[];
   enabled: boolean;
   displayOrder: number;
   createdAt: string;

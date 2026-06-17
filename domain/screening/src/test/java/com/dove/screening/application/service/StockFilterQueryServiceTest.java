@@ -109,7 +109,7 @@ class StockFilterQueryServiceTest {
         void shouldReturnTickersWhenFilterExists() {
             StockFilter filter = StockFilter.createSystem("s", null, List.of(), List.of(), List.of(), "admin");
             given(repository.findById(1L)).willReturn(Optional.of(filter));
-            given(stockTagFilterRepository.findTickers(any(), any(), any(), any()))
+            given(stockTagFilterRepository.findTickers(any(), any(), any(), any(), any()))
                     .willReturn(Set.of("005930", "000660"));
 
             Set<String> result = service.resolveTickers(1L, List.of(MarketType.KOSPI));

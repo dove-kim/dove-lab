@@ -35,16 +35,16 @@ public final class FilterModel {
         FilterConditionType type = FilterConditionType.parseOrNull(n.path("conditionType").asText());
         if (type == null) return new UnknownCondition();
         return switch (type) {
-            case INDICATOR_VALUE -> threshold(indicatorOperand(n.path("indicator").asText()), n);
-            case INDICATOR_RANGE -> range(indicatorOperand(n.path("indicator").asText()), n);
-            case INDICATOR_CROSS -> comparison(indicatorOperand(n.path("leftIndicator").asText()),
-                    indicatorOperand(n.path("rightIndicator").asText()), n);
-            case PRICE_VALUE -> threshold(priceOperand(n.path("priceField").asText()), n);
-            case PRICE_RANGE -> range(priceOperand(n.path("priceField").asText()), n);
-            case VOLUME_VALUE -> threshold(new VolumeOperand(), n);
-            case VOLUME_RANGE -> range(new VolumeOperand(), n);
-            case PRICE_VS_INDICATOR -> comparison(priceOperand(n.path("priceField").asText()),
-                    indicatorOperand(n.path("indicator").asText()), n);
+            case INDICATOR_VALUE -> threshold(indicatorOperand(n.path("indicator").asText(), offset(n)), n);
+            case INDICATOR_RANGE -> range(indicatorOperand(n.path("indicator").asText(), offset(n)), n);
+            case INDICATOR_CROSS -> comparison(indicatorOperand(n.path("leftIndicator").asText(), leftOffset(n)),
+                    indicatorOperand(n.path("rightIndicator").asText(), rightOffset(n)), n);
+            case PRICE_VALUE -> threshold(priceOperand(n.path("priceField").asText(), offset(n)), n);
+            case PRICE_RANGE -> range(priceOperand(n.path("priceField").asText(), offset(n)), n);
+            case VOLUME_VALUE -> threshold(new VolumeOperand(offset(n)), n);
+            case VOLUME_RANGE -> range(new VolumeOperand(offset(n)), n);
+            case PRICE_VS_INDICATOR -> comparison(priceOperand(n.path("priceField").asText(), leftOffset(n)),
+                    indicatorOperand(n.path("indicator").asText(), rightOffset(n)), n);
             case MARKET_FILTER -> marketFilter(n);
         };
     }
@@ -80,13 +80,32 @@ public final class FilterModel {
         return new MarketFilterCondition(markets);
     }
 
-    private static FilterOperand indicatorOperand(String name) {
+    private static FilterOperand indicatorOperand(String name, int offset) {
         IndicatorType t = IndicatorType.parseOrNull(name);
-        return t == null ? null : new IndicatorOperand(t);
+        return t == null ? null : new IndicatorOperand(t, offset);
     }
 
-    private static FilterOperand priceOperand(String field) {
+    private static FilterOperand priceOperand(String field, int offset) {
         FilterPriceField f = FilterPriceField.parseOrNull(field);
-        return f == null ? null : new PriceOperand(f);
+        return f == null ? null : new PriceOperand(f, offset);
+    }
+
+    /** 거래일 오프셋 상한 — 약 1년치 거래일. */
+    private static final int MAX_OFFSET = 250;
+
+    private static int offset(JsonNode n) {
+        return clampOffset(n.path("offset").asInt(0));
+    }
+
+    private static int leftOffset(JsonNode n) {
+        return clampOffset(n.path("leftOffset").asInt(0));
+    }
+
+    private static int rightOffset(JsonNode n) {
+        return clampOffset(n.path("rightOffset").asInt(0));
+    }
+
+    private static int clampOffset(int v) {
+        return Math.max(-MAX_OFFSET, Math.min(MAX_OFFSET, v));
     }
 }

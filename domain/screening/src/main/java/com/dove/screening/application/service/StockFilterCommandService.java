@@ -3,6 +3,7 @@ package com.dove.screening.application.service;
 import com.dove.screening.application.exception.DuplicateStockFilterNameException;
 import com.dove.screening.domain.entity.StockFilter;
 import com.dove.screening.domain.repository.StockFilterRepository;
+import com.dove.screening.domain.value.NamePatternCondition;
 import com.dove.screening.domain.value.NumericCondition;
 import com.dove.screening.domain.value.StockCondition;
 import com.dove.screening.domain.value.TagCondition;
@@ -28,6 +29,18 @@ public class StockFilterCommandService {
     // ── 시스템 필터 ─────────────────────────────────────────────────────────
 
     /**
+     * 시스템 종목 필터를 생성한다 (이름 패턴 조건 없이).
+     */
+    public StockFilter createSystem(String name, String description,
+                                    List<TagCondition> tagConditions,
+                                    List<StockCondition> stockConditions,
+                                    List<NumericCondition> numericConditions,
+                                    String createdBy) {
+        return createSystem(name, description, tagConditions, stockConditions, numericConditions,
+                List.of(), createdBy);
+    }
+
+    /**
      * 시스템 종목 필터를 생성한다.
      *
      * @throws DuplicateStockFilterNameException 같은 이름의 시스템 필터가 이미 있을 때
@@ -36,12 +49,26 @@ public class StockFilterCommandService {
                                     List<TagCondition> tagConditions,
                                     List<StockCondition> stockConditions,
                                     List<NumericCondition> numericConditions,
+                                    List<NamePatternCondition> namePatternConditions,
                                     String createdBy) {
         if (repository.countByMemberIdIsNullAndName(name) > 0) {
             throw new DuplicateStockFilterNameException("DUPLICATE_STOCK_FILTER_NAME");
         }
         return repository.save(
-                StockFilter.createSystem(name, description, tagConditions, stockConditions, numericConditions, createdBy));
+                StockFilter.createSystem(name, description, tagConditions, stockConditions, numericConditions,
+                        namePatternConditions, createdBy));
+    }
+
+    /**
+     * 시스템 종목 필터를 수정한다 (이름 패턴 조건 없이).
+     */
+    public StockFilter updateSystem(Long id, String name, String description,
+                                    List<TagCondition> tagConditions,
+                                    List<StockCondition> stockConditions,
+                                    List<NumericCondition> numericConditions,
+                                    String updatedBy) {
+        return updateSystem(id, name, description, tagConditions, stockConditions, numericConditions,
+                List.of(), updatedBy);
     }
 
     /**
@@ -54,6 +81,7 @@ public class StockFilterCommandService {
                                     List<TagCondition> tagConditions,
                                     List<StockCondition> stockConditions,
                                     List<NumericCondition> numericConditions,
+                                    List<NamePatternCondition> namePatternConditions,
                                     String updatedBy) {
         StockFilter filter = repository.findById(id)
                 .orElseThrow(() -> new NoSuchElementException("STOCK_FILTER_NOT_FOUND"));
@@ -64,7 +92,8 @@ public class StockFilterCommandService {
                 && repository.countByMemberIdIsNullAndNameAndIdNot(name, id) > 0) {
             throw new DuplicateStockFilterNameException("DUPLICATE_STOCK_FILTER_NAME");
         }
-        filter.update(name, description, tagConditions, stockConditions, numericConditions, updatedBy);
+        filter.update(name, description, tagConditions, stockConditions, numericConditions,
+                namePatternConditions, updatedBy);
         return filter;
     }
 
@@ -100,6 +129,18 @@ public class StockFilterCommandService {
     // ── 개인 필터 ───────────────────────────────────────────────────────────
 
     /**
+     * 개인 종목 필터를 생성한다 (이름 패턴 조건 없이).
+     */
+    public StockFilter createPersonal(Long memberId, String name, String description,
+                                      List<TagCondition> tagConditions,
+                                      List<StockCondition> stockConditions,
+                                      List<NumericCondition> numericConditions,
+                                      String createdBy) {
+        return createPersonal(memberId, name, description, tagConditions, stockConditions, numericConditions,
+                List.of(), createdBy);
+    }
+
+    /**
      * 개인 종목 필터를 생성한다.
      *
      * @throws DuplicateStockFilterNameException 같은 이름의 개인 필터가 이미 있을 때
@@ -108,14 +149,27 @@ public class StockFilterCommandService {
                                       List<TagCondition> tagConditions,
                                       List<StockCondition> stockConditions,
                                       List<NumericCondition> numericConditions,
+                                      List<NamePatternCondition> namePatternConditions,
                                       String createdBy) {
         try {
             return repository.saveAndFlush(
                     StockFilter.createPersonal(memberId, name, description,
-                            tagConditions, stockConditions, numericConditions, createdBy));
+                            tagConditions, stockConditions, numericConditions, namePatternConditions, createdBy));
         } catch (DataIntegrityViolationException e) {
             throw new DuplicateStockFilterNameException("DUPLICATE_STOCK_FILTER_NAME");
         }
+    }
+
+    /**
+     * 회원이 소유한 개인 종목 필터를 수정한다 (이름 패턴 조건 없이).
+     */
+    public StockFilter updatePersonal(Long memberId, Long id, String name, String description,
+                                      List<TagCondition> tagConditions,
+                                      List<StockCondition> stockConditions,
+                                      List<NumericCondition> numericConditions,
+                                      String updatedBy) {
+        return updatePersonal(memberId, id, name, description, tagConditions, stockConditions, numericConditions,
+                List.of(), updatedBy);
     }
 
     /**
@@ -128,10 +182,12 @@ public class StockFilterCommandService {
                                       List<TagCondition> tagConditions,
                                       List<StockCondition> stockConditions,
                                       List<NumericCondition> numericConditions,
+                                      List<NamePatternCondition> namePatternConditions,
                                       String updatedBy) {
         StockFilter filter = repository.findByIdAndMemberId(id, memberId)
                 .orElseThrow(() -> new NoSuchElementException("STOCK_FILTER_NOT_FOUND"));
-        filter.update(name, description, tagConditions, stockConditions, numericConditions, updatedBy);
+        filter.update(name, description, tagConditions, stockConditions, numericConditions,
+                namePatternConditions, updatedBy);
         try {
             repository.flush();
         } catch (DataIntegrityViolationException e) {

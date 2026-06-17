@@ -38,17 +38,17 @@ public class JwtProvider {
     }
 
     /**
-     * 회원 정보·권한·기능을 담은 access 토큰을 생성한다.
+     * 회원 정보·권한·capability를 담은 access 토큰을 생성한다.
      */
     public String generateAccessToken(Long memberId, String username, String name, String role,
-                                      boolean mustChangePassword, Set<String> features) {
+                                      boolean mustChangePassword, Set<String> capabilities) {
         return Jwts.builder()
                 .subject(String.valueOf(memberId))
                 .claim("tokenType", TOKEN_TYPE_ACCESS)
                 .claim("username", username)
                 .claim("name", name)
                 .claim("role", role)
-                .claim("features", features == null ? List.of() : List.copyOf(features))
+                .claim("capabilities", capabilities == null ? List.of() : List.copyOf(capabilities))
                 .claim("mustChangePassword", mustChangePassword)
                 .issuedAt(new Date())
                 .expiration(new Date(System.currentTimeMillis() + accessExpirationMs))
@@ -85,8 +85,12 @@ public class JwtProvider {
         return Boolean.TRUE.equals(getClaims(token).get("mustChangePassword", Boolean.class));
     }
 
-    public Set<String> extractFeatures(String token) {
-        Object raw = getClaims(token).get("features");
+    public Set<String> extractCapabilities(String token) {
+        return extractStringSet(token, "capabilities");
+    }
+
+    private Set<String> extractStringSet(String token, String claim) {
+        Object raw = getClaims(token).get(claim);
         if (raw instanceof List<?> list) {
             return list.stream().map(String::valueOf).collect(Collectors.toUnmodifiableSet());
         }

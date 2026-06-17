@@ -56,9 +56,11 @@ interface BaseCondition {
   negated: boolean;
 }
 
+// 거래일 오프셋: 0=기준일, 양수=미래, 음수=과거. 미지정 시 0.
 export interface IndicatorValueCondition extends BaseCondition {
   conditionType: "INDICATOR_VALUE";
   indicator: IndicatorType;
+  offset?: number;
   operator: CompareOp;
   value: number;
 }
@@ -66,6 +68,7 @@ export interface IndicatorValueCondition extends BaseCondition {
 export interface IndicatorRangeCondition extends BaseCondition {
   conditionType: "INDICATOR_RANGE";
   indicator: IndicatorType;
+  offset?: number;
   minValue: number;
   minInclusive: boolean;
   maxValue: number;
@@ -75,13 +78,16 @@ export interface IndicatorRangeCondition extends BaseCondition {
 export interface IndicatorCrossCondition extends BaseCondition {
   conditionType: "INDICATOR_CROSS";
   leftIndicator: IndicatorType;
+  leftOffset?: number;
   operator: CompareOp;
   rightIndicator: IndicatorType;
+  rightOffset?: number;
 }
 
 export interface PriceValueCondition extends BaseCondition {
   conditionType: "PRICE_VALUE";
   priceField: PriceField;
+  offset?: number;
   operator: CompareOp;
   value: number;
 }
@@ -89,6 +95,7 @@ export interface PriceValueCondition extends BaseCondition {
 export interface PriceRangeCondition extends BaseCondition {
   conditionType: "PRICE_RANGE";
   priceField: PriceField;
+  offset?: number;
   minValue: number;
   minInclusive: boolean;
   maxValue: number;
@@ -97,12 +104,14 @@ export interface PriceRangeCondition extends BaseCondition {
 
 export interface VolumeValueCondition extends BaseCondition {
   conditionType: "VOLUME_VALUE";
+  offset?: number;
   operator: CompareOp;
   value: number;
 }
 
 export interface VolumeRangeCondition extends BaseCondition {
   conditionType: "VOLUME_RANGE";
+  offset?: number;
   minValue: number;
   minInclusive: boolean;
   maxValue: number;
@@ -112,8 +121,10 @@ export interface VolumeRangeCondition extends BaseCondition {
 export interface PriceVsIndicatorCondition extends BaseCondition {
   conditionType: "PRICE_VS_INDICATOR";
   priceField: PriceField;
+  leftOffset?: number;
   operator: CompareOp;
   indicator: IndicatorType;
+  rightOffset?: number;
 }
 
 export interface MarketFilterCondition extends BaseCondition {

@@ -43,6 +43,8 @@ public final class FilterEvaluator {
     }
 
     private static Double resolve(FilterOperand operand, EvalContext ctx) {
+        // 오프셋 비교는 SQL self-join(push-down) 전용 — 인메모리 폴백은 단일 행만 보므로 미지원.
+        if (operand.offset() != 0) return null;
         return switch (operand) {
             case IndicatorOperand i -> ctx.indicators() == null ? null : ctx.indicators().get(i.type());
             case PriceOperand p -> price(p.field(), ctx);

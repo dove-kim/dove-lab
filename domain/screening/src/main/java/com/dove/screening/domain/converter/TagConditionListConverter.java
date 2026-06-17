@@ -16,7 +16,7 @@ import java.util.List;
 @Converter
 public class TagConditionListConverter implements AttributeConverter<List<TagCondition>, String> {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = com.dove.jpa.JsonSupport.MAPPER;
     private static final TypeReference<List<TagCondition>> TYPE = new TypeReference<>() {};
 
     @Override

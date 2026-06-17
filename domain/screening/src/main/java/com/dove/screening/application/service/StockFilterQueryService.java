@@ -3,6 +3,7 @@ package com.dove.screening.application.service;
 import com.dove.market.domain.enums.MarketType;
 import com.dove.screening.domain.entity.StockFilter;
 import com.dove.screening.domain.repository.StockFilterRepository;
+import com.dove.screening.domain.value.NamePatternCondition;
 import com.dove.screening.domain.value.NumericCondition;
 import com.dove.screening.domain.value.TagCondition;
 import com.dove.screening.infrastructure.repository.StockTagFilterRepository;
@@ -41,7 +42,8 @@ public class StockFilterQueryService {
     public Set<String> resolveTickers(Long stockFilterId, List<MarketType> markets) {
         return repository.findById(stockFilterId)
                 .map(sf -> stockTagFilterRepository.findTickers(
-                        sf.getTagConditions(), sf.getNumericConditions(), sf.getStockConditions(), markets))
+                        sf.getTagConditions(), sf.getNumericConditions(), sf.getStockConditions(),
+                        sf.getNamePatternConditions(), markets))
                 .orElse(Set.of());
     }
 
@@ -84,11 +86,13 @@ public class StockFilterQueryService {
      */
     public Set<String> previewByTagConditions(List<TagCondition> tagConds,
                                               List<NumericCondition> numConds,
+                                              List<NamePatternCondition> nameConds,
                                               List<MarketType> markets) {
         List<MarketType> targets = (markets != null && !markets.isEmpty())
                 ? markets
                 : MarketType.KRX_MARKETS;
         return stockTagFilterRepository.findTickers(
-                tagConds, numConds != null ? numConds : List.of(), List.of(), targets);
+                tagConds, numConds != null ? numConds : List.of(), List.of(),
+                nameConds != null ? nameConds : List.of(), targets);
     }
 }
