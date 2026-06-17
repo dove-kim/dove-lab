@@ -3,12 +3,14 @@ package com.dove.screening.infrastructure.repository;
 import com.dove.market.domain.enums.MarketType;
 import com.dove.stock.domain.enums.NumericField;
 import com.dove.stock.domain.enums.TagField;
+import com.dove.screening.domain.value.NamePatternCondition;
 import com.dove.screening.domain.value.NumericCondition;
 import com.dove.screening.domain.value.StockCondition;
 import com.dove.screening.domain.value.TagCondition;
 import com.dove.stock.domain.entity.QStock;
 import com.dove.stock.domain.entity.QStockDetail;
 import com.querydsl.core.BooleanBuilder;
+import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.NumberPath;
 import com.querydsl.core.types.dsl.StringExpression;
 import com.querydsl.jpa.impl.JPAQueryFactory;
@@ -42,6 +44,18 @@ public class StockTagFilterRepository {
                                    List<NumericCondition> numConds,
                                    List<StockCondition> stockConds,
                                    List<MarketType> markets) {
+        return findTickers(tagConds, numConds, stockConds, List.of(), markets);
+    }
+
+    /**
+     * 태그·수치·이름패턴·종목 조건과 시장 제한을 모두 적용해 통과 ticker 집합을 반환한다.
+     * 모든 조건이 비어 있으면 시장 제한만 적용한 전체 종목을 반환한다.
+     */
+    public Set<String> findTickers(List<TagCondition> tagConds,
+                                   List<NumericCondition> numConds,
+                                   List<StockCondition> stockConds,
+                                   List<NamePatternCondition> nameConds,
+                                   List<MarketType> markets) {
         QStock stock = QStock.stock;
         QStockDetail detail = QStockDetail.stockDetail;
         BooleanBuilder where = new BooleanBuilder();
@@ -52,6 +66,7 @@ public class StockTagFilterRepository {
 
         applyTagConditions(where, tagConds, stock, detail);
         applyNumericConditions(where, numConds, detail);
+        applyNamePatternConditions(where, nameConds, detail);
 
         Set<String> result = new HashSet<>(
                 queryFactory.select(stock.ticker)
@@ -97,6 +112,42 @@ public class StockTagFilterRepository {
             if (c.min() != null) where.and(path.goe(c.min()));
             if (c.max() != null) where.and(path.loe(c.max()));
         }
+    }
+
+    /**
+     * INCLUDE: 패턴 중 하나라도 종목명에 포함(OR). EXCLUDE: 패턴 포함 종목 제거(NULL 보존).
+     */
+    private void applyNamePatternConditions(BooleanBuilder where, List<NamePatternCondition> nameConds,
+                                            QStockDetail detail) {
+        if (nameConds == null || nameConds.isEmpty()) return;
+
+        BooleanBuilder includeOr = new BooleanBuilder();
+        boolean hasInclude = false;
+        for (NamePatternCondition c : nameConds) {
+            if (INCLUDE.equals(c.mode())) {
+                includeOr.or(nameMatches(detail, c));
+                hasInclude = true;
+            }
+        }
+        if (hasInclude) where.and(includeOr);
+
+        for (NamePatternCondition c : nameConds) {
+            if (EXCLUDE.equals(c.mode())) {
+                where.and(detail.prdtAbrvName.isNull().or(nameMatches(detail, c).not()));
+            }
+        }
+    }
+
+    /**
+     * 매칭 방식(CONTAINS/STARTS_WITH/ENDS_WITH)에 따른 종목명 술어. 기본은 포함.
+     */
+    private BooleanExpression nameMatches(QStockDetail detail, NamePatternCondition c) {
+        StringExpression name = detail.prdtAbrvName;
+        return switch (c.matchType()) {
+            case "STARTS_WITH" -> name.startsWith(c.pattern());
+            case "ENDS_WITH" -> name.endsWith(c.pattern());
+            default -> name.contains(c.pattern());
+        };
     }
 
     /**

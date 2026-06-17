@@ -10,7 +10,7 @@ import com.dove.user.application.service.MemberProfileCommandService;
 import com.dove.user.application.service.MemberProfileQueryService;
 import com.dove.user.domain.entity.MemberProfile;
 import com.dove.auth.domain.enums.MemberRole;
-import com.dove.userfeature.application.service.MemberFeatureGrantQueryService;
+import com.dove.userfeature.application.service.MemberCapabilityGrantQueryService;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -43,7 +43,7 @@ class AuthServiceTest {
     @Mock MemberProfileQueryService memberProfileQueryService;
     @Mock MemberProfileCommandService memberProfileCommandService;
     @Mock InviteCodeService inviteCodeService;
-    @Mock MemberFeatureGrantQueryService memberFeatureGrantQueryService;
+    @Mock MemberCapabilityGrantQueryService memberCapabilityGrantQueryService;
     @Mock JwtProvider jwtProvider;
     @Mock PasswordEncoder passwordEncoder;
 
@@ -68,7 +68,7 @@ class AuthServiceTest {
             given(credentialService.findByUsername("test")).willReturn(Optional.of(credential));
             given(passwordEncoder.matches("1234", "encoded")).willReturn(true);
             given(memberProfileQueryService.findById(1L)).willReturn(Optional.of(profile));
-            given(memberFeatureGrantQueryService.findActiveFeatureCodes(1L)).willReturn(Set.of());
+            given(memberCapabilityGrantQueryService.findGrantedCapabilities(1L)).willReturn(Set.of());
             given(jwtProvider.generateAccessToken(anyLong(), anyString(), anyString(), anyString(), anyBoolean(), any()))
                     .willReturn("jwt-access");
             given(jwtProvider.generateRefreshToken(anyLong())).willReturn("jwt-refresh");
@@ -137,7 +137,7 @@ class AuthServiceTest {
             given(memberProfileQueryService.existsByEmail("new@t.com")).willReturn(false);
             given(passwordEncoder.encode("pass1234")).willReturn("encoded");
             given(memberProfileCommandService.save(any())).willReturn(saved);
-            given(memberFeatureGrantQueryService.findActiveFeatureCodes(42L)).willReturn(Set.of());
+            given(memberCapabilityGrantQueryService.findGrantedCapabilities(42L)).willReturn(Set.of());
             given(jwtProvider.generateAccessToken(anyLong(), anyString(), anyString(), anyString(), anyBoolean(), any()))
                     .willReturn("jwt-access");
             given(jwtProvider.generateRefreshToken(anyLong())).willReturn("jwt-refresh");

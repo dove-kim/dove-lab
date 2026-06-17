@@ -3,11 +3,11 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useState, useEffect } from "react";
-import type { UserMenu } from "@/types/user";
+import { hasCapability } from "@/utils/capability";
 
 interface Props {
   role: string;
-  menu: UserMenu;
+  capabilities: string[];
   mobileOpen: boolean;
   onMobileClose: () => void;
 }
@@ -18,11 +18,30 @@ interface NavItem {
   icon: React.ReactNode;
 }
 
-interface FeatureGroup {
-  featureCode: string;
+/** capability로 게이트되는 메뉴 항목. capability 없으면 항상 접근 가능. */
+interface MenuItem extends NavItem {
+  capability?: string;
+  /** 권한 없을 때 정책: LOCK=잠금 표시, HIDE=숨김. 기본 LOCK. */
+  deny?: "LOCK" | "HIDE";
+}
+
+interface MenuGroup {
+  key: string;
   label: string;
   icon: React.ReactNode;
-  subMenus: NavItem[];
+  items: MenuItem[];
+}
+
+interface RenderedItem extends MenuItem {
+  accessible: boolean;
+  locked: boolean;
+}
+
+interface RenderedGroup {
+  key: string;
+  label: string;
+  icon: React.ReactNode;
+  items: RenderedItem[];
 }
 
 const DASHBOARD_ITEM: NavItem = {
@@ -38,95 +57,50 @@ const DASHBOARD_ITEM: NavItem = {
   ),
 };
 
-/** 기능별 메타 정보 (아이콘 + 레이블) */
-const FEATURE_META: Record<string, { label: string; icon: React.ReactNode }> = {
-  STOCK_SEARCH: {
-    label: "주식 검색",
-    icon: (
-      <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
-      </svg>
-    ),
-  },
-  STOCK_LEDGER: {
-    label: "주식 장부",
-    icon: (
-      <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2" />
-        <line x1="3" y1="9" x2="21" y2="9" />
-        <line x1="9" y1="21" x2="9" y2="9" />
-      </svg>
-    ),
-  },
-  BUDGET: {
-    label: "가계부",
-    icon: (
-      <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="12" y1="1" x2="12" y2="23" />
-        <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6" />
-      </svg>
-    ),
-  },
-};
+const SEARCH_ICON = (
+  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
+  </svg>
+);
 
-/** 기능별 하위 메뉴 코드 목록 (프론트 기준) */
-const FEATURE_SUB_MENUS: Record<string, string[]> = {
-  STOCK_SEARCH: ["STOCK_SEARCH_MAIN", "STOCK_VIEW_ALL", "STOCK_SEARCH_FILTER", "STOCK_FILTERS"],
-  STOCK_LEDGER: [],
-  BUDGET: [],
-};
+const FILTER_ICON = (
+  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
+  </svg>
+);
 
-/** 하위 메뉴 코드 → NavItem */
-const SUB_MENU_NAV: Record<string, NavItem> = {
-  STOCK_SEARCH_MAIN: {
-    href: "/stock-search",
-    label: "종목 검색",
-    icon: (
-      <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <circle cx="11" cy="11" r="8" /><line x1="21" y1="21" x2="16.65" y2="16.65" />
-      </svg>
-    ),
-  },
-  STOCK_VIEW_ALL: {
-    href: "/all-stocks",
-    label: "모든 종목",
-    icon: (
-      <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
-        <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
-      </svg>
-    ),
-  },
-  STOCK_SEARCH_FILTER: {
-    href: "/search-filters",
-    label: "필터 관리",
-    icon: (
-      <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <line x1="4" y1="6" x2="20" y2="6" /><line x1="8" y1="12" x2="16" y2="12" /><line x1="11" y1="18" x2="13" y2="18" />
-      </svg>
-    ),
-  },
-  STOCK_FILTERS: {
-    href: "/stock-filters",
-    label: "종목 필터",
-    icon: (
-      <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-        <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="9" x2="15" y2="9" /><line x1="9" y1="12" x2="15" y2="12" /><line x1="9" y1="15" x2="12" y2="15" />
-      </svg>
-    ),
-  },
-};
+const GRID_ICON = (
+  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="9" y1="9" x2="15" y2="9" /><line x1="9" y1="12" x2="15" y2="12" /><line x1="9" y1="15" x2="12" y2="15" />
+  </svg>
+);
 
-const SETTINGS_ITEM: NavItem = {
-  href: "/settings/menu",
-  label: "메뉴 설정",
-  icon: (
-    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <circle cx="12" cy="12" r="3" />
-      <path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z" />
-    </svg>
-  ),
-};
+const STOCK_GROUP_ICON = (
+  <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
+  </svg>
+);
+
+const LOCK_ICON = (
+  <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="3" y="11" width="18" height="11" rx="2" />
+    <path d="M7 11V7a5 5 0 0 1 10 0v4" />
+  </svg>
+);
+
+/** 메뉴 매니페스트(프론트 소유). 노출/잠금은 capability로 결정한다. */
+const MENU_GROUPS: MenuGroup[] = [
+  {
+    key: "STOCK",
+    label: "주식",
+    icon: STOCK_GROUP_ICON,
+    items: [
+      { href: "/stock-search", label: "종목 조회", icon: SEARCH_ICON, capability: "STOCK_VIEW", deny: "LOCK" },
+      { href: "/search-filters", label: "필터 관리", icon: FILTER_ICON, capability: "STOCK_SEARCH", deny: "LOCK" },
+      { href: "/stock-filters", label: "종목 필터", icon: GRID_ICON, capability: "STOCK_SEARCH", deny: "LOCK" },
+    ],
+  },
+];
 
 const ADMIN_USER_ITEM: NavItem = {
   href: "/admin/users",
@@ -159,29 +133,6 @@ const ROOT_INVITE_ITEM: NavItem = {
     <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
       <rect x="2" y="7" width="20" height="14" rx="2" />
       <path d="M16 3l-4 4-4-4" />
-    </svg>
-  ),
-};
-
-const ROOT_STOCK_LIST_ITEM: NavItem = {
-  href: "/all-stocks",
-  label: "주식 종목 리스트",
-  icon: (
-    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
-      <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
-    </svg>
-  ),
-};
-
-const ROOT_STOCK_FILTERS_ITEM: NavItem = {
-  href: "/stock-filters",
-  label: "종목 필터",
-  icon: (
-    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-      <line x1="4" y1="6" x2="20" y2="6" />
-      <line x1="8" y1="12" x2="16" y2="12" />
-      <line x1="11" y1="18" x2="13" y2="18" />
     </svg>
   ),
 };
@@ -222,7 +173,7 @@ const ROOT_STOCK_TAGS_ITEM: NavItem = {
 
 const STORAGE_KEY = "sidebar-collapsed";
 
-export default function Sidebar({ role, menu, mobileOpen, onMobileClose }: Props) {
+export default function Sidebar({ role, capabilities, mobileOpen, onMobileClose }: Props) {
   const pathname = usePathname();
   const [collapsed, setCollapsed] = useState(false);
   const isAdmin = role === "ADMIN" || role === "ROOT";
@@ -245,21 +196,16 @@ export default function Sidebar({ role, menu, mobileOpen, onMobileClose }: Props
     });
   }
 
-  // 2계층 기능 그룹 빌드 (모듈 무시, 기능 단위로 평탄화)
-  const featureGroups: FeatureGroup[] = [];
-  const sortedModules = [...menu.modules].sort((a, b) => a.displayOrder - b.displayOrder);
-  for (const mod of sortedModules) {
-    const sortedFeatures = [...mod.features].sort((a, b) => a.displayOrder - b.displayOrder);
-    for (const feat of sortedFeatures) {
-      if (feat.hidden) continue;
-      const meta = FEATURE_META[feat.featureCode];
-      if (!meta) continue;
-      const subMenuItems = (FEATURE_SUB_MENUS[feat.featureCode] ?? [])
-        .map((code) => SUB_MENU_NAV[code])
-        .filter(Boolean);
-      featureGroups.push({ featureCode: feat.featureCode, ...meta, subMenus: subMenuItems });
-    }
-  }
+  // 매니페스트 → capability 기준으로 접근/잠금/숨김 계산. HIDE는 제외, LOCK은 잠금 표시.
+  const groups: RenderedGroup[] = MENU_GROUPS.map((group) => {
+    const items: RenderedItem[] = group.items
+      .map((item) => {
+        const accessible = !item.capability || hasCapability(capabilities, item.capability);
+        return { ...item, accessible, locked: !accessible && item.deny !== "HIDE" };
+      })
+      .filter((item) => item.accessible || item.deny !== "HIDE");
+    return { ...group, items };
+  }).filter((group) => group.items.length > 0);
 
   const showLabel = mobileOpen || !collapsed;
 
@@ -305,25 +251,15 @@ export default function Sidebar({ role, menu, mobileOpen, onMobileClose }: Props
         <>
           <NavLink item={DASHBOARD_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
 
-          {featureGroups.map((group) =>
-            group.subMenus.length === 0 ? (
-              <NavLink
-                key={group.featureCode}
-                item={{ href: "#", label: group.label, icon: group.icon }}
-                pathname={pathname}
-                collapsed={collapsed}
-                mobileOpen={mobileOpen}
-              />
-            ) : (
-              <FeatureSection
-                key={group.featureCode}
-                group={group}
-                pathname={pathname}
-                collapsed={collapsed}
-                showLabel={showLabel}
-              />
-            )
-          )}
+          {groups.map((group) => (
+            <MenuSection
+              key={group.key}
+              group={group}
+              pathname={pathname}
+              collapsed={collapsed}
+              showLabel={showLabel}
+            />
+          ))}
 
           {isAdmin && (
             <>
@@ -351,43 +287,42 @@ export default function Sidebar({ role, menu, mobileOpen, onMobileClose }: Props
         </>
 
         <div className="flex-1" />
-
-        {/* 메뉴 설정 — 하단 고정 */}
-        <div className="border-t border-white/10 mx-1 mt-1 pt-1">
-          <NavLink item={SETTINGS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
-        </div>
       </nav>
     </aside>
   );
 }
 
-function FeatureSection({
+function MenuSection({
   group,
   pathname,
   collapsed,
   showLabel,
 }: {
-  group: FeatureGroup;
+  group: RenderedGroup;
   pathname: string;
   collapsed: boolean;
   showLabel: boolean;
 }) {
-  const isAnyActive = group.subMenus.some((s) => pathname === s.href);
+  const isAnyActive = group.items.some((s) => pathname === s.href);
 
   if (collapsed && !showLabel) {
-    // 접힌 상태: 첫 번째 하위 메뉴 아이콘만 표시
+    // 접힌 상태: 하위 항목 아이콘만 표시
     return (
       <>
-        {group.subMenus.map((sub) => (
-          <NavLink key={sub.href} item={sub} pathname={pathname} collapsed={collapsed} mobileOpen={false} />
-        ))}
+        {group.items.map((sub) =>
+          sub.locked ? (
+            <LockedRow key={sub.href} item={sub} collapsed showLabel={false} />
+          ) : (
+            <NavLink key={sub.href} item={sub} pathname={pathname} collapsed={collapsed} mobileOpen={false} />
+          )
+        )}
       </>
     );
   }
 
   return (
     <div>
-      {/* 기능 섹션 헤더 */}
+      {/* 그룹 헤더 */}
       <div
         className={`flex items-center gap-3 px-2.5 py-2 rounded-lg text-xs font-semibold uppercase tracking-wide ${
           isAnyActive ? "text-indigo-300" : "text-slate-500"
@@ -396,23 +331,48 @@ function FeatureSection({
         {group.icon}
         {showLabel && <span className="truncate">{group.label}</span>}
       </div>
-      {/* 하위 메뉴 */}
+      {/* 하위 항목 */}
       <div className="ml-2 pl-3 border-l border-white/10 flex flex-col gap-0.5">
-        {group.subMenus.map((sub) => (
-          <Link
-            key={sub.href}
-            href={sub.href}
-            className={`flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition cursor-pointer ${
-              pathname === sub.href
-                ? "bg-indigo-600/25 text-indigo-300 border border-indigo-500/30"
-                : "text-slate-400 hover:text-white hover:bg-white/5"
-            }`}
-          >
-            {sub.icon}
-            {showLabel && <span className="truncate">{sub.label}</span>}
-          </Link>
-        ))}
+        {group.items.map((sub) =>
+          sub.locked ? (
+            <LockedRow key={sub.href} item={sub} collapsed={false} showLabel={showLabel} />
+          ) : (
+            <Link
+              key={sub.href}
+              href={sub.href}
+              className={`flex items-center gap-2.5 px-2 py-2 rounded-lg text-sm transition cursor-pointer ${
+                pathname === sub.href
+                  ? "bg-indigo-600/25 text-indigo-300 border border-indigo-500/30"
+                  : "text-slate-400 hover:text-white hover:bg-white/5"
+              }`}
+            >
+              {sub.icon}
+              {showLabel && <span className="truncate">{sub.label}</span>}
+            </Link>
+          )
+        )}
       </div>
+    </div>
+  );
+}
+
+function LockedRow({
+  item,
+  collapsed,
+  showLabel,
+}: {
+  item: RenderedItem;
+  collapsed: boolean;
+  showLabel: boolean;
+}) {
+  return (
+    <div
+      title="권한이 없습니다"
+      className={`flex items-center gap-2.5 ${collapsed ? "px-2.5 py-2.5" : "px-2 py-2"} rounded-lg text-sm text-slate-600 cursor-not-allowed select-none`}
+    >
+      {item.icon}
+      {showLabel && <span className="truncate flex-1">{item.label}</span>}
+      {showLabel && LOCK_ICON}
     </div>
   );
 }

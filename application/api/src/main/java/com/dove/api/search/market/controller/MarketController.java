@@ -1,6 +1,8 @@
 package com.dove.api.search.market.controller;
 
+import com.dove.api.global.security.authorization.RequireCapability;
 import com.dove.api.search.market.dto.TradingDaysResponse;
+import com.dove.userfeature.domain.capability.Capability;
 import com.dove.market.domain.enums.MarketType;
 import com.dove.stock.application.service.StockPriceQueryService;
 import com.dove.stock.domain.enums.PriceType;
@@ -19,6 +21,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/market")
 @RequiredArgsConstructor
+@RequireCapability(Capability.STOCK_VIEW)
 public class MarketController {
 
     private static final List<MarketType> ALL_MARKETS = MarketType.KRX_MARKETS;
@@ -38,5 +41,13 @@ public class MarketController {
                 .toList();
         String latestDate = dates.isEmpty() ? today.toString() : dates.get(0);
         return new TradingDaysResponse(latestDate, dates);
+    }
+
+    /**
+     * 시스템이 지원하는 시장 목록(KRX)을 반환한다.
+     */
+    @GetMapping("/available")
+    public List<String> getAvailableMarkets() {
+        return ALL_MARKETS.stream().map(MarketType::name).toList();
     }
 }

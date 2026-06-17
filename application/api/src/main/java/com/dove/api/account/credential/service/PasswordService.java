@@ -48,6 +48,6 @@ public class PasswordService {
 
         return jwtProvider.generateAccessToken(
                 profile.getId(), credential.getUsername(), profile.getName(),
-                profile.getRole().name(), false, user.grantedFeatures());
+                profile.getRole().name(), false, user.capabilities());
     }
 }

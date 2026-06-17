@@ -10,8 +10,8 @@ import com.dove.user.application.service.MemberProfileCommandService;
 import com.dove.user.application.service.MemberProfileQueryService;
 import com.dove.user.domain.entity.MemberProfile;
 import com.dove.auth.domain.enums.MemberRole;
-import com.dove.userfeature.application.service.MemberFeatureGrantQueryService;
-import com.dove.userfeature.domain.enums.FeatureCode;
+import com.dove.userfeature.application.service.MemberCapabilityGrantQueryService;
+import com.dove.userfeature.domain.capability.Capability;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.crypto.password.PasswordEncoder;
@@ -34,7 +34,7 @@ public class AuthService {
     private final MemberProfileQueryService memberProfileQueryService;
     private final MemberProfileCommandService memberProfileCommandService;
     private final InviteCodeService inviteCodeService;
-    private final MemberFeatureGrantQueryService memberFeatureGrantQueryService;
+    private final MemberCapabilityGrantQueryService memberCapabilityGrantQueryService;
     private final JwtProvider jwtProvider;
     private final PasswordEncoder passwordEncoder;
 
@@ -63,10 +63,10 @@ public class AuthService {
         credential.recordSuccessfulLogin();
         credentialService.save(credential);
 
-        Set<String> features = loadFeatureNames(profile.getId(), profile.getRole());
+        Set<String> capabilities = loadCapabilityNames(profile.getId(), profile.getRole());
         String accessToken = jwtProvider.generateAccessToken(
                 profile.getId(), credential.getUsername(), profile.getName(),
-                profile.getRole().name(), mustChangePassword, features);
+                profile.getRole().name(), mustChangePassword, capabilities);
         String refreshToken = jwtProvider.generateRefreshToken(profile.getId());
         return new LoginResult(accessToken, refreshToken, profile.getId(), credential.getUsername(),
                 profile.getName(), profile.getRole(), rememberMe, mustChangePassword);
@@ -93,9 +93,9 @@ public class AuthService {
                 Credential.create(profile.getId(), username, passwordEncoder.encode(password)));
         inviteCodeService.use(code);
 
-        Set<String> features = loadFeatureNames(profile.getId(), profile.getRole());
+        Set<String> capabilities = loadCapabilityNames(profile.getId(), profile.getRole());
         String accessToken = jwtProvider.generateAccessToken(
-                profile.getId(), username, name, profile.getRole().name(), false, features);
+                profile.getId(), username, name, profile.getRole().name(), false, capabilities);
         String refreshToken = jwtProvider.generateRefreshToken(profile.getId());
         return new LoginResult(accessToken, refreshToken, profile.getId(), username, name,
                 profile.getRole(), false, false);
@@ -115,23 +115,23 @@ public class AuthService {
         }
         boolean mustChangePassword = credential.isPasswordResetRequired();
 
-        Set<String> features = loadFeatureNames(memberId, profile.getRole());
+        Set<String> capabilities = loadCapabilityNames(memberId, profile.getRole());
         String accessToken = jwtProvider.generateAccessToken(
                 profile.getId(), credential.getUsername(), profile.getName(),
-                profile.getRole().name(), mustChangePassword, features);
+                profile.getRole().name(), mustChangePassword, capabilities);
         String refreshToken = jwtProvider.generateRefreshToken(profile.getId());
         return new LoginResult(accessToken, refreshToken, profile.getId(), credential.getUsername(),
                 profile.getName(), profile.getRole(), false, mustChangePassword);
     }
 
-    private Set<String> loadFeatureNames(Long memberId, MemberRole role) {
+    private Set<String> loadCapabilityNames(Long memberId, MemberRole role) {
         if (role == MemberRole.ROOT) {
-            return Arrays.stream(FeatureCode.values())
-                    .map(FeatureCode::name)
+            return Arrays.stream(Capability.values())
+                    .map(Capability::name)
                     .collect(Collectors.toUnmodifiableSet());
         }
-        return memberFeatureGrantQueryService.findActiveFeatureCodes(memberId).stream()
-                .map(FeatureCode::name)
+        return memberCapabilityGrantQueryService.findGrantedCapabilities(memberId).stream()
+                .map(Capability::name)
                 .collect(Collectors.toUnmodifiableSet());
     }
 }

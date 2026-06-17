@@ -34,7 +34,7 @@ class MarketControllerTest {
         }
 
         @Test
-        @WithApiUser
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("데이터 없어도 200 + latestDate·빈 거래일 배열")
         void shouldReturnTradingDaysWhenAuthenticated() throws Exception {
             mockMvc.perform(get("/market/trading-days"))
@@ -44,7 +44,7 @@ class MarketControllerTest {
         }
 
         @Test
-        @WithApiUser
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("limit 파라미터 지정 200")
         void shouldAcceptLimitParam() throws Exception {
             mockMvc.perform(get("/market/trading-days")

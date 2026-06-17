@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import { cx } from "@/utils/cx";
 import {
   FilterMode,
-  NumericCondition,
+  NameMatchType,
+  NamePatternCondition,
   StockCondition,
   StockFilterResponse,
   StockSummary,
@@ -12,9 +13,10 @@ import {
 } from "@/types/stock-filter";
 import {
   StockTagFieldGroup,
-  StockTagNumericField,
   StockTagsResponse,
 } from "@/types/stock-tag";
+
+const PREVIEW_PAGE_SIZE = 100;
 
 const BOOLEAN_OPTIONS: { value: string; label: string }[] = [
   { value: "Y", label: "예" },
@@ -40,6 +42,13 @@ interface StockListItem {
 /** 한 종목 식별자(시장:코드)를 묶는 키 */
 function stockKey(marketType: string, code: string): string {
   return `${marketType}:${code}`;
+}
+
+/** 이름 패턴 칩에 표시할 문구 (예: "리츠"로 끝). */
+function namePhrase(pattern: string, matchType: NameMatchType): string {
+  if (matchType === "STARTS_WITH") return `"${pattern}"로 시작`;
+  if (matchType === "ENDS_WITH") return `"${pattern}"로 끝`;
+  return `"${pattern}" 포함`;
 }
 
 /** field 그룹의 첫 선택 값(원문). BOOLEAN은 "Y", 값 없으면 빈 문자열. */
@@ -77,11 +86,11 @@ export default function StockFilterEditor({
   const [tagDraftValue, setTagDraftValue] = useState<string>("");
   const [tagDraftMode, setTagDraftMode] = useState<FilterMode>("INCLUDE");
 
-  // 수치 조건
-  const [numConds, setNumConds] = useState<NumericCondition[]>(initial?.numericConditions ?? []);
-  const [numDraftField, setNumDraftField] = useState<string>("");
-  const [numDraftMin, setNumDraftMin] = useState<string>("");
-  const [numDraftMax, setNumDraftMax] = useState<string>("");
+  // 이름 패턴 조건 (예: "스팩" 제외)
+  const [nameConds, setNameConds] = useState<NamePatternCondition[]>(initial?.namePatternConditions ?? []);
+  const [nameDraftPattern, setNameDraftPattern] = useState<string>("");
+  const [nameDraftMode, setNameDraftMode] = useState<FilterMode>("EXCLUDE");
+  const [nameDraftMatchType, setNameDraftMatchType] = useState<NameMatchType>("CONTAINS");
 
   // 종목 조건 (EXCLUDE = Zone②, INCLUDE = Zone③)
   const initialExcludes = (initial?.stockConditions ?? []).filter((c) => c.mode === "EXCLUDE");
@@ -97,6 +106,8 @@ export default function StockFilterEditor({
   const [allStocks, setAllStocks] = useState<StockListItem[]>([]);
   const [excludeQuery, setExcludeQuery] = useState("");
   const [includeQuery, setIncludeQuery] = useState("");
+  const [previewSort, setPreviewSort] = useState<"name" | "code">("name");
+  const [previewPage, setPreviewPage] = useState(0);
 
   const [error, setError] = useState<string | null>(null);
   const [saving, setSaving] = useState(false);
@@ -126,9 +137,6 @@ export default function StockFilterEditor({
           const first = data.tagFields[0];
           setTagDraftField(first.field);
           setTagDraftValue(firstValueOf(first));
-        }
-        if (data.numericFields.length > 0) {
-          setNumDraftField(data.numericFields[0].field);
         }
       })
       .catch(() => setTags(null));
@@ -163,7 +171,8 @@ export default function StockFilterEditor({
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
           tagConditions: tagConds,
-          numericConditions: numConds,
+          numericConditions: [],
+          namePatternConditions: nameConds,
           markets: selectedMarkets.length > 0 ? selectedMarkets : null,
         }),
       })
@@ -178,7 +187,7 @@ export default function StockFilterEditor({
     return () => {
       if (debounceRef.current) clearTimeout(debounceRef.current);
     };
-  }, [tagConds, numConds, selectedMarkets]);
+  }, [tagConds, nameConds, selectedMarkets]);
 
   // 파생 — 최종 카운트
   const excludeKeys = useMemo(
@@ -208,11 +217,20 @@ export default function StockFilterEditor({
 
   const filteredTagPreview = useMemo(() => {
     const q = excludeQuery.trim().toLowerCase();
-    if (!q) return tagPreviewAvailable.slice(0, 200);
-    return tagPreviewAvailable
-      .filter((s) => s.name.toLowerCase().includes(q) || s.code.includes(q))
-      .slice(0, 200);
-  }, [tagPreviewAvailable, excludeQuery]);
+    const base = q
+      ? tagPreviewAvailable.filter((s) => s.name.toLowerCase().includes(q) || s.code.includes(q))
+      : tagPreviewAvailable;
+    return [...base].sort((a, b) =>
+      previewSort === "name" ? a.name.localeCompare(b.name, "ko") : a.code.localeCompare(b.code)
+    );
+  }, [tagPreviewAvailable, excludeQuery, previewSort]);
+
+  // 조건·검색·정렬이 바뀌면 첫 페이지로
+  useEffect(() => { setPreviewPage(0); }, [excludeQuery, previewSort, tagPreviewAvailable]);
+  const previewTotalPages = Math.max(1, Math.ceil(filteredTagPreview.length / PREVIEW_PAGE_SIZE));
+  const previewSafePage = Math.min(previewPage, previewTotalPages - 1);
+  const pagedPreview = filteredTagPreview.slice(
+    previewSafePage * PREVIEW_PAGE_SIZE, (previewSafePage + 1) * PREVIEW_PAGE_SIZE);
 
   // Zone③ — 태그와 무관 추가 검색
   const filteredAddCandidates = useMemo(() => {
@@ -230,10 +248,6 @@ export default function StockFilterEditor({
   // ── 핸들러 ─────────────────────────────────────────────────────────────
   function fieldGroupOf(field: string): StockTagFieldGroup | undefined {
     return tags?.tagFields.find((f) => f.field === field);
-  }
-
-  function numericFieldOf(field: string): StockTagNumericField | undefined {
-    return tags?.numericFields.find((f) => f.field === field);
   }
 
   function tagValueOptions(field: string): { value: string; label: string }[] {
@@ -263,21 +277,18 @@ export default function StockFilterEditor({
     setTagConds(tagConds.filter((_, i) => i !== idx));
   }
 
-  function handleAddNumeric() {
-    if (readonly || !numDraftField) return;
-    const min = numDraftMin.trim() === "" ? null : Number(numDraftMin);
-    const max = numDraftMax.trim() === "" ? null : Number(numDraftMax);
-    if (min === null && max === null) return;
-    if (min !== null && Number.isNaN(min)) return;
-    if (max !== null && Number.isNaN(max)) return;
-    setNumConds([...numConds, { field: numDraftField, min, max }]);
-    setNumDraftMin("");
-    setNumDraftMax("");
+  function handleAddName() {
+    if (readonly) return;
+    const p = nameDraftPattern.trim();
+    if (!p) return;
+    if (nameConds.some((c) => c.pattern === p && c.mode === nameDraftMode && c.matchType === nameDraftMatchType)) return;
+    setNameConds([...nameConds, { pattern: p, mode: nameDraftMode, matchType: nameDraftMatchType }]);
+    setNameDraftPattern("");
   }
 
-  function handleRemoveNumeric(idx: number) {
+  function handleRemoveName(idx: number) {
     if (readonly) return;
-    setNumConds(numConds.filter((_, i) => i !== idx));
+    setNameConds(nameConds.filter((_, i) => i !== idx));
   }
 
   function handleExclude(s: StockSummary | StockListItem) {
@@ -310,17 +321,6 @@ export default function StockFilterEditor({
     return `${modeLabel} · ${fieldLabel}: ${valLabel}`;
   }
 
-  function numericLabel(c: NumericCondition): string {
-    const fieldLabel = numericFieldOf(c.field)?.label ?? c.field;
-    const min = c.min !== null ? c.min.toLocaleString() : null;
-    const max = c.max !== null ? c.max.toLocaleString() : null;
-    let range: string;
-    if (min !== null && max !== null) range = `${min} ~ ${max}`;
-    else if (min !== null) range = `${min} 이상`;
-    else range = `${max} 이하`;
-    return `${fieldLabel}: ${range}`;
-  }
-
   function nameOf(marketType: string, code: string): string {
     return allStocks.find((s) => s.marketType === marketType && s.code === code)?.name ?? code;
   }
@@ -336,8 +336,8 @@ export default function StockFilterEditor({
 
     const stockConditions: StockCondition[] = [...excludes, ...includes];
     const body = scope === "system"
-      ? { name: name.trim(), description: description.trim() || null, tagConditions: tagConds, numericConditions: numConds, stockConditions, enabled }
-      : { name: name.trim(), description: description.trim() || null, tagConditions: tagConds, numericConditions: numConds, stockConditions };
+      ? { name: name.trim(), description: description.trim() || null, tagConditions: tagConds, numericConditions: [], namePatternConditions: nameConds, stockConditions, enabled }
+      : { name: name.trim(), description: description.trim() || null, tagConditions: tagConds, numericConditions: [], namePatternConditions: nameConds, stockConditions };
 
     try {
       let url: string;
@@ -472,7 +472,7 @@ export default function StockFilterEditor({
               {!readonly && (tags?.tagFields.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-2 items-end">
                   <select
-                    className={cx.select}
+                    className={cx.select + " min-w-[8rem]"}
                     value={tagDraftField}
                     onChange={(e) => handleTagFieldChange(e.target.value)}
                   >
@@ -481,16 +481,21 @@ export default function StockFilterEditor({
                     ))}
                   </select>
                   <select
-                    className={cx.select}
+                    className={cx.select + " min-w-[8rem]"}
                     value={tagDraftValue}
                     onChange={(e) => setTagDraftValue(e.target.value)}
+                    disabled={tagValueOptions(tagDraftField).length === 0}
                   >
-                    {tagValueOptions(tagDraftField).map((o) => (
-                      <option key={o.value} value={o.value}>{o.label}</option>
-                    ))}
+                    {tagValueOptions(tagDraftField).length === 0 ? (
+                      <option value="">값 없음</option>
+                    ) : (
+                      tagValueOptions(tagDraftField).map((o) => (
+                        <option key={o.value} value={o.value}>{o.label}</option>
+                      ))
+                    )}
                   </select>
                   <select
-                    className={cx.select}
+                    className={cx.select + " min-w-[6rem]"}
                     value={tagDraftMode}
                     onChange={(e) => setTagDraftMode(e.target.value as FilterMode)}
                   >
@@ -522,50 +527,54 @@ export default function StockFilterEditor({
               </div>
             </section>
 
-            {/* 수치 조건 */}
+            {/* 이름 패턴 조건 */}
             <section className="space-y-3">
-              <h3 className="text-sm font-semibold text-slate-300">수치 조건</h3>
-              {!readonly && (tags?.numericFields.length ?? 0) > 0 && (
+              <h3 className="text-sm font-semibold text-slate-300">이름 패턴 조건</h3>
+              {!readonly && (
                 <div className="flex flex-wrap gap-2 items-end">
+                  <input
+                    className={cx.input + " flex-1 min-w-40"}
+                    placeholder="예: 스팩"
+                    value={nameDraftPattern}
+                    onChange={(e) => setNameDraftPattern(e.target.value)}
+                    onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddName(); } }}
+                  />
                   <select
                     className={cx.select}
-                    value={numDraftField}
-                    onChange={(e) => setNumDraftField(e.target.value)}
+                    value={nameDraftMatchType}
+                    onChange={(e) => setNameDraftMatchType(e.target.value as NameMatchType)}
                   >
-                    {tags!.numericFields.map((f) => (
-                      <option key={f.field} value={f.field}>{f.label}</option>
-                    ))}
+                    <option value="CONTAINS">포함</option>
+                    <option value="STARTS_WITH">시작</option>
+                    <option value="ENDS_WITH">끝</option>
                   </select>
-                  <input
-                    type="number"
-                    className={cx.input + " w-32"}
-                    placeholder="이상(min)"
-                    value={numDraftMin}
-                    onChange={(e) => setNumDraftMin(e.target.value)}
-                  />
-                  <span className="text-slate-500">~</span>
-                  <input
-                    type="number"
-                    className={cx.input + " w-32"}
-                    placeholder="이하(max)"
-                    value={numDraftMax}
-                    onChange={(e) => setNumDraftMax(e.target.value)}
-                  />
-                  <button onClick={handleAddNumeric} className={cx.btnPrimary}>+ 추가</button>
+                  <select
+                    className={cx.select}
+                    value={nameDraftMode}
+                    onChange={(e) => setNameDraftMode(e.target.value as FilterMode)}
+                  >
+                    <option value="INCLUDE">포함(허용)</option>
+                    <option value="EXCLUDE">제외</option>
+                  </select>
+                  <button onClick={handleAddName} className={cx.btnPrimary}>+ 추가</button>
                 </div>
               )}
               <div className="flex flex-wrap gap-2">
-                {numConds.length === 0 && (
-                  <div className="text-xs text-slate-500">수치 조건이 없으면 제한하지 않습니다.</div>
+                {nameConds.length === 0 && (
+                  <div className="text-xs text-slate-500">종목명에 패턴이 포함된 종목을 포함/제외합니다 (예: &quot;스팩&quot; 제외).</div>
                 )}
-                {numConds.map((c, idx) => (
+                {nameConds.map((c, idx) => (
                   <span
                     key={idx}
-                    className="inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs border bg-amber-600/15 text-amber-200 border-amber-500/30"
+                    className={`inline-flex items-center gap-2 px-3 py-1.5 rounded-lg text-xs border ${
+                      c.mode === "INCLUDE"
+                        ? "bg-indigo-600/15 text-indigo-200 border-indigo-500/30"
+                        : "bg-rose-600/15 text-rose-200 border-rose-500/30"
+                    }`}
                   >
-                    {numericLabel(c)}
+                    {c.mode === "INCLUDE" ? "포함" : "제외"} · 이름 {namePhrase(c.pattern, c.matchType)}
                     {!readonly && (
-                      <button onClick={() => handleRemoveNumeric(idx)} className="hover:text-white">×</button>
+                      <button onClick={() => handleRemoveName(idx)} className="hover:text-white">×</button>
                     )}
                   </span>
                 ))}
@@ -697,13 +706,23 @@ export default function StockFilterEditor({
                   })}
                 </div>
               )}
-              <input
-                className={cx.input}
-                placeholder="종목명/코드 검색"
-                value={excludeQuery}
-                onChange={(e) => setExcludeQuery(e.target.value)}
-                disabled={readonly}
-              />
+              <div className="flex items-center gap-2">
+                <input
+                  className={cx.input + " flex-1"}
+                  placeholder="종목명/코드 검색"
+                  value={excludeQuery}
+                  onChange={(e) => setExcludeQuery(e.target.value)}
+                  disabled={readonly}
+                />
+                <button
+                  type="button"
+                  onClick={() => setPreviewSort((v) => (v === "name" ? "code" : "name"))}
+                  className={cx.btnToggleOff + " flex-shrink-0 whitespace-nowrap"}
+                  title="정렬 전환"
+                >
+                  {previewSort === "name" ? "이름순" : "코드순"}
+                </button>
+              </div>
             </div>
             <div className="flex-1 overflow-y-auto px-3 py-2">
               {tagConds.length === 0 && tagPreview.length === 0 && !previewLoading && (
@@ -716,7 +735,7 @@ export default function StockFilterEditor({
                   해당하는 종목이 없습니다
                 </div>
               )}
-              {filteredTagPreview.map((s) => (
+              {pagedPreview.map((s) => (
                 <div
                   key={stockKey(s.marketType, s.code)}
                   className="flex items-center justify-between px-2 py-1.5 hover:bg-white/5 rounded text-sm"
@@ -736,12 +755,20 @@ export default function StockFilterEditor({
                   )}
                 </div>
               ))}
-              {tagPreviewAvailable.length > 200 && (
-                <div className="text-xs text-slate-500 px-2 py-2 text-center">
-                  상위 200건만 표시 — 검색으로 좁히세요
-                </div>
-              )}
             </div>
+            {filteredTagPreview.length > PREVIEW_PAGE_SIZE && (
+              <div className="flex items-center justify-between gap-2 px-3 py-2 border-t border-white/10 text-xs text-slate-400">
+                <button type="button" disabled={previewSafePage === 0}
+                  onClick={() => setPreviewPage((p) => Math.max(0, p - 1))}
+                  className={cx.btnToggleOff + " disabled:opacity-30 disabled:cursor-not-allowed"}>이전</button>
+                <span>
+                  {(previewSafePage * PREVIEW_PAGE_SIZE + 1).toLocaleString()}–{Math.min((previewSafePage + 1) * PREVIEW_PAGE_SIZE, filteredTagPreview.length).toLocaleString()} / {filteredTagPreview.length.toLocaleString()}건
+                </span>
+                <button type="button" disabled={previewSafePage >= previewTotalPages - 1}
+                  onClick={() => setPreviewPage((p) => Math.min(previewTotalPages - 1, p + 1))}
+                  className={cx.btnToggleOff + " disabled:opacity-30 disabled:cursor-not-allowed"}>다음</button>
+              </div>
+            )}
           </div>
         </div>
 

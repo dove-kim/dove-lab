@@ -52,7 +52,7 @@ class StockFilterControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("생성 전 빈 목록")
         void shouldReturnEmptyPersonalFiltersWhenNone() throws Exception {
             mockMvc.perform(get("/stock-filters/personal"))
@@ -67,7 +67,7 @@ class StockFilterControllerTest {
     class CreatePersonalFilter {
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("201 생성")
         void shouldCreatePersonalFilterWhenValid() throws Exception {
             mockMvc.perform(post("/stock-filters/personal")
@@ -80,7 +80,7 @@ class StockFilterControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("name 누락 시 400")
         void shouldReturn400WhenNameMissing() throws Exception {
             mockMvc.perform(post("/stock-filters/personal")
@@ -92,7 +92,7 @@ class StockFilterControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("이름 중복 시 409")
         void shouldReturn409WhenNameDuplicate() throws Exception {
             stockFilterCommandService.createPersonal(MEMBER_ID, "중복이름", null, List.of(), List.of(), List.of(), "tester");
@@ -111,7 +111,7 @@ class StockFilterControllerTest {
     class UpdatePersonalFilter {
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("없는 id면 404")
         void shouldReturn404WhenUpdatingNonExistent() throws Exception {
             mockMvc.perform(put("/stock-filters/personal/99999")
@@ -123,7 +123,7 @@ class StockFilterControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("수정 성공")
         void shouldUpdatePersonalFilterWhenExists() throws Exception {
             var filter = stockFilterCommandService.createPersonal(MEMBER_ID, "원래이름", null, List.of(), List.of(), List.of(), "tester");
@@ -143,7 +143,7 @@ class StockFilterControllerTest {
     class DeletePersonalFilter {
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("없는 id면 404")
         void shouldReturn404WhenDeletingNonExistent() throws Exception {
             mockMvc.perform(delete("/stock-filters/personal/99999"))
@@ -151,7 +151,7 @@ class StockFilterControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("삭제 204")
         void shouldDeletePersonalFilterWhenExists() throws Exception {
             var filter = stockFilterCommandService.createPersonal(MEMBER_ID, "삭제할필터", null, List.of(), List.of(), List.of(), "tester");
@@ -166,7 +166,7 @@ class StockFilterControllerTest {
     class ListSystemFilters {
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, role = "USER", features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, role = "USER", capabilities = {"STOCK_SEARCH"})
         @DisplayName("USER는 활성 필터만 조회")
         void shouldReturnOnlyEnabledSystemFiltersForUser() throws Exception {
             stockFilterCommandService.createSystem("활성필터", null, List.of(), List.of(), List.of(), "admin");
@@ -181,7 +181,7 @@ class StockFilterControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, role = "ADMIN", features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, role = "ADMIN", capabilities = {"STOCK_SEARCH"})
         @DisplayName("ADMIN은 비활성 필터도 조회")
         void shouldReturnAllSystemFiltersForAdmin() throws Exception {
             stockFilterCommandService.createSystem("활성필터", null, List.of(), List.of(), List.of(), "admin");
@@ -199,7 +199,7 @@ class StockFilterControllerTest {
     class ListAvailableFilters {
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("활성 시스템 필터 + 본인 개인 필터 반환")
         void shouldReturnAvailableFilters() throws Exception {
             stockFilterCommandService.createSystem("시스템필터", null, List.of(), List.of(), List.of(), "admin");

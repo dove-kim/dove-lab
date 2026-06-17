@@ -56,7 +56,7 @@ class StockAnalystControllerTest {
         }
 
         @Test
-        @WithApiUser(features = {"STOCK_SEARCH"})
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("KIS 응답을 매핑해 반환")
         void shouldReturnInvestOpinionWhenGranted() throws Exception {
             given(analystFetcher.fetchInvestOpinion(eq(TICKER), any(LocalDate.class), any(LocalDate.class)))
@@ -75,7 +75,7 @@ class StockAnalystControllerTest {
         }
 
         @Test
-        @WithApiUser(features = {"STOCK_SEARCH"})
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("KIS 데이터 없으면 빈 배열")
         void shouldReturnEmptyInvestOpinionWhenNoData() throws Exception {
             given(analystFetcher.fetchInvestOpinion(eq(TICKER), any(LocalDate.class), any(LocalDate.class)))
@@ -93,7 +93,7 @@ class StockAnalystControllerTest {
     class GetEstimate {
 
         @Test
-        @WithApiUser(features = {"STOCK_SEARCH"})
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("데이터 없으면 available=false")
         void shouldReturnEmptyEstimateWhenNoData() throws Exception {
             given(analystFetcher.fetchEstimate(TICKER)).willReturn(Optional.empty());

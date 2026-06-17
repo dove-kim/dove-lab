@@ -15,7 +15,7 @@ import java.util.List;
 @Converter
 public class MarketTypeListConverter implements AttributeConverter<List<MarketType>, String> {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = com.dove.jpa.JsonSupport.MAPPER;
 
     @Override
     public String convertToDatabaseColumn(List<MarketType> attribute) {

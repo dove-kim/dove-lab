@@ -8,32 +8,38 @@ import {
   PRICE_FIELD_LABELS,
 } from "@/types/filter";
 
+/** 오프셋 표기: 0/미지정→없음, 음수→"(N일전)", 양수→"(N일후)". */
+function offsetTag(offset?: number): string {
+  if (!offset) return "";
+  return offset < 0 ? `(${-offset}일전)` : `(${offset}일후)`;
+}
+
 export function summarizeCondition(node: ConditionNode): string {
   switch (node.conditionType) {
     case "INDICATOR_VALUE":
-      return `${INDICATOR_LABELS[node.indicator]} ${COMPARE_OP_LABELS[node.operator]} ${node.value}`;
+      return `${INDICATOR_LABELS[node.indicator]}${offsetTag(node.offset)} ${COMPARE_OP_LABELS[node.operator]} ${node.value}`;
     case "INDICATOR_RANGE": {
       const lo = node.minInclusive ? "≤" : "<";
       const hi = node.maxInclusive ? "≤" : "<";
-      return `${node.minValue} ${lo} ${INDICATOR_LABELS[node.indicator]} ${hi} ${node.maxValue}`;
+      return `${node.minValue} ${lo} ${INDICATOR_LABELS[node.indicator]}${offsetTag(node.offset)} ${hi} ${node.maxValue}`;
     }
     case "INDICATOR_CROSS":
-      return `${INDICATOR_LABELS[node.leftIndicator]} ${COMPARE_OP_LABELS[node.operator]} ${INDICATOR_LABELS[node.rightIndicator]}`;
+      return `${INDICATOR_LABELS[node.leftIndicator]}${offsetTag(node.leftOffset)} ${COMPARE_OP_LABELS[node.operator]} ${INDICATOR_LABELS[node.rightIndicator]}${offsetTag(node.rightOffset)}`;
     case "PRICE_VALUE":
-      return `${PRICE_FIELD_LABELS[node.priceField]} ${COMPARE_OP_LABELS[node.operator]} ${node.value.toLocaleString()}`;
+      return `${PRICE_FIELD_LABELS[node.priceField]}${offsetTag(node.offset)} ${COMPARE_OP_LABELS[node.operator]} ${node.value.toLocaleString()}`;
     case "PRICE_VS_INDICATOR":
-      return `${PRICE_FIELD_LABELS[node.priceField]} ${COMPARE_OP_LABELS[node.operator]} ${INDICATOR_LABELS[node.indicator]}`;
+      return `${PRICE_FIELD_LABELS[node.priceField]}${offsetTag(node.leftOffset)} ${COMPARE_OP_LABELS[node.operator]} ${INDICATOR_LABELS[node.indicator]}${offsetTag(node.rightOffset)}`;
     case "PRICE_RANGE": {
       const lo = node.minInclusive ? "≤" : "<";
       const hi = node.maxInclusive ? "≤" : "<";
-      return `${node.minValue.toLocaleString()} ${lo} ${PRICE_FIELD_LABELS[node.priceField]} ${hi} ${node.maxValue.toLocaleString()}`;
+      return `${node.minValue.toLocaleString()} ${lo} ${PRICE_FIELD_LABELS[node.priceField]}${offsetTag(node.offset)} ${hi} ${node.maxValue.toLocaleString()}`;
     }
     case "VOLUME_VALUE":
-      return `거래량 ${COMPARE_OP_LABELS[node.operator]} ${node.value.toLocaleString()}`;
+      return `거래량${offsetTag(node.offset)} ${COMPARE_OP_LABELS[node.operator]} ${node.value.toLocaleString()}`;
     case "VOLUME_RANGE": {
       const lo = node.minInclusive ? "≤" : "<";
       const hi = node.maxInclusive ? "≤" : "<";
-      return `${node.minValue.toLocaleString()} ${lo} 거래량 ${hi} ${node.maxValue.toLocaleString()}`;
+      return `${node.minValue.toLocaleString()} ${lo} 거래량${offsetTag(node.offset)} ${hi} ${node.maxValue.toLocaleString()}`;
     }
     case "MARKET_FILTER":
       return `시장: ${node.markets.join(", ")}`;

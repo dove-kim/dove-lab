@@ -1,5 +1,6 @@
 package com.dove.api.search.stock.controller;
 
+import com.dove.api.global.security.authorization.RequireCapability;
 import com.dove.api.search.stock.dto.IndicatorBar;
 import com.dove.api.search.stock.dto.InvestorFlowBar;
 import com.dove.api.search.stock.dto.PriceBar;
@@ -15,6 +16,7 @@ import com.dove.stock.application.service.StockQueryService;
 import com.dove.stock.domain.entity.Stock;
 import com.dove.stock.domain.enums.PriceType;
 import com.dove.stock.domain.enums.StockExchange;
+import com.dove.userfeature.domain.capability.Capability;
 import lombok.RequiredArgsConstructor;
 import org.springframework.format.annotation.DateTimeFormat;
 import org.springframework.http.HttpStatus;
@@ -38,6 +40,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/stocks")
 @RequiredArgsConstructor
+@RequireCapability(Capability.STOCK_VIEW)
 public class StockController {
 
     private final StockQueryService stockQueryService;

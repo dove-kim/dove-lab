@@ -9,7 +9,8 @@ import com.dove.screening.application.exception.DuplicateStockFilterNameExceptio
 import com.dove.screening.application.service.StockFilterCommandService;
 import com.dove.screening.application.service.StockFilterQueryService;
 import com.dove.api.global.security.AuthenticatedUser;
-import com.dove.api.global.security.authorization.RequireFeature;
+import com.dove.api.global.security.authorization.RequireCapability;
+import com.dove.userfeature.domain.capability.Capability;
 import com.dove.stock.application.service.StockQueryService;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -37,7 +38,7 @@ import java.util.Set;
 @RestController
 @RequestMapping("/stock-filters")
 @RequiredArgsConstructor
-@RequireFeature("STOCK_SEARCH")
+@RequireCapability(Capability.STOCK_SEARCH)
 public class StockFilterController {
 
     private final StockFilterQueryService queryService;
@@ -72,7 +73,7 @@ public class StockFilterController {
     @PostMapping("/preview/tag")
     public List<StockSummaryResponse> previewTag(@RequestBody PreviewTagRequest req) {
         Set<String> tickers = queryService.previewByTagConditions(
-                req.tagConditions(), req.numericConditions(), req.markets());
+                req.tagConditions(), req.numericConditions(), req.namePatternConditions(), req.markets());
         Map<String, String> names = stockQueryService.findNamesByTickers(tickers);
         return stockQueryService.findByTickers(tickers).values().stream()
                 .map(s -> StockSummaryResponse.from(s, names.getOrDefault(s.getTicker(), s.getTicker())))
@@ -100,7 +101,8 @@ public class StockFilterController {
         try {
             return StockFilterResponse.from(
                     commandService.createPersonal(user.memberId(), req.name(), req.description(),
-                            req.tagConditions(), req.stockConditions(), req.numericConditions(), user.username()));
+                            req.tagConditions(), req.stockConditions(), req.numericConditions(),
+                            req.namePatternConditions(), user.username()));
         } catch (DuplicateStockFilterNameException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "DUPLICATE_STOCK_FILTER_NAME");
         }
@@ -117,7 +119,8 @@ public class StockFilterController {
         try {
             return StockFilterResponse.from(
                     commandService.updatePersonal(user.memberId(), id, req.name(), req.description(),
-                            req.tagConditions(), req.stockConditions(), req.numericConditions(), user.username()));
+                            req.tagConditions(), req.stockConditions(), req.numericConditions(),
+                            req.namePatternConditions(), user.username()));
         } catch (NoSuchElementException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "STOCK_FILTER_NOT_FOUND");
         } catch (DuplicateStockFilterNameException e) {

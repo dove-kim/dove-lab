@@ -1,9 +1,9 @@
 package com.dove.screening.infrastructure.repository;
 
+import com.dove.indicator.domain.entity.QStockFeatureDaily;
 import com.dove.screening.domain.value.FilterModel;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
-import com.querydsl.core.types.dsl.BooleanExpression;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 
@@ -18,10 +18,10 @@ class StockFeatureFilterTranslatorTest {
 
     private static final ObjectMapper MAPPER = new ObjectMapper();
 
-    private Optional<BooleanExpression> translate(String json) {
+    private Optional<TranslatedFilter> translate(String json) {
         try {
             JsonNode node = MAPPER.readTree(json);
-            return StockFeatureFilterTranslator.translate(FilterModel.parse(node));
+            return StockFeatureFilterTranslator.translate(FilterModel.parse(node), QStockFeatureDaily.stockFeatureDaily);
         } catch (Exception e) {
             throw new RuntimeException(e);
         }
@@ -32,6 +32,24 @@ class StockFeatureFilterTranslatorTest {
     void shouldTranslateNumericIndicator() {
         String n = "{\"conditionType\":\"INDICATOR_VALUE\",\"indicator\":\"RSI_14\",\"operator\":\"GT\",\"value\":30}";
         assertThat(translate(n)).isPresent();
+    }
+
+    @Test
+    @DisplayName("오프셋 지표(N일 전) — SQL 변환 가능 + 오프셋 별칭 생성")
+    void shouldTranslateOffsetIndicator() {
+        String n = "{\"conditionType\":\"INDICATOR_VALUE\",\"indicator\":\"RSI_14\",\"offset\":-5,\"operator\":\"GT\",\"value\":30}";
+        Optional<TranslatedFilter> result = translate(n);
+        assertThat(result).isPresent();
+        assertThat(result.get().offsetAliases()).containsKey(-5);
+    }
+
+    @Test
+    @DisplayName("오프셋 교차(오늘 vs N일 전) — 좌우 오프셋 별칭 분리")
+    void shouldTranslateCrossWithOffsets() {
+        String valid = "{\"conditionType\":\"INDICATOR_CROSS\",\"leftIndicator\":\"SMA_5\",\"leftOffset\":0,"
+                + "\"rightIndicator\":\"SMA_5\",\"rightOffset\":-20,\"operator\":\"GT\"}";
+        assertThat(translate(valid)).isPresent();
+        assertThat(translate(valid).get().offsetAliases()).containsKeys(0, -20);
     }
 
     @Test

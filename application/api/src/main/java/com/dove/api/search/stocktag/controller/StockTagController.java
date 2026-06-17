@@ -1,6 +1,7 @@
 package com.dove.api.search.stocktag.controller;
 
-import com.dove.api.global.security.authorization.RequireFeature;
+import com.dove.api.global.security.authorization.RequireCapability;
+import com.dove.userfeature.domain.capability.Capability;
 import com.dove.api.search.stocktag.dto.StockTagFieldGroup;
 import com.dove.api.search.stocktag.dto.StockTagNumericField;
 import com.dove.api.search.stocktag.dto.StockTagValueItem;
@@ -25,7 +26,7 @@ import java.util.stream.Collectors;
 @RestController
 @RequestMapping("/stock-tags")
 @RequiredArgsConstructor
-@RequireFeature("STOCK_SEARCH")
+@RequireCapability(Capability.STOCK_VIEW)
 public class StockTagController {
 
     private final StockTagValueService queryService;
