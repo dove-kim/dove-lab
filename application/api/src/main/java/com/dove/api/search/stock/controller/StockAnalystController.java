@@ -1,6 +1,7 @@
 package com.dove.api.search.stock.controller;
 
-import com.dove.api.global.security.authorization.RequireFeature;
+import com.dove.api.global.security.authorization.RequireCapability;
+import com.dove.userfeature.domain.capability.Capability;
 import com.dove.api.search.stock.dto.EstimateResponse;
 import com.dove.api.search.stock.dto.InvestOpinionResponse;
 import com.dove.stockcollection.application.port.AnalystFetcher;
@@ -21,7 +22,7 @@ import java.util.Optional;
  */
 @RestController
 @RequestMapping("/stocks")
-@RequireFeature("STOCK_SEARCH")
+@RequireCapability(Capability.STOCK_VIEW)
 public class StockAnalystController {
 
     private final Optional<AnalystFetcher> analystFetcher;

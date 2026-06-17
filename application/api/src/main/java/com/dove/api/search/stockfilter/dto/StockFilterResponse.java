@@ -1,6 +1,7 @@
 package com.dove.api.search.stockfilter.dto;
 
 import com.dove.screening.domain.entity.StockFilter;
+import com.dove.screening.domain.value.NamePatternCondition;
 import com.dove.screening.domain.value.NumericCondition;
 import com.dove.screening.domain.value.StockCondition;
 import com.dove.screening.domain.value.TagCondition;
@@ -18,6 +19,7 @@ import java.util.List;
  * @param tagConditions     태그 조건 목록
  * @param stockConditions   종목 속성 조건 목록
  * @param numericConditions 수치 조건 목록
+ * @param namePatternConditions 종목명 패턴 조건 목록
  * @param enabled           활성화 여부
  * @param displayOrder      표시 순서
  * @param createdBy         생성자
@@ -33,6 +35,7 @@ public record StockFilterResponse(
         List<TagCondition> tagConditions,
         List<StockCondition> stockConditions,
         List<NumericCondition> numericConditions,
+        List<NamePatternCondition> namePatternConditions,
         boolean enabled,
         int displayOrder,
         String createdBy,
@@ -52,6 +55,7 @@ public record StockFilterResponse(
                 f.getTagConditions(),
                 f.getStockConditions(),
                 f.getNumericConditions(),
+                f.getNamePatternConditions(),
                 f.isEnabled(),
                 f.getDisplayOrder(),
                 f.getCreatedBy(),

@@ -42,7 +42,7 @@ class StockTagControllerTest {
         }
 
         @Test
-        @WithApiUser(features = {"STOCK_SEARCH"})
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("분류 메타와 값 목록을 반환")
         void shouldReturnTagsWhenAuthorized() throws Exception {
             mockMvc.perform(get("/stock-tags"))

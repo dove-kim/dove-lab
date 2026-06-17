@@ -5,7 +5,8 @@ import com.dove.api.search.indicatorpreset.dto.IndicatorPresetResponse;
 import com.dove.api.search.indicatorpreset.dto.PresetReorderRequest;
 import com.dove.api.search.indicatorpreset.dto.UpdateIndicatorPresetRequest;
 import com.dove.api.global.security.AuthenticatedUser;
-import com.dove.api.global.security.authorization.RequireFeature;
+import com.dove.api.global.security.authorization.RequireCapability;
+import com.dove.userfeature.domain.capability.Capability;
 import com.dove.screening.application.service.IndicatorPresetCommandService;
 import com.dove.screening.application.service.IndicatorPresetQueryService;
 import jakarta.validation.Valid;
@@ -34,7 +35,7 @@ import java.util.NoSuchElementException;
 @RestController
 @RequestMapping("/indicator-presets")
 @RequiredArgsConstructor
-@RequireFeature("STOCK_SEARCH")
+@RequireCapability(Capability.STOCK_VIEW)
 public class IndicatorPresetController {
 
     private final IndicatorPresetCommandService commandService;

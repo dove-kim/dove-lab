@@ -48,7 +48,8 @@ public class SystemStockFilterAdminController {
         try {
             return StockFilterResponse.from(
                     commandService.createSystem(req.name(), req.description(),
-                            req.tagConditions(), req.stockConditions(), req.numericConditions(), user.username()));
+                            req.tagConditions(), req.stockConditions(), req.numericConditions(),
+                            req.namePatternConditions(), user.username()));
         } catch (DuplicateStockFilterNameException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "DUPLICATE_STOCK_FILTER_NAME");
         }
@@ -65,7 +66,8 @@ public class SystemStockFilterAdminController {
         try {
             return StockFilterResponse.from(
                     commandService.updateSystem(id, req.name(), req.description(),
-                            req.tagConditions(), req.stockConditions(), req.numericConditions(), user.username()));
+                            req.tagConditions(), req.stockConditions(), req.numericConditions(),
+                            req.namePatternConditions(), user.username()));
         } catch (NoSuchElementException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "STOCK_FILTER_NOT_FOUND");
         } catch (DuplicateStockFilterNameException e) {

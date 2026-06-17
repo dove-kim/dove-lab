@@ -14,19 +14,19 @@ import org.springframework.stereotype.Component;
 import java.lang.reflect.Method;
 
 /**
- * {@link RequireRole}, {@link RequireFeature} 어노테이션 기반 권한 검사 AOP advice.
+ * {@link RequireRole}, {@link RequireCapability} 어노테이션 기반 권한 검사 AOP advice.
  */
 @Aspect
 @Component
 public class AuthorizationAspect {
 
     /**
-     * 대상 메서드 실행 전 요구 권한 등급·기능 보유 여부를 검사한다.
+     * 대상 메서드 실행 전 요구 권한 등급·capability 보유 여부를 검사한다.
      *
-     * @throws org.springframework.security.access.AccessDeniedException 권한 또는 기능이 부족할 때
+     * @throws org.springframework.security.access.AccessDeniedException 권한·capability가 부족할 때
      */
     @Around("@within(com.dove.api.global.security.authorization.RequireRole) || @annotation(com.dove.api.global.security.authorization.RequireRole) "
-            + "|| @within(com.dove.api.global.security.authorization.RequireFeature) || @annotation(com.dove.api.global.security.authorization.RequireFeature)")
+            + "|| @within(com.dove.api.global.security.authorization.RequireCapability) || @annotation(com.dove.api.global.security.authorization.RequireCapability)")
     public Object enforce(ProceedingJoinPoint pjp) throws Throwable {
         MethodSignature signature = (MethodSignature) pjp.getSignature();
         Method method = signature.getMethod();
@@ -36,12 +36,12 @@ public class AuthorizationAspect {
         if (requireRole == null) {
             requireRole = targetClass.getAnnotation(RequireRole.class);
         }
-        RequireFeature requireFeature = method.getAnnotation(RequireFeature.class);
-        if (requireFeature == null) {
-            requireFeature = targetClass.getAnnotation(RequireFeature.class);
+        RequireCapability requireCapability = method.getAnnotation(RequireCapability.class);
+        if (requireCapability == null) {
+            requireCapability = targetClass.getAnnotation(RequireCapability.class);
         }
 
-        if (requireRole != null || requireFeature != null) {
+        if (requireRole != null || requireCapability != null) {
             AuthenticatedUser user = currentUser();
             if (requireRole != null) {
                 Role current;
@@ -54,21 +54,23 @@ public class AuthorizationAspect {
                     throw new AccessDeniedException("ROLE_INSUFFICIENT");
                 }
             }
-            if (requireFeature != null) {
-                // ROOT 는 모든 feature 자동 통과 (시스템 최고 권한)
-                Role current;
-                try {
-                    current = Role.parse(user.role());
-                } catch (IllegalArgumentException e) {
-                    current = null;
-                }
-                if (current != Role.ROOT && !user.grantedFeatures().contains(requireFeature.value())) {
-                    throw new AccessDeniedException("FEATURE_NOT_GRANTED");
+            if (requireCapability != null) {
+                // ROOT 는 모든 capability 자동 통과 (시스템 최고 권한)
+                if (!isRoot(user) && !user.capabilities().contains(requireCapability.value().name())) {
+                    throw new AccessDeniedException("CAPABILITY_NOT_GRANTED");
                 }
             }
         }
 
         return pjp.proceed();
+    }
+
+    private boolean isRoot(AuthenticatedUser user) {
+        try {
+            return Role.parse(user.role()) == Role.ROOT;
+        } catch (IllegalArgumentException e) {
+            return false;
+        }
     }
 
     private AuthenticatedUser currentUser() {

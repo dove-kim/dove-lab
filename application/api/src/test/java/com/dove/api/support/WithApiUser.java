@@ -31,9 +31,9 @@ public @interface WithApiUser {
     String role() default "USER";
 
     /**
-     * 부여된 기능 코드 집합 (FeatureCode.name()).
+     * 부여된 권한 코드 집합 (Capability.name()).
      */
-    String[] features() default {};
+    String[] capabilities() default {};
 
     /**
      * 비밀번호 변경 강제 여부.

@@ -9,16 +9,16 @@ import java.util.Set;
  * @param username 로그인 아이디
  * @param role 권한 등급
  * @param mustChangePassword 비밀번호 변경 강제 여부
- * @param grantedFeatures 부여된 기능 코드(FeatureCode.name()) 집합
+ * @param capabilities 부여된 권한 코드(Capability.name()) 집합
  */
 public record AuthenticatedUser(
         Long memberId,
         String username,
         String role,
         boolean mustChangePassword,
-        Set<String> grantedFeatures
+        Set<String> capabilities
 ) {
     public AuthenticatedUser {
-        grantedFeatures = grantedFeatures == null ? Set.of() : Set.copyOf(grantedFeatures);
+        capabilities = capabilities == null ? Set.of() : Set.copyOf(capabilities);
     }
 }

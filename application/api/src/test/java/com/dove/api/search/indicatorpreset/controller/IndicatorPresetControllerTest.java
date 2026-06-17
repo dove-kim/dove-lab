@@ -58,7 +58,7 @@ class IndicatorPresetControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_VIEW"})
         @DisplayName("생성 전 빈 목록")
         void shouldReturnEmptyListWhenNoPresets() throws Exception {
             mockMvc.perform(get("/indicator-presets"))
@@ -73,7 +73,7 @@ class IndicatorPresetControllerTest {
     class CreatePreset {
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_VIEW"})
         @DisplayName("201 생성")
         void shouldCreatePresetWhenValid() throws Exception {
             mockMvc.perform(post("/indicator-presets")
@@ -86,7 +86,7 @@ class IndicatorPresetControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_VIEW"})
         @DisplayName("name 누락 시 400")
         void shouldReturn400WhenNameMissing() throws Exception {
             mockMvc.perform(post("/indicator-presets")
@@ -98,7 +98,7 @@ class IndicatorPresetControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_VIEW"})
         @DisplayName("이름 중복 시 409")
         void shouldReturn409WhenNameDuplicate() throws Exception {
             indicatorPresetCommandService.create(MEMBER_ID, "중복프리셋", List.of(item()), List.of());
@@ -117,7 +117,7 @@ class IndicatorPresetControllerTest {
     class UpdatePreset {
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_VIEW"})
         @DisplayName("수정 성공")
         void shouldUpdatePresetWhenValid() throws Exception {
             var preset = indicatorPresetCommandService.create(MEMBER_ID, "원래프리셋", List.of(item()), List.of());
@@ -132,7 +132,7 @@ class IndicatorPresetControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_VIEW"})
         @DisplayName("없는 id면 404")
         void shouldReturn404WhenUpdatingNonExistent() throws Exception {
             mockMvc.perform(put("/indicator-presets/99999")
@@ -149,7 +149,7 @@ class IndicatorPresetControllerTest {
     class ReorderPresets {
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_VIEW"})
         @DisplayName("순서 변경 204")
         void shouldReorderPresetsWhenValid() throws Exception {
             var a = indicatorPresetCommandService.create(MEMBER_ID, "프리셋A", List.of(item()), List.of());
@@ -169,7 +169,7 @@ class IndicatorPresetControllerTest {
     class DeletePreset {
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_VIEW"})
         @DisplayName("삭제 204")
         void shouldDeletePresetWhenExists() throws Exception {
             var preset = indicatorPresetCommandService.create(MEMBER_ID, "삭제프리셋", List.of(item()), List.of());
@@ -179,7 +179,7 @@ class IndicatorPresetControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_VIEW"})
         @DisplayName("없는 id면 404")
         void shouldReturn404WhenDeletingNonExistent() throws Exception {
             mockMvc.perform(delete("/indicator-presets/99999"))

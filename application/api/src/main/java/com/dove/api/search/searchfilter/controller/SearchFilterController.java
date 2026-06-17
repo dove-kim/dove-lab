@@ -1,6 +1,7 @@
 package com.dove.api.search.searchfilter.controller;
 
 import com.dove.api.global.security.AuthenticatedUser;
+import com.dove.api.global.security.authorization.RequireCapability;
 import com.dove.api.search.searchfilter.dto.CreateSearchFilterRequest;
 import com.dove.api.search.searchfilter.dto.ExecuteFilterRequest;
 import com.dove.api.search.searchfilter.dto.ExecuteFilterResponse;
@@ -12,6 +13,7 @@ import com.dove.screening.application.service.SearchFilterCommandService;
 import com.dove.screening.application.service.SearchFilterQueryService;
 import com.dove.screening.domain.entity.SearchFilter;
 import com.dove.screening.domain.value.FilterExpression;
+import com.dove.userfeature.domain.capability.Capability;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.dao.DataIntegrityViolationException;
@@ -39,6 +41,7 @@ import java.util.NoSuchElementException;
 @RestController
 @RequestMapping("/filters")
 @RequiredArgsConstructor
+@RequireCapability(Capability.STOCK_SEARCH)
 public class SearchFilterController {
 
     private final SearchFilterCommandService searchFilterCommandService;

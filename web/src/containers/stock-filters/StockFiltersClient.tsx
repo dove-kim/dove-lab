@@ -13,9 +13,7 @@ type Tab = "personal" | "system";
 
 export default function StockFiltersClient({ role }: Props) {
   const isAdmin = role === "ADMIN" || role === "ROOT";
-  const isRoot = role === "ROOT";
-  // ROOT는 공통(시스템) 필터만 다룸 — 내 필터 없음
-  const [tab, setTab] = useState<Tab>(isRoot ? "system" : "personal");
+  const [tab, setTab] = useState<Tab>("personal");
   const [personal, setPersonal] = useState<StockFilterResponse[]>([]);
   const [system, setSystem] = useState<StockFilterResponse[]>([]);
   const [loading, setLoading] = useState(false);
@@ -128,11 +126,9 @@ export default function StockFiltersClient({ role }: Props) {
         </div>
       </div>
 
-      {/* 탭 — ROOT는 공통 필터만 */}
+      {/* 탭 — 모든 사용자가 내 필터 + 시스템 필터 */}
       <div className="flex gap-2 mb-4 border-b border-white/10">
-        {!isRoot && (
-          <TabButton active={tab === "personal"} onClick={() => setTab("personal")}>내 필터</TabButton>
-        )}
+        <TabButton active={tab === "personal"} onClick={() => setTab("personal")}>내 필터</TabButton>
         <TabButton active={tab === "system"} onClick={() => setTab("system")}>시스템 필터</TabButton>
       </div>
 
@@ -246,7 +242,6 @@ function FilterCard({
 
       <div className="flex gap-3 mt-3 text-[10px] text-slate-500">
         <span>태그 {filter.tagConditions.length}</span>
-        <span>수치 {filter.numericConditions?.length ?? 0}</span>
         <span>EXCLUDE {filter.stockConditions.filter((c) => c.mode === "EXCLUDE").length}</span>
         <span>INCLUDE {filter.stockConditions.filter((c) => c.mode === "INCLUDE").length}</span>
       </div>

@@ -32,7 +32,7 @@ class JwtProviderTest {
         assertThat(jwtProvider.extractRole(token)).isEqualTo("USER");
         assertThat(jwtProvider.extractMustChangePassword(token)).isFalse();
         assertThat(jwtProvider.extractTokenType(token)).isEqualTo(JwtProvider.TOKEN_TYPE_ACCESS);
-        assertThat(jwtProvider.extractFeatures(token)).containsExactly("STOCK_SEARCH");
+        assertThat(jwtProvider.extractCapabilities(token)).containsExactly("STOCK_SEARCH");
         assertThat(jwtProvider.extractIssuedAt(token)).isNotNull();
     }
 
@@ -41,7 +41,7 @@ class JwtProviderTest {
     void shouldAllowEmptyFeatures() {
         String token = jwtProvider.generateAccessToken(1L, "alice", "Alice", "USER", false, null);
 
-        assertThat(jwtProvider.extractFeatures(token)).isEmpty();
+        assertThat(jwtProvider.extractCapabilities(token)).isEmpty();
     }
 
     @Test

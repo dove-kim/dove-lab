@@ -11,7 +11,7 @@ import com.fasterxml.jackson.databind.node.NullNode;
  */
 public record FilterExpression(JsonNode root) {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = com.dove.jpa.JsonSupport.MAPPER;
 
     /**
      * 유효한 JSON 문자열에서 FilterExpression을 생성한다.

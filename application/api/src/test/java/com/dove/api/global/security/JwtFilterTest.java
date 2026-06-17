@@ -68,7 +68,7 @@ class JwtFilterTest {
             assertThat(user.memberId()).isEqualTo(7L);
             assertThat(user.username()).isEqualTo("alice");
             assertThat(user.role()).isEqualTo("USER");
-            assertThat(user.grantedFeatures()).containsExactly("STOCK_SEARCH");
+            assertThat(user.capabilities()).containsExactly("STOCK_SEARCH");
 
             verify(chain).doFilter(request, response);
         }

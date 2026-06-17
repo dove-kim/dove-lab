@@ -4,6 +4,7 @@ export interface JwtPayload {
   role: string;
   exp: number;
   mustChangePassword?: boolean;
+  capabilities?: string[];
 }
 
 export function decodeJwtPayload(token: string): JwtPayload | null {

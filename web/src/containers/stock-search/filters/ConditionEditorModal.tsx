@@ -78,6 +78,21 @@ function NumberInput({
   );
 }
 
+function OffsetInput({ value, onChange, label }: { value: number; onChange: (v: number) => void; label?: string }) {
+  return (
+    <div>
+      <label className="text-xs text-slate-400 mb-1 block">{label ?? "오프셋"} (0=오늘 · 음수=과거 · 양수=미래)</label>
+      <input
+        type="number"
+        value={value}
+        onChange={(e) => onChange(parseInt(e.target.value, 10) || 0)}
+        className={cx.inputNumber}
+        placeholder="0"
+      />
+    </div>
+  );
+}
+
 function InclusiveToggle({ label, value, onChange }: { label: string; value: boolean; onChange: (v: boolean) => void }) {
   return (
     <div className="flex items-center gap-2">
@@ -198,26 +213,48 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
     )
   );
 
+  // 오프셋(거래일): 0=오늘, 음수=과거, 양수=미래
+  const [indValue_offset, setIndValue_offset] = useState<number>(
+    initial?.conditionType === "INDICATOR_VALUE" ? (initial.offset ?? 0) : 0);
+  const [priceVal_offset, setPriceVal_offset] = useState<number>(
+    initial?.conditionType === "PRICE_VALUE" ? (initial.offset ?? 0) : 0);
+  const [volVal_offset, setVolVal_offset] = useState<number>(
+    initial?.conditionType === "VOLUME_VALUE" ? (initial.offset ?? 0) : 0);
+  const [cross_leftOffset, setCross_leftOffset] = useState<number>(
+    initial?.conditionType === "INDICATOR_CROSS" ? (initial.leftOffset ?? 0) : 0);
+  const [cross_rightOffset, setCross_rightOffset] = useState<number>(
+    initial?.conditionType === "INDICATOR_CROSS" ? (initial.rightOffset ?? 0) : 0);
+  const [pvi_leftOffset, setPvi_leftOffset] = useState<number>(
+    initial?.conditionType === "PRICE_VS_INDICATOR" ? (initial.leftOffset ?? 0) : 0);
+  const [pvi_rightOffset, setPvi_rightOffset] = useState<number>(
+    initial?.conditionType === "PRICE_VS_INDICATOR" ? (initial.rightOffset ?? 0) : 0);
+  const [indRange_offset, setIndRange_offset] = useState<number>(
+    initial?.conditionType === "INDICATOR_RANGE" ? (initial.offset ?? 0) : 0);
+  const [priceRange_offset, setPriceRange_offset] = useState<number>(
+    initial?.conditionType === "PRICE_RANGE" ? (initial.offset ?? 0) : 0);
+  const [volRange_offset, setVolRange_offset] = useState<number>(
+    initial?.conditionType === "VOLUME_RANGE" ? (initial.offset ?? 0) : 0);
+
   function buildNode(): ConditionNode {
     const id = initial?.id ?? generateId();
     const negated = initial?.negated ?? false;
     switch (conditionType) {
       case "INDICATOR_VALUE":
-        return { id, nodeType: "CONDITION", negated, conditionType, indicator: indValue_indicator, operator: indValue_op, value: indValue_val };
+        return { id, nodeType: "CONDITION", negated, conditionType, indicator: indValue_indicator, offset: indValue_offset, operator: indValue_op, value: indValue_val };
       case "INDICATOR_RANGE":
-        return { id, nodeType: "CONDITION", negated, conditionType, indicator: indRange_ind, minValue: indRange_min, minInclusive: indRange_minInc, maxValue: indRange_max, maxInclusive: indRange_maxInc };
+        return { id, nodeType: "CONDITION", negated, conditionType, indicator: indRange_ind, offset: indRange_offset, minValue: indRange_min, minInclusive: indRange_minInc, maxValue: indRange_max, maxInclusive: indRange_maxInc };
       case "INDICATOR_CROSS":
-        return { id, nodeType: "CONDITION", negated, conditionType, leftIndicator: cross_left, operator: cross_op, rightIndicator: cross_right };
+        return { id, nodeType: "CONDITION", negated, conditionType, leftIndicator: cross_left, leftOffset: cross_leftOffset, operator: cross_op, rightIndicator: cross_right, rightOffset: cross_rightOffset };
       case "PRICE_VALUE":
-        return { id, nodeType: "CONDITION", negated, conditionType, priceField: price_field, operator: priceVal_op, value: priceVal_val };
+        return { id, nodeType: "CONDITION", negated, conditionType, priceField: price_field, offset: priceVal_offset, operator: priceVal_op, value: priceVal_val };
       case "PRICE_RANGE":
-        return { id, nodeType: "CONDITION", negated, conditionType, priceField: price_field, minValue: priceRange_min, minInclusive: priceRange_minInc, maxValue: priceRange_max, maxInclusive: priceRange_maxInc };
+        return { id, nodeType: "CONDITION", negated, conditionType, priceField: price_field, offset: priceRange_offset, minValue: priceRange_min, minInclusive: priceRange_minInc, maxValue: priceRange_max, maxInclusive: priceRange_maxInc };
       case "VOLUME_VALUE":
-        return { id, nodeType: "CONDITION", negated, conditionType, operator: volVal_op, value: volVal_val };
+        return { id, nodeType: "CONDITION", negated, conditionType, offset: volVal_offset, operator: volVal_op, value: volVal_val };
       case "VOLUME_RANGE":
-        return { id, nodeType: "CONDITION", negated, conditionType, minValue: volRange_min, minInclusive: volRange_minInc, maxValue: volRange_max, maxInclusive: volRange_maxInc };
+        return { id, nodeType: "CONDITION", negated, conditionType, offset: volRange_offset, minValue: volRange_min, minInclusive: volRange_minInc, maxValue: volRange_max, maxInclusive: volRange_maxInc };
       case "PRICE_VS_INDICATOR":
-        return { id, nodeType: "CONDITION", negated, conditionType, priceField: priceVsInd_field, operator: priceVsInd_op, indicator: priceVsInd_ind } as PriceVsIndicatorCondition;
+        return { id, nodeType: "CONDITION", negated, conditionType, priceField: priceVsInd_field, leftOffset: pvi_leftOffset, operator: priceVsInd_op, indicator: priceVsInd_ind, rightOffset: pvi_rightOffset } as PriceVsIndicatorCondition;
       case "MARKET_FILTER":
         return { id, nodeType: "CONDITION", negated, conditionType, markets: Array.from(markets) };
     }
@@ -257,6 +294,7 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
                 <label className="text-xs text-slate-400 mb-1 block">지표</label>
                 <IndicatorSelect value={indValue_indicator} onChange={setIndValue_indicator} />
               </div>
+              <OffsetInput value={indValue_offset} onChange={setIndValue_offset} />
               <div className="flex gap-2">
                 <div>
                   <label className="text-xs text-slate-400 mb-1 block">비교 연산자</label>
@@ -276,6 +314,7 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
                 <label className="text-xs text-slate-400 mb-1 block">지표</label>
                 <IndicatorSelect value={indRange_ind} onChange={setIndRange_ind} />
               </div>
+              <OffsetInput value={indRange_offset} onChange={setIndRange_offset} />
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-slate-400 mb-1 block">최솟값</label>
@@ -299,6 +338,7 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
                 <label className="text-xs text-slate-400 mb-1 block">좌측 지표</label>
                 <IndicatorSelect value={cross_left} onChange={setCross_left} />
               </div>
+              <OffsetInput label="좌측 오프셋" value={cross_leftOffset} onChange={setCross_leftOffset} />
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">비교 연산자</label>
                 <OpSelect value={cross_op} onChange={setCross_op} />
@@ -307,6 +347,7 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
                 <label className="text-xs text-slate-400 mb-1 block">우측 지표</label>
                 <IndicatorSelect value={cross_right} onChange={setCross_right} />
               </div>
+              <OffsetInput label="우측 오프셋" value={cross_rightOffset} onChange={setCross_rightOffset} />
             </>
           )}
 
@@ -316,6 +357,7 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
                 <label className="text-xs text-slate-400 mb-1 block">가격 필드</label>
                 <Select value={price_field} items={PRICE_FIELD_ITEMS} onChange={v => setPrice_field(v as PriceField)} className="w-full" />
               </div>
+              <OffsetInput value={priceVal_offset} onChange={setPriceVal_offset} />
               <div className="flex gap-2">
                 <div>
                   <label className="text-xs text-slate-400 mb-1 block">비교 연산자</label>
@@ -335,6 +377,7 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
                 <label className="text-xs text-slate-400 mb-1 block">가격 필드</label>
                 <Select value={price_field} items={PRICE_FIELD_ITEMS} onChange={v => setPrice_field(v as PriceField)} className="w-full" />
               </div>
+              <OffsetInput value={priceRange_offset} onChange={setPriceRange_offset} />
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-slate-400 mb-1 block">최솟값(원)</label>
@@ -364,10 +407,12 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
                   <OpSelect value={priceVsInd_op} onChange={setPriceVsInd_op} />
                 </div>
               </div>
+              <OffsetInput label="가격 오프셋" value={pvi_leftOffset} onChange={setPvi_leftOffset} />
               <div>
                 <label className="text-xs text-slate-400 mb-1 block">비교 지표</label>
                 <IndicatorSelect value={priceVsInd_ind} onChange={setPriceVsInd_ind} />
               </div>
+              <OffsetInput label="지표 오프셋" value={pvi_rightOffset} onChange={setPvi_rightOffset} />
               <p className="text-xs text-slate-500">
                 예: 종가 &gt; SMA_20 (상향돌파), 종가 &lt; BB_LOWER_20 (하단 터치)
               </p>
@@ -375,20 +420,24 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
           )}
 
           {conditionType === "VOLUME_VALUE" && (
-            <div className="flex gap-2">
-              <div>
-                <label className="text-xs text-slate-400 mb-1 block">비교 연산자</label>
-                <OpSelect value={volVal_op} onChange={setVolVal_op} />
+            <>
+              <OffsetInput value={volVal_offset} onChange={setVolVal_offset} />
+              <div className="flex gap-2">
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">비교 연산자</label>
+                  <OpSelect value={volVal_op} onChange={setVolVal_op} />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs text-slate-400 mb-1 block">거래량</label>
+                  <NumberInput value={volVal_val} onChange={setVolVal_val} placeholder="예: 1000000" />
+                </div>
               </div>
-              <div className="flex-1">
-                <label className="text-xs text-slate-400 mb-1 block">거래량</label>
-                <NumberInput value={volVal_val} onChange={setVolVal_val} placeholder="예: 1000000" />
-              </div>
-            </div>
+            </>
           )}
 
           {conditionType === "VOLUME_RANGE" && (
             <>
+              <OffsetInput value={volRange_offset} onChange={setVolRange_offset} />
               <div className="grid grid-cols-2 gap-3">
                 <div>
                   <label className="text-xs text-slate-400 mb-1 block">최솟값</label>
