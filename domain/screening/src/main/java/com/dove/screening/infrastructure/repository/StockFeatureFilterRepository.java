@@ -1,10 +1,12 @@
 package com.dove.screening.infrastructure.repository;
 
+import com.dove.indicator.domain.entity.QStockFeatureDaily;
 import com.dove.screening.domain.value.FeatureMatch;
 import com.dove.screening.domain.value.FilterNode;
 import com.dove.stock.domain.enums.PriceType;
 import com.dove.stock.domain.enums.StockExchange;
 import com.querydsl.core.types.Projections;
+import com.querydsl.jpa.impl.JPAQuery;
 import com.querydsl.jpa.impl.JPAQueryFactory;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Repository;
@@ -12,6 +14,7 @@ import org.springframework.stereotype.Repository;
 import java.time.LocalDate;
 import java.util.Collection;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 import static com.dove.indicator.domain.entity.QStockFeatureDaily.stockFeatureDaily;
@@ -32,19 +35,32 @@ public class StockFeatureFilterRepository {
     public Optional<List<FeatureMatch>> findMatchingByExpression(Collection<StockExchange> exchanges,
                                                                  PriceType priceType, LocalDate date,
                                                                  FilterNode expression) {
-        return StockFeatureFilterTranslator.translate(expression)
-                .map(predicate -> queryFactory
-                        .select(Projections.constructor(FeatureMatch.class,
-                                stockFeatureDaily.id.ticker,
-                                stockFeatureDaily.id.exchange,
-                                stockFeatureDaily.closePrice,
-                                stockFeatureDaily.volume))
-                        .from(stockFeatureDaily)
-                        .where(stockFeatureDaily.id.exchange.in(exchanges),
-                                stockFeatureDaily.id.priceType.eq(priceType),
-                                stockFeatureDaily.id.tradeDate.eq(date),
-                                predicate)
-                        .fetch());
+        return StockFeatureFilterTranslator.translate(expression, stockFeatureDaily)
+                .map(tr -> {
+                    JPAQuery<FeatureMatch> query = queryFactory
+                            .select(Projections.constructor(FeatureMatch.class,
+                                    stockFeatureDaily.id.ticker,
+                                    stockFeatureDaily.id.exchange,
+                                    stockFeatureDaily.closePrice,
+                                    stockFeatureDaily.volume))
+                            .from(stockFeatureDaily);
+                    // 오프셋(N일 전/후) 별칭을 SEQ 기준으로 self-join (없으면 NULL → 조건 false).
+                    for (Map.Entry<Integer, QStockFeatureDaily> e : tr.offsetAliases().entrySet()) {
+                        if (e.getKey() == 0) continue;
+                        QStockFeatureDaily a = e.getValue();
+                        query.leftJoin(a).on(
+                                a.id.ticker.eq(stockFeatureDaily.id.ticker),
+                                a.id.exchange.eq(stockFeatureDaily.id.exchange),
+                                a.id.priceType.eq(stockFeatureDaily.id.priceType),
+                                a.seq.eq(stockFeatureDaily.seq.add(e.getKey())));
+                    }
+                    return query.where(
+                            stockFeatureDaily.id.exchange.in(exchanges),
+                            stockFeatureDaily.id.priceType.eq(priceType),
+                            stockFeatureDaily.id.tradeDate.eq(date),
+                            tr.predicate())
+                            .fetch();
+                });
     }
 
     /**

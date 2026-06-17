@@ -1,8 +1,10 @@
 package com.dove.screening.domain.entity;
 
+import com.dove.screening.domain.converter.NamePatternConditionListConverter;
 import com.dove.screening.domain.converter.NumericConditionListConverter;
 import com.dove.screening.domain.converter.StockConditionListConverter;
 import com.dove.screening.domain.converter.TagConditionListConverter;
+import com.dove.screening.domain.value.NamePatternCondition;
 import com.dove.screening.domain.value.NumericCondition;
 import com.dove.screening.domain.value.StockCondition;
 import com.dove.screening.domain.value.TagCondition;
@@ -73,6 +75,11 @@ public class StockFilter {
     @Comment("수치 범위 조건 JSON 배열 (자본금·액면가·상장주식수 등)")
     private List<NumericCondition> numericConditions;
 
+    @Convert(converter = NamePatternConditionListConverter.class)
+    @Column(name = "NAME_PATTERN_CONDITIONS", nullable = false, columnDefinition = "JSON")
+    @Comment("종목명 패턴 조건 JSON 배열 (예: '스팩' 제외)")
+    private List<NamePatternCondition> namePatternConditions;
+
     @Column(name = "ENABLED", nullable = false)
     @Comment("활성 여부 (FALSE=picker 숨김)")
     private boolean enabled;
@@ -107,6 +114,19 @@ public class StockFilter {
                                            List<StockCondition> stockConditions,
                                            List<NumericCondition> numericConditions,
                                            String createdBy) {
+        return createSystem(name, description, tagConditions, stockConditions, numericConditions,
+                List.of(), createdBy);
+    }
+
+    /**
+     * 시스템 종목 필터를 생성한다 (이름 패턴 조건 포함).
+     */
+    public static StockFilter createSystem(String name, String description,
+                                           List<TagCondition> tagConditions,
+                                           List<StockCondition> stockConditions,
+                                           List<NumericCondition> numericConditions,
+                                           List<NamePatternCondition> namePatternConditions,
+                                           String createdBy) {
         StockFilter f = new StockFilter();
         f.memberId = null;
         f.name = name;
@@ -114,6 +134,7 @@ public class StockFilter {
         f.tagConditions = tagConditions != null ? tagConditions : List.of();
         f.stockConditions = stockConditions != null ? stockConditions : List.of();
         f.numericConditions = numericConditions != null ? numericConditions : List.of();
+        f.namePatternConditions = namePatternConditions != null ? namePatternConditions : List.of();
         f.enabled = true;
         f.displayOrder = 0;
         f.createdBy = createdBy;
@@ -134,6 +155,21 @@ public class StockFilter {
                                              List<StockCondition> stockConditions,
                                              List<NumericCondition> numericConditions,
                                              String createdBy) {
+        return createPersonal(memberId, name, description, tagConditions, stockConditions, numericConditions,
+                List.of(), createdBy);
+    }
+
+    /**
+     * 개인 종목 필터를 생성한다 (이름 패턴 조건 포함).
+     *
+     * @throws IllegalArgumentException memberId가 null일 때
+     */
+    public static StockFilter createPersonal(Long memberId, String name, String description,
+                                             List<TagCondition> tagConditions,
+                                             List<StockCondition> stockConditions,
+                                             List<NumericCondition> numericConditions,
+                                             List<NamePatternCondition> namePatternConditions,
+                                             String createdBy) {
         if (memberId == null) {
             throw new IllegalArgumentException("MEMBER_ID_REQUIRED");
         }
@@ -144,6 +180,7 @@ public class StockFilter {
         f.tagConditions = tagConditions != null ? tagConditions : List.of();
         f.stockConditions = stockConditions != null ? stockConditions : List.of();
         f.numericConditions = numericConditions != null ? numericConditions : List.of();
+        f.namePatternConditions = namePatternConditions != null ? namePatternConditions : List.of();
         f.enabled = true;
         f.displayOrder = 0;
         f.createdBy = createdBy;
@@ -174,11 +211,24 @@ public class StockFilter {
                        List<StockCondition> stockConditions,
                        List<NumericCondition> numericConditions,
                        String updatedBy) {
+        update(name, description, tagConditions, stockConditions, numericConditions, List.of(), updatedBy);
+    }
+
+    /**
+     * 필터명·설명·조건 목록(이름 패턴 포함)을 갱신한다.
+     */
+    public void update(String name, String description,
+                       List<TagCondition> tagConditions,
+                       List<StockCondition> stockConditions,
+                       List<NumericCondition> numericConditions,
+                       List<NamePatternCondition> namePatternConditions,
+                       String updatedBy) {
         this.name = name;
         this.description = description;
         this.tagConditions = tagConditions != null ? tagConditions : List.of();
         this.stockConditions = stockConditions != null ? stockConditions : List.of();
         this.numericConditions = numericConditions != null ? numericConditions : List.of();
+        this.namePatternConditions = namePatternConditions != null ? namePatternConditions : List.of();
         this.updatedBy = updatedBy;
         this.updatedAt = LocalDateTime.now();
     }

@@ -19,7 +19,7 @@ public class WithApiUserSecurityContextFactory implements WithSecurityContextFac
     public SecurityContext createSecurityContext(WithApiUser annotation) {
         AuthenticatedUser principal = new AuthenticatedUser(
                 annotation.memberId(), annotation.username(), annotation.role(),
-                annotation.mustChangePassword(), Set.of(annotation.features()));
+                annotation.mustChangePassword(), Set.of(annotation.capabilities()));
         UsernamePasswordAuthenticationToken auth = new UsernamePasswordAuthenticationToken(
                 principal, null, List.of(new SimpleGrantedAuthority(annotation.role())));
         SecurityContext context = SecurityContextHolder.createEmptyContext();

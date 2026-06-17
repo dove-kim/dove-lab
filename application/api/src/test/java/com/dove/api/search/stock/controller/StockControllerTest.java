@@ -55,7 +55,7 @@ class StockControllerTest {
         }
 
         @Test
-        @WithApiUser
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("종목 목록에 시드 종목 포함")
         void shouldReturnStockListWhenAuthenticated() throws Exception {
             mockMvc.perform(get("/stocks"))
@@ -70,7 +70,7 @@ class StockControllerTest {
     class GetDetail {
 
         @Test
-        @WithApiUser
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("시드 종목 상세 반환")
         void shouldReturnDetailForExistingStock() throws Exception {
             mockMvc.perform(get("/stocks/" + TICKER + "/detail"))
@@ -79,7 +79,7 @@ class StockControllerTest {
         }
 
         @Test
-        @WithApiUser
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("없는 종목이면 404")
         void shouldReturn404WhenDetailForUnknownStock() throws Exception {
             mockMvc.perform(get("/stocks/000000/detail"))
@@ -92,7 +92,7 @@ class StockControllerTest {
     class GetEvents {
 
         @Test
-        @WithApiUser
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("데이터 없으면 빈 배열")
         void shouldReturnEmptyEventsWhenNone() throws Exception {
             mockMvc.perform(get("/stocks/" + TICKER + "/events"))
@@ -107,7 +107,7 @@ class StockControllerTest {
     class GetPrices {
 
         @Test
-        @WithApiUser
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("주가 데이터 없으면 빈 배열")
         void shouldReturnEmptyPricesWhenNoData() throws Exception {
             mockMvc.perform(get("/stocks/" + TICKER + "/prices")
@@ -118,7 +118,7 @@ class StockControllerTest {
         }
 
         @Test
-        @WithApiUser
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("없는 종목이면 404")
         void shouldReturn404WhenPricesForUnknownStock() throws Exception {
             mockMvc.perform(get("/stocks/000000/prices")
@@ -132,7 +132,7 @@ class StockControllerTest {
     class GetIndicators {
 
         @Test
-        @WithApiUser
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("지표 데이터 없으면 빈 배열")
         void shouldReturnEmptyIndicatorsWhenNoData() throws Exception {
             mockMvc.perform(get("/stocks/" + TICKER + "/indicators")
@@ -158,7 +158,7 @@ class StockControllerTest {
         }
 
         @Test
-        @WithApiUser
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("데이터 없으면 빈 배열")
         void shouldReturnEmptyWhenNoData() throws Exception {
             mockMvc.perform(get("/stocks/" + TICKER + "/investor-flow")
@@ -170,7 +170,7 @@ class StockControllerTest {
         }
 
         @Test
-        @WithApiUser
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("날짜 범위 내 데이터를 거래일 오름차순으로 반환")
         void shouldReturnInvestorFlowAscendingByDate() throws Exception {
             investorDailyService.saveAll(List.of(
@@ -193,7 +193,7 @@ class StockControllerTest {
         }
 
         @Test
-        @WithApiUser
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
         @DisplayName("범위 밖 날짜 데이터는 포함하지 않음")
         void shouldExcludeDataOutsideDateRange() throws Exception {
             investorDailyService.saveAll(List.of(

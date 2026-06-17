@@ -15,7 +15,7 @@ import java.util.Map;
 @Converter
 public class EventDetailConverter implements AttributeConverter<Map<String, String>, String> {
 
-    private static final ObjectMapper MAPPER = new ObjectMapper();
+    private static final ObjectMapper MAPPER = com.dove.jpa.JsonSupport.MAPPER;
     private static final TypeReference<Map<String, String>> TYPE = new TypeReference<>() {};
 
     @Override

@@ -52,7 +52,7 @@ class SearchFilterControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("빈 목록 반환")
         void shouldReturnEmptyListWhenNoFilters() throws Exception {
             mockMvc.perform(get("/filters"))
@@ -62,7 +62,7 @@ class SearchFilterControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("생성한 필터 목록에 포함")
         void shouldReturnCreatedFilterWhenExists() throws Exception {
             seedFilter("내필터", DateRule.LATEST);
@@ -79,7 +79,7 @@ class SearchFilterControllerTest {
     class CreateFilter {
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("필터 생성 201")
         void shouldCreateFilterWhenValid() throws Exception {
             String body = """
@@ -96,7 +96,7 @@ class SearchFilterControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("name 누락 시 400")
         void shouldReturn400WhenNameMissing() throws Exception {
             String body = """
@@ -110,7 +110,7 @@ class SearchFilterControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("이름 중복 시 409")
         void shouldReturn409WhenNameDuplicate() throws Exception {
             seedFilter("중복필터", DateRule.LATEST);
@@ -132,7 +132,7 @@ class SearchFilterControllerTest {
     class UpdateFilter {
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("없는 id면 404")
         void shouldReturn404WhenUpdatingNonExistent() throws Exception {
             String body = """
@@ -147,7 +147,7 @@ class SearchFilterControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("필터 수정")
         void shouldUpdateFilterWhenExists() throws Exception {
             var filter = searchFilterCommandService.create(MEMBER_ID, "원래이름", DateRule.LATEST,
@@ -172,7 +172,7 @@ class SearchFilterControllerTest {
     class DeleteFilter {
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("없는 id면 404")
         void shouldReturn404WhenDeletingNonExistent() throws Exception {
             mockMvc.perform(delete("/filters/99999"))
@@ -180,7 +180,7 @@ class SearchFilterControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("필터 삭제 204")
         void shouldDeleteFilterWhenExists() throws Exception {
             var filter = searchFilterCommandService.create(MEMBER_ID, "삭제할필터", DateRule.LATEST,
@@ -196,7 +196,7 @@ class SearchFilterControllerTest {
     class ReorderFilters {
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("순서 변경 204")
         void shouldReorderFiltersWhenValid() throws Exception {
             var f1 = searchFilterCommandService.create(MEMBER_ID, "첫번째", DateRule.LATEST,
@@ -225,7 +225,7 @@ class SearchFilterControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("없는 id면 404")
         void shouldReturn404WhenExecutingNonExistent() throws Exception {
             mockMvc.perform(post("/filters/99999/execute")
@@ -234,7 +234,7 @@ class SearchFilterControllerTest {
         }
 
         @Test
-        @WithApiUser(memberId = MEMBER_ID, features = {"STOCK_SEARCH"})
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_SEARCH"})
         @DisplayName("결과 반환 (빈 종목 → matchCount=0)")
         void shouldExecuteFilterWhenExists() throws Exception {
             // SPECIFIC_DATE: referenceDate=null 이면 LocalDate.now()를 기준일로 사용 → 빈 결과 반환

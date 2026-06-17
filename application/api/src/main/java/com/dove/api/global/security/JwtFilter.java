@@ -41,10 +41,10 @@ public class JwtFilter extends OncePerRequestFilter {
                     String username = jwtProvider.extractUsername(token);
                     String role = jwtProvider.extractRole(token);
                     boolean mustChangePassword = jwtProvider.extractMustChangePassword(token);
-                    Set<String> features = jwtProvider.extractFeatures(token);
+                    Set<String> capabilities = jwtProvider.extractCapabilities(token);
 
                     AuthenticatedUser principal = new AuthenticatedUser(
-                            memberId, username, role, mustChangePassword, features);
+                            memberId, username, role, mustChangePassword, capabilities);
                     SimpleGrantedAuthority authority = new SimpleGrantedAuthority(role);
                     UsernamePasswordAuthenticationToken auth =
                             new UsernamePasswordAuthenticationToken(principal, null, List.of(authority));

@@ -1,13 +1,6 @@
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import AppShell from "@/components/AppShell";
-import AllStocksLayout from "@/containers/stock-browse/AllStocksLayout";
 
-export default async function AllStocksPage() {
-  if (!(await cookies()).get("token")) redirect("/login");
-  return (
-    <AppShell>
-      <AllStocksLayout />
-    </AppShell>
-  );
+// "모든 종목"은 종목 검색(전체 보기)으로 통합됨 — 기존 링크·북마크 호환용 리다이렉트.
+export default function AllStocksPage() {
+  redirect("/stock-search");
 }
