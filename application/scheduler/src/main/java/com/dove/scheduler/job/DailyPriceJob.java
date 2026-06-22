@@ -4,6 +4,8 @@ import com.dove.concurrent.ParallelException;
 import com.dove.jobstatus.JobStatusRegistry;
 import com.dove.jobstatus.SchedulerJobName;
 import com.dove.kis.infrastructure.adapter.KisTradingDayAdapter;
+import com.dove.market.application.service.ExchangeTradingDateService;
+import com.dove.market.domain.enums.Exchange;
 import com.dove.stock.domain.enums.StockExchange;
 import com.dove.stockcollection.application.port.DailyPriceFetcher;
 import com.dove.stockcollection.application.service.CollectionProgress;
@@ -29,6 +31,7 @@ public class DailyPriceJob {
     private final SystemEventService systemEventService;
     private final JobStatusRegistry jobStatusRegistry;
     private final KisTradingDayAdapter tradingDayAdapter;
+    private final ExchangeTradingDateService tradingDateService;
     private final Clock clock;
 
     /**
@@ -44,8 +47,12 @@ public class DailyPriceJob {
             return;
         }
 
+        // 거래일 확정 → 거래일 캘린더에 등록(거래일 목록 조회의 출처)
+        tradingDateService.register(Exchange.KRX, today);
+
         jobStatusRegistry.start(SchedulerJobName.DAILY_PRICE.name(), StockExchange.values().length);
 
+        boolean allSynced = true;
         int done = 0;
         for (StockExchange exchange : StockExchange.values()) {
             try {
@@ -55,8 +62,14 @@ public class DailyPriceJob {
                 Throwable cause = e.getCause();
                 log.error("[{}] 당일 수집 실패: {}", exchange, cause.getMessage(), cause);
                 systemEventService.recordKisApiFailure(exchange.name(), cause.getMessage());
+                allSynced = false;
             }
             jobStatusRegistry.progress(SchedulerJobName.DAILY_PRICE.name(), ++done);
+        }
+
+        // 전 거래소 수집 성공 시에만 주가 수집 완료로 표시
+        if (allSynced) {
+            tradingDateService.markPricesSynced(Exchange.KRX, today);
         }
 
         jobStatusRegistry.complete(SchedulerJobName.DAILY_PRICE.name());

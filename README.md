@@ -186,6 +186,19 @@ docker compose -f docker-compose.prod.yml up -d
 > 운영 DB에는 `init_data.sql`, `init_stock_data.sql`을 **실행하지 않는다.**
 > 스키마(`init.sql`)만 적용하고 데이터는 수집 파이프라인이 채운다.
 
+### 데이터 마이그레이션 (1회성)
+
+기존 운영 스키마에 손으로 적용하는 마이그레이션. 멱등(재실행 안전)이며 도커 기동 시 자동 실행되지 않는다.
+
+`EXCHANGE_TRADING_DATE`(거래소 개장일)를 거래일 목록 조회의 출처로 전환 — 과거 거래일을 `STOCK_PRICE`에서 역추출해 채운다.
+
+```bash
+mysql -u <user> -p <DB명> < scripts/migration/backfill_exchange_trading_date.sql
+```
+
+> 백필 이후의 거래일은 `DailyPriceJob`이 매 거래일 자동 등록한다.
+> 백필은 `STOCK_PRICE`가 EXCHANGE/PRICE_TYPE를 enum ordinal(TINYINT)로 저장하는 것을 전제로 한다 — PriceType.RAW=0, StockExchange KOSPI=0/KOSDAQ=1/KONEX=2.
+
 ## scripts/
 
 | 파일 | 설명 |
@@ -193,6 +206,7 @@ docker compose -f docker-compose.prod.yml up -d
 | `init.sql` | 스키마 DDL (단일 진실 원천) |
 | `init_data.sql` | 로컬 개발용 사용자 시드 |
 | `init_stock_data.sql` | 로컬 개발용 종목·주가·기술지표 mock |
+| `migration/*.sql` | 운영용 1회성 수동 마이그레이션 (멱등, 자동 실행 X) |
 
 ### 신규 지표 추가 절차
 

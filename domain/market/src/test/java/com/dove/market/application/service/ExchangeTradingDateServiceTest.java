@@ -28,84 +28,112 @@ class ExchangeTradingDateServiceTest {
     static final LocalDate DATE = LocalDate.of(2026, 4, 25);
 
     @Nested
-    @DisplayName("upsert")
-    class Upsert {
+    @DisplayName("register")
+    class Register {
 
         @Test
-        @DisplayName("레코드 없을 때 신규 생성한다")
+        @DisplayName("레코드 없을 때 거래일을 생성한다")
         void shouldCreateWhenNotExists() {
-            service.upsert(KRX, DATE, true);
+            service.register(KRX, DATE);
 
-            assertThat(repository.findById(new ExchangeTradingDateId(KRX, DATE)))
-                    .isPresent()
-                    .hasValueSatisfying(etd -> assertThat(etd.isOpen()).isTrue());
+            assertThat(repository.findById(new ExchangeTradingDateId(KRX, DATE))).isPresent();
         }
 
         @Test
-        @DisplayName("closed → open 갱신을 허용한다")
-        void shouldAllowClosedToOpenUpdate() {
-            service.upsert(KRX, DATE, false);
-            service.upsert(KRX, DATE, true);
+        @DisplayName("이미 있으면 pricesSynced를 되돌리지 않는다 (멱등)")
+        void shouldNotResetPricesSyncedWhenAlreadyExists() {
+            service.register(KRX, DATE);
+            service.markPricesSynced(KRX, DATE);
+
+            service.register(KRX, DATE);
 
             assertThat(repository.findById(new ExchangeTradingDateId(KRX, DATE))
-                    .map(ExchangeTradingDate::isOpen)).contains(true);
-        }
-
-        @Test
-        @DisplayName("open → closed 갱신은 무시한다 — 개장 확정 후 되돌리지 않는다")
-        void shouldNotDowngradeFromOpenToClosed() {
-            service.upsert(KRX, DATE, true);
-            service.upsert(KRX, DATE, false);
-
-            assertThat(repository.findById(new ExchangeTradingDateId(KRX, DATE))
-                    .map(ExchangeTradingDate::isOpen)).contains(true);
+                    .map(ExchangeTradingDate::isPricesSynced)).contains(true);
         }
     }
 
     @Nested
-    @DisplayName("existsOpenDay")
-    class ExistsOpenDay {
+    @DisplayName("existsTradingDay")
+    class ExistsTradingDay {
 
         @Test
-        @DisplayName("개장일이면 true를 반환한다")
-        void shouldReturnTrueForOpenDay() {
-            service.upsert(KRX, DATE, true);
+        @DisplayName("등록된 거래일이면 true를 반환한다")
+        void shouldReturnTrueForRegisteredDay() {
+            service.register(KRX, DATE);
 
-            assertThat(service.existsOpenDay(KRX, DATE)).isTrue();
-        }
-
-        @Test
-        @DisplayName("휴장일이면 false를 반환한다")
-        void shouldReturnFalseForClosedDay() {
-            service.upsert(KRX, DATE, false);
-
-            assertThat(service.existsOpenDay(KRX, DATE)).isFalse();
+            assertThat(service.existsTradingDay(KRX, DATE)).isTrue();
         }
 
         @Test
         @DisplayName("레코드 없으면 false를 반환한다")
         void shouldReturnFalseWhenNoRecord() {
-            assertThat(service.existsOpenDay(KRX, DATE)).isFalse();
+            assertThat(service.existsTradingDay(KRX, DATE)).isFalse();
         }
     }
 
     @Nested
-    @DisplayName("findOpenDatesInRange")
-    class FindOpenDatesInRange {
+    @DisplayName("findTradingDatesInRange")
+    class FindTradingDatesInRange {
 
         @Test
-        @DisplayName("기간 내 개장일만 반환한다")
-        void shouldReturnOnlyOpenDatesInRange() {
+        @DisplayName("기간 내 거래일을 반환한다")
+        void shouldReturnDatesInRange() {
+            LocalDate d1 = DATE;
+            LocalDate d3 = DATE.plusDays(2);
+            service.register(KRX, d1);
+            service.register(KRX, d3);
+
+            List<LocalDate> result = service.findTradingDatesInRange(KRX, d1, d3);
+
+            assertThat(result).containsExactlyInAnyOrder(d1, d3);
+        }
+
+        @Test
+        @DisplayName("기간 밖 거래일은 제외한다")
+        void shouldExcludeDatesOutOfRange() {
+            service.register(KRX, DATE.minusDays(1));
+            service.register(KRX, DATE);
+
+            List<LocalDate> result = service.findTradingDatesInRange(KRX, DATE, DATE);
+
+            assertThat(result).containsExactly(DATE);
+        }
+    }
+
+    @Nested
+    @DisplayName("findRecentTradingDates")
+    class FindRecentTradingDates {
+
+        @Test
+        @DisplayName("최근 거래일을 limit개까지 내림차순으로 반환한다")
+        void shouldReturnRecentDatesDescWithinLimit() {
             LocalDate d1 = DATE;
             LocalDate d2 = DATE.plusDays(1);
             LocalDate d3 = DATE.plusDays(2);
-            service.upsert(KRX, d1, true);
-            service.upsert(KRX, d2, false);
-            service.upsert(KRX, d3, true);
+            LocalDate d4 = DATE.plusDays(3);
+            service.register(KRX, d1);
+            service.register(KRX, d2);
+            service.register(KRX, d3);
+            service.register(KRX, d4);
 
-            List<LocalDate> result = service.findOpenDatesInRange(KRX, d1, d3);
+            List<LocalDate> result = service.findRecentTradingDates(KRX, d4, 2);
 
-            assertThat(result).containsExactlyInAnyOrder(d1, d3);
+            assertThat(result).containsExactly(d4, d3);
+        }
+
+        @Test
+        @DisplayName("onOrBefore 이후 거래일은 제외한다")
+        void shouldExcludeDatesAfterOnOrBefore() {
+            LocalDate d1 = DATE;
+            LocalDate d2 = DATE.plusDays(1);
+            LocalDate d3 = DATE.plusDays(2);
+            service.register(KRX, d1);
+            service.register(KRX, d2);
+            service.register(KRX, d3);
+
+            List<LocalDate> result = service.findRecentTradingDates(KRX, d2, 10);
+
+            assertThat(result).containsExactly(d2, d1);
         }
     }
 
@@ -114,25 +142,17 @@ class ExchangeTradingDateServiceTest {
     class FindUnsyncedPriceDates {
 
         @Test
-        @DisplayName("open=true AND pricesSynced=false인 날짜만 반환한다")
-        void shouldReturnUnsyncedOpenDates() {
+        @DisplayName("pricesSynced=false인 날짜만 반환한다")
+        void shouldReturnUnsyncedDates() {
             LocalDate d1 = DATE;
             LocalDate d2 = DATE.plusDays(1);
-            service.upsert(KRX, d1, true);
-            service.upsert(KRX, d2, true);
+            service.register(KRX, d1);
+            service.register(KRX, d2);
             service.markPricesSynced(KRX, d1);
 
             List<LocalDate> result = service.findUnsyncedPriceDates(KRX, d1, d2);
 
             assertThat(result).containsExactly(d2);
-        }
-
-        @Test
-        @DisplayName("휴장일은 미수집 조회에서 제외한다")
-        void shouldNotReturnClosedDaysInUnsyncedQuery() {
-            service.upsert(KRX, DATE, false);
-
-            assertThat(service.findUnsyncedPriceDates(KRX, DATE, DATE)).isEmpty();
         }
     }
 
@@ -143,7 +163,7 @@ class ExchangeTradingDateServiceTest {
         @Test
         @DisplayName("pricesSynced를 true로 변경한다")
         void shouldMarkPricesSynced() {
-            service.upsert(KRX, DATE, true);
+            service.register(KRX, DATE);
             service.markPricesSynced(KRX, DATE);
 
             assertThat(repository.findById(new ExchangeTradingDateId(KRX, DATE))
@@ -170,11 +190,11 @@ class ExchangeTradingDateServiceTest {
         }
 
         @Test
-        @DisplayName("가장 최근 날짜를 반환한다")
+        @DisplayName("가장 최근 거래일을 반환한다")
         void shouldReturnLatestDate() {
-            service.upsert(KRX, DATE.minusDays(2), true);
-            service.upsert(KRX, DATE.minusDays(1), false);
-            service.upsert(KRX, DATE, true);
+            service.register(KRX, DATE.minusDays(2));
+            service.register(KRX, DATE.minusDays(1));
+            service.register(KRX, DATE);
 
             assertThat(service.findLastProcessedDate(KRX)).hasValue(DATE);
         }
