@@ -12,6 +12,7 @@
 - **테스트는 실제 코드와 동일 패키지를 미러링한다**(`.controller`/`.service`까지). 상위 기능 패키지에 평평하게 두지 않음.
 - **행위/엔드포인트 단위로 `@Nested` 내부 클래스로 묶는다.** 한 컨트롤러 메서드(또는 한 행위 묶음)당 `@Nested` 하나. `@DisplayName`을 계층화: 바깥 클래스=대상, `@Nested`=엔드포인트/행위, 메서드=구체 케이스.
 - 빈 테스트 패키지(디렉터리)는 남기지 않는다.
+- **Mockito는 strict로 쓴다 — `lenient(...)`·`Strictness.LENIENT`·`@MockitoSettings(strictness = LENIENT)` 금지.** 기본 `STRICT_STUBS` 유지. 'unnecessary stubbing'이 뜨면 느슨하게 풀지 말고 **불필요한 스텁을 제거하거나 케이스별로 테스트를 분리**한다. 공통 스텁 헬퍼는 그것을 호출하는 모든 테스트에서 실제로 쓰일 때만 둔다.
 
 ### api 통합 테스트 인증
 

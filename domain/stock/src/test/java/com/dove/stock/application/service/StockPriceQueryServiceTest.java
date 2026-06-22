@@ -176,24 +176,6 @@ class StockPriceQueryServiceTest {
     }
 
     @Nested
-    @DisplayName("findRecentTradeDates — 최근 거래일 목록")
-    class FindRecentTradeDates {
-
-        @Test
-        @DisplayName("onOrBefore 이하 최근 N개 거래일을 내림차순으로 반환한다")
-        void shouldReturnRecentTradeDatesDescending() {
-            save(LocalDate.of(2024, 1, 1));
-            save(LocalDate.of(2024, 1, 2));
-            save(LocalDate.of(2024, 1, 3));
-
-            List<LocalDate> result = service.findRecentTradeDates(
-                    List.of(MarketType.KOSPI), PT, LocalDate.of(2024, 1, 3), 2);
-
-            assertThat(result).containsExactly(LocalDate.of(2024, 1, 3), LocalDate.of(2024, 1, 2));
-        }
-    }
-
-    @Nested
     @DisplayName("findNthRecentTradeDate — N번째 최근 거래일")
     class FindNthRecentTradeDate {
 

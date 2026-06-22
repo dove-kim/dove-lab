@@ -96,19 +96,6 @@ public class StockPriceRepositorySupport {
                 .fetch();
     }
 
-    /** 거래소 집합에서 onOrBefore 이하의 최근 거래일 N개 (내림차순). */
-    public List<LocalDate> findRecentTradeDates(Collection<StockExchange> exchanges,
-                                                PriceType priceType, LocalDate onOrBefore, int limit) {
-        return queryFactory.select(stockPrice.id.tradeDate).distinct()
-                .from(stockPrice)
-                .where(stockPrice.id.exchange.in(exchanges),
-                        stockPrice.id.priceType.eq(priceType),
-                        stockPrice.id.tradeDate.loe(onOrBefore))
-                .orderBy(stockPrice.id.tradeDate.desc())
-                .limit(limit)
-                .fetch();
-    }
-
     /** onOrBefore 이하의 offset번째(0-based) 최근 거래일. */
     public LocalDate findNthRecentTradeDate(Collection<StockExchange> exchanges,
                                             PriceType priceType, LocalDate onOrBefore, int offset) {

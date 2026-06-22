@@ -20,7 +20,7 @@ export const viewport: Viewport = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="ko">
-      <body>
+      <body className="touch-pan-x touch-pan-y">
         <ScrollWatcher />
         {children}
       </body>
