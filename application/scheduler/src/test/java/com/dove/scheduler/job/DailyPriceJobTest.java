@@ -4,6 +4,8 @@ import com.dove.concurrent.ParallelException;
 import com.dove.jobstatus.JobStatusRegistry;
 import com.dove.jobstatus.SchedulerJobName;
 import com.dove.kis.infrastructure.adapter.KisTradingDayAdapter;
+import com.dove.market.application.service.ExchangeTradingDateService;
+import com.dove.market.domain.enums.Exchange;
 import com.dove.stock.domain.enums.StockExchange;
 import com.dove.stockcollection.application.port.DailyPriceFetcher;
 import com.dove.stockcollection.application.service.CollectionProgress;
@@ -53,9 +55,12 @@ class DailyPriceJobTest {
     @Mock
     private KisTradingDayAdapter tradingDayAdapter;
 
+    @Mock
+    private ExchangeTradingDateService tradingDateService;
+
     private DailyPriceJob job() {
         return new DailyPriceJob(priceCollectionService, systemEventService,
-                jobStatusRegistry, tradingDayAdapter, CLOCK);
+                jobStatusRegistry, tradingDayAdapter, tradingDateService, CLOCK);
     }
 
     @Nested
@@ -72,6 +77,7 @@ class DailyPriceJobTest {
             verify(jobStatusRegistry, never()).start(any(), anyLong());
             verify(priceCollectionService, never()).collect(any(), any(), any(), any(), any());
             verify(jobStatusRegistry, never()).complete(any());
+            verify(tradingDateService, never()).register(any(), any());
         }
     }
 
@@ -94,6 +100,8 @@ class DailyPriceJobTest {
             verify(jobStatusRegistry).start(SchedulerJobName.DAILY_PRICE.name(), exchangeCount);
             verify(jobStatusRegistry).complete(SchedulerJobName.DAILY_PRICE.name());
             verify(systemEventService, never()).recordKisApiFailure(any(), any());
+            verify(tradingDateService).register(Exchange.KRX, TODAY);
+            verify(tradingDateService).markPricesSynced(Exchange.KRX, TODAY);
         }
 
         @Test
@@ -112,6 +120,8 @@ class DailyPriceJobTest {
                     .collect(any(), any(), any(), any(), any());
             verify(systemEventService).recordKisApiFailure(first.name(), "KIS 호출 실패");
             verify(jobStatusRegistry).complete(SchedulerJobName.DAILY_PRICE.name());
+            verify(tradingDateService).register(Exchange.KRX, TODAY);
+            verify(tradingDateService, never()).markPricesSynced(any(), any());
         }
     }
 }

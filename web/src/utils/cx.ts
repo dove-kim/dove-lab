@@ -1,12 +1,12 @@
 ﻿export const cx = {
   input:
-    "w-full bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-white placeholder-white/25 text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition",
+    "w-full bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-white placeholder-white/25 text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition",
   inputNumber:
-    "w-full bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
+    "w-full bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none",
   inputDate:
-    "bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:invert",
+    "bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition [color-scheme:dark] [&::-webkit-calendar-picker-indicator]:opacity-40 [&::-webkit-calendar-picker-indicator]:invert",
   select:
-    "bg-slate-800 border border-white/15 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition [&_option]:bg-slate-800 [&_optgroup]:bg-slate-800",
+    "bg-slate-800 border border-white/15 rounded-lg px-3 py-2 text-white text-base sm:text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition [&_option]:bg-slate-800 [&_optgroup]:bg-slate-800",
   btnPrimary:
     "px-5 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white transition disabled:opacity-50",
   btnSecondary:

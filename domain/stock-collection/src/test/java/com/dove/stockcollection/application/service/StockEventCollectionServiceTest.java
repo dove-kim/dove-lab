@@ -12,8 +12,6 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
-import org.mockito.junit.jupiter.MockitoSettings;
-import org.mockito.quality.Strictness;
 import org.springframework.test.util.ReflectionTestUtils;
 
 import java.time.LocalDate;
@@ -35,7 +33,6 @@ import static org.mockito.Mockito.when;
  * KSD 권리 이벤트 수집 코어의 일일·백필 분기와 100행 캡 보완, 무효 행 스킵을 검증한다.
  */
 @ExtendWith(MockitoExtension.class)
-@MockitoSettings(strictness = Strictness.LENIENT)
 @DisplayName("StockEventCollectionService")
 class StockEventCollectionServiceTest {
 

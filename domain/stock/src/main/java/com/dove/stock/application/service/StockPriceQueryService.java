@@ -69,13 +69,6 @@ public class StockPriceQueryService {
         return support.findTradeDatesInRange(exchanges, priceType, from, to);
     }
 
-    /** 시장 집합의 최근 거래일 N개 (내림차순). */
-    public List<LocalDate> findRecentTradeDates(Collection<MarketType> markets,
-                                                PriceType priceType, LocalDate onOrBefore, int limit) {
-        List<StockExchange> exchanges = markets.stream().map(StockExchange::fromMarket).toList();
-        return support.findRecentTradeDates(exchanges, priceType, onOrBefore, limit);
-    }
-
     /** 시장 집합에서 onOrBefore 이하 offset번째(0-based) 최근 거래일. 없으면 null. */
     public LocalDate findNthRecentTradeDate(Collection<MarketType> markets,
                                             PriceType priceType, LocalDate onOrBefore, int offset) {
