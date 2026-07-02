@@ -9,7 +9,8 @@ ENV JAVA_TOOL_OPTIONS="-Xmx700m -XX:MaxMetaspaceSize=200m -Xss256k -XX:+UseG1GC 
 
 # 모델 활성화 드라이런이 score.py를 ProcessBuilder로 호출 → python + 모델 런타임 의존성 필요.
 RUN yum install -y python3 python3-pip libgomp && \
-    pip3 install --no-cache-dir joblib numpy pandas lightgbm scikit-learn && \
+    pip3 install --no-cache-dir --upgrade pip && \
+    pip3 install --no-cache-dir --prefer-binary joblib numpy pandas lightgbm scikit-learn && \
     yum clean all
 ENV MODEL_SCORER_PYTHON="python3" \
     MODEL_SCORER_SCRIPT="/app/scoring/score.py"
