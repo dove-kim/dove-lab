@@ -67,3 +67,5 @@ settings.local.json
 
 plan*.md
 PLAN*.md
+# 로컬 모델 아티팩트 임시 디렉터리
+.model-artifacts/

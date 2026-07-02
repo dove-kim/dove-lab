@@ -40,7 +40,41 @@ export type ConditionType =
   | "PRICE_VS_INDICATOR"
   | "VOLUME_VALUE"
   | "VOLUME_RANGE"
-  | "MARKET_FILTER";
+  | "MARKET_FILTER"
+  | "MODEL_SCORE_VALUE"
+  | "MODEL_SCORE_RANGE"
+  | "RANK_VALUE"
+  | "RANK_RANGE"
+  | "BREADTH_VALUE"
+  | "BREADTH_RANGE"
+  | "STOCK_STATUS";
+
+export type StockStatusExclude = "TRADING_HALT" | "ADMIN_ITEM";
+
+export const STOCK_STATUS_LABELS: Record<StockStatusExclude, string> = {
+  TRADING_HALT: "거래정지",
+  ADMIN_ITEM: "관리종목",
+};
+
+export type RankType =
+  | "RANK_RET_1D" | "RANK_RET_5D" | "RANK_RET_10D"
+  | "RANK_VOLUME_RATIO_20" | "RANK_RSI_14" | "RANK_MACD_HISTOGRAM"
+  | "RANK_HIGH_52W_RATIO" | "RANK_VOLATILITY_20D" | "RANK_TURNOVER";
+
+/**
+ * 활성 모델 요약(필터 조건에서 모델 선택용).
+ *
+ * @param id         모델 식별자
+ * @param name       모델 이름
+ * @param version    버전
+ * @param outputType 출력 의미(PROBABILITY/REGRESSION)
+ */
+export interface ModelSummary {
+  id: number;
+  name: string;
+  version: string;
+  outputType: string;
+}
 
 export interface GroupNode {
   id: string;
@@ -132,6 +166,67 @@ export interface MarketFilterCondition extends BaseCondition {
   markets: MarketTypeFilter[];
 }
 
+export interface ModelScoreValueCondition extends BaseCondition {
+  conditionType: "MODEL_SCORE_VALUE";
+  modelId: number;
+  offset?: number;
+  operator: CompareOp;
+  value: number;
+}
+
+export interface ModelScoreRangeCondition extends BaseCondition {
+  conditionType: "MODEL_SCORE_RANGE";
+  modelId: number;
+  offset?: number;
+  minValue: number;
+  minInclusive: boolean;
+  maxValue: number;
+  maxInclusive: boolean;
+}
+
+export interface RankValueCondition extends BaseCondition {
+  conditionType: "RANK_VALUE";
+  rank: RankType;
+  offset?: number;
+  operator: CompareOp;
+  value: number;
+}
+
+export interface RankRangeCondition extends BaseCondition {
+  conditionType: "RANK_RANGE";
+  rank: RankType;
+  offset?: number;
+  minValue: number;
+  minInclusive: boolean;
+  maxValue: number;
+  maxInclusive: boolean;
+}
+
+export interface BreadthValueCondition extends BaseCondition {
+  conditionType: "BREADTH_VALUE";
+  offset?: number;
+  operator: CompareOp;
+  value: number;
+}
+
+export interface BreadthRangeCondition extends BaseCondition {
+  conditionType: "BREADTH_RANGE";
+  offset?: number;
+  minValue: number;
+  minInclusive: boolean;
+  maxValue: number;
+  maxInclusive: boolean;
+}
+
+/**
+ * 종목상태 제외 조건. 지정한 상태의 종목을 결과에서 제외한다.
+ * 종목상태는 현재값이라 최신일자에서만 유효 — DateRule≠LATEST면 백엔드가 무시한다.
+ */
+export interface StockStatusCondition extends BaseCondition {
+  conditionType: "STOCK_STATUS";
+  exclude: StockStatusExclude[];
+}
+
 export type ConditionNode =
   | IndicatorValueCondition
   | IndicatorRangeCondition
@@ -141,7 +236,14 @@ export type ConditionNode =
   | PriceVsIndicatorCondition
   | VolumeValueCondition
   | VolumeRangeCondition
-  | MarketFilterCondition;
+  | MarketFilterCondition
+  | ModelScoreValueCondition
+  | ModelScoreRangeCondition
+  | RankValueCondition
+  | RankRangeCondition
+  | BreadthValueCondition
+  | BreadthRangeCondition
+  | StockStatusCondition;
 
 export type ExpressionNode = GroupNode | ConditionNode;
 
@@ -214,6 +316,25 @@ export const INDICATOR_LABELS: Record<IndicatorType, string> = {
 export const PRICE_FIELD_LABELS: Record<PriceField, string> = {
   OPEN: "시가", HIGH: "고가", LOW: "저가", CLOSE: "종가",
 };
+
+/** 횡단면 순위(0~1, 1=최상위) 종류 라벨. */
+export const RANK_TYPE_LABELS: Record<RankType, string> = {
+  RANK_RET_1D: "1일 수익률 순위",
+  RANK_RET_5D: "5일 수익률 순위",
+  RANK_RET_10D: "10일 수익률 순위",
+  RANK_VOLUME_RATIO_20: "거래량비율(20) 순위",
+  RANK_RSI_14: "RSI(14) 순위",
+  RANK_MACD_HISTOGRAM: "MACD히스토그램 순위",
+  RANK_HIGH_52W_RATIO: "52주고점비율 순위",
+  RANK_VOLATILITY_20D: "변동성(20일) 순위",
+  RANK_TURNOVER: "거래대금 순위",
+};
+
+export const ALL_RANK_TYPES: RankType[] = [
+  "RANK_TURNOVER", "RANK_RET_1D", "RANK_RET_5D", "RANK_RET_10D",
+  "RANK_VOLUME_RATIO_20", "RANK_RSI_14", "RANK_MACD_HISTOGRAM",
+  "RANK_HIGH_52W_RATIO", "RANK_VOLATILITY_20D",
+];
 
 export const COMPARE_OP_LABELS: Record<CompareOp, string> = {
   GT: ">", GTE: "≥", LT: "<", LTE: "≤", EQ: "=", NEQ: "≠",

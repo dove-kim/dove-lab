@@ -1,12 +1,15 @@
 package com.dove.api.search.stock.controller;
 
 import com.dove.api.global.security.authorization.RequireCapability;
+import com.dove.api.search.stock.dto.FundamentalStatementResponse;
 import com.dove.api.search.stock.dto.IndicatorBar;
 import com.dove.api.search.stock.dto.InvestorFlowBar;
 import com.dove.api.search.stock.dto.PriceBar;
 import com.dove.api.search.stock.dto.StockDetailResponse;
 import com.dove.api.search.stock.dto.StockEventResponse;
 import com.dove.api.search.stock.dto.StockResponse;
+import com.dove.api.search.stock.dto.ValuationResponse;
+import com.dove.fundamental.application.FundamentalQueryService;
 import com.dove.indicator.application.service.StockFeatureDailyService;
 import com.dove.indicator.domain.enums.IndicatorType;
 import com.dove.investorflow.application.service.InvestorDailyService;
@@ -48,6 +51,7 @@ public class StockController {
     private final StockFeatureDailyService featureDailyService;
     private final StockEventService stockEventQueryService;
     private final InvestorDailyService investorDailyService;
+    private final FundamentalQueryService fundamentalQueryService;
 
     /**
      * 전체 종목 목록을 반환한다.
@@ -89,36 +93,43 @@ public class StockController {
     }
 
     /**
-     * 종목 주가 조회.
+     * 종목 주가 조회. before가 있으면 그 날짜 직전 과거 구간을, 없으면 최근 구간을 반환한다(둘 다 거래일 오름차순).
      *
      * @param source   KRX | NXT | INTEGRATED (대소문자 무관)
      * @param adjusted 수정주가 여부
      * @param limit    최대 봉 수 (기본 120)
+     * @param before   이 거래일(exclusive) 직전 과거 봉을 조회 (과거 페이지네이션). 비어있으면 최근 봉.
      */
     @GetMapping("/{ticker}/prices")
     public List<PriceBar> getPrices(@PathVariable String ticker,
                                     @RequestParam String source,
                                     @RequestParam(defaultValue = "true") boolean adjusted,
-                                    @RequestParam(defaultValue = "120") int limit) {
+                                    @RequestParam(defaultValue = "120") int limit,
+                                    @RequestParam(required = false) String before) {
         StockExchange exchange = resolveExchange(source, ticker);
         PriceType priceType = adjusted ? PriceType.ADJUSTED : PriceType.RAW;
-        return priceQueryService.findRecent(ticker, exchange, priceType, limit).stream()
+        var prices = (before != null && !before.isBlank())
+                ? priceQueryService.findBefore(ticker, exchange, priceType, LocalDate.parse(before), limit)
+                : priceQueryService.findRecent(ticker, exchange, priceType, limit);
+        return prices.stream()
                 .map(p -> PriceBar.of(p.getTradeDate(), p))
                 .toList();
     }
 
     /**
-     * 종목 지표 조회.
+     * 종목 지표 조회. before가 있으면 그 날짜 직전 과거 구간을, 없으면 최근 구간을 반환한다.
      *
      * @param source   KRX | NXT | INTEGRATED (대소문자 무관)
      * @param adjusted 수정주가 여부
+     * @param before   이 거래일(exclusive) 직전 과거 지표를 조회 (과거 페이지네이션). 비어있으면 최근.
      */
     @GetMapping("/{ticker}/indicators")
     public List<IndicatorBar> getIndicators(@PathVariable String ticker,
                                             @RequestParam String source,
                                             @RequestParam(defaultValue = "true") boolean adjusted,
                                             @RequestParam(defaultValue = "120") int limit,
-                                            @RequestParam List<String> types) {
+                                            @RequestParam List<String> types,
+                                            @RequestParam(required = false) String before) {
         List<IndicatorType> indicatorTypes = types.stream()
                 .map(IndicatorType::parseOrNull)
                 .filter(Objects::nonNull)
@@ -128,7 +139,9 @@ public class StockController {
         StockExchange exchange = resolveExchange(source, ticker);
         PriceType priceType = adjusted ? PriceType.ADJUSTED : PriceType.RAW;
         Map<LocalDate, Map<IndicatorType, Double>> bars =
-                featureDailyService.findRecentByStock(ticker, exchange, priceType, limit);
+                (before != null && !before.isBlank())
+                        ? featureDailyService.findBeforeByStock(ticker, exchange, priceType, LocalDate.parse(before), limit)
+                        : featureDailyService.findRecentByStock(ticker, exchange, priceType, limit);
 
         return bars.entrySet().stream()
                 .sorted(Map.Entry.comparingByKey())
@@ -158,6 +171,36 @@ public class StockController {
                         d.institutionNet(),
                         d.foreignNet()))
                 .toList();
+    }
+
+    /**
+     * 종목의 재무제표(공시 단위)를 최신순으로 반환한다.
+     */
+    @GetMapping("/{ticker}/fundamentals")
+    public List<FundamentalStatementResponse> getFundamentals(@PathVariable String ticker) {
+        return fundamentalQueryService.findStatements(ticker).stream()
+                .map(FundamentalStatementResponse::from)
+                .toList();
+    }
+
+    /**
+     * 종목의 최근 일별 밸류에이션을 반환한다.
+     */
+    @GetMapping("/{ticker}/valuations")
+    public List<ValuationResponse> getValuations(@PathVariable String ticker) {
+        return fundamentalQueryService.findValuations(ticker).stream()
+                .map(ValuationResponse::from)
+                .toList();
+    }
+
+    /**
+     * 종목의 최신 밸류에이션 1건을 반환한다(없으면 204).
+     */
+    @GetMapping("/{ticker}/valuation/latest")
+    public ValuationResponse getLatestValuation(@PathVariable String ticker) {
+        return fundamentalQueryService.findLatestValuation(ticker)
+                .map(ValuationResponse::from)
+                .orElseThrow(() -> new ResponseStatusException(HttpStatus.NO_CONTENT));
     }
 
     /**

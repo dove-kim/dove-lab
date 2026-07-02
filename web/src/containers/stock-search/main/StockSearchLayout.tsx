@@ -83,6 +83,7 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
 
   // ── 공통 상태 ──────────────────────────────────────────────────────────────────
   const [searchQuery, setSearchQuery] = useState("");
+  const [searchOpen, setSearchOpen] = useState(true);
   const [selected, setSelected] = useState<StockMatchResult | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
   const [listST, setListST] = useState(0);
@@ -241,7 +242,24 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
 
   return (
     <div className="flex flex-col flex-1 overflow-hidden min-w-0">
-      {/* ── 상단 컨트롤 ───────────────────────────────────────────────────────── */}
+      {/* ── 검색/필터 영역 토글 바 (모바일·웹 공통) ───────────────────────────── */}
+      <div className="flex-shrink-0 flex items-center justify-between px-5 py-1.5 border-b border-white/10 bg-slate-900/40">
+        <span className="text-xs text-slate-400">
+          {mode === "all" ? "전체 종목" : "필터 검색"}
+          {result && mode === "filter" && <span className="text-slate-500"> · {result.matchCount}개 매칭</span>}
+        </span>
+        <button type="button" onClick={() => setSearchOpen((v) => !v)}
+          className="flex items-center gap-1 text-xs text-slate-400 hover:text-white transition">
+          {searchOpen ? "검색 접기" : "검색 펼치기"}
+          <svg className={`w-3.5 h-3.5 transition-transform ${searchOpen ? "" : "rotate-180"}`}
+            viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+            <polyline points="18 15 12 9 6 15" />
+          </svg>
+        </button>
+      </div>
+
+      {/* ── 상단 컨트롤 (접기 가능) ───────────────────────────────────────────── */}
+      {searchOpen && (
       <div className="flex-shrink-0 border-b border-white/10 px-5 py-3 flex flex-wrap items-end gap-4">
         {/* 모드 토글 */}
         <div className="flex flex-col gap-1">
@@ -356,6 +374,7 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
           </>
         )}
       </div>
+      )}
 
       {/* ── 결과 목록 + 상세 영역 ─────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">

@@ -8,5 +8,11 @@ public enum SchedulerJobName {
     STOCK_DETAIL,
     INVESTOR_FLOW,
     DAILY_PRICE,
-    INDICATOR
+    INDICATOR,
+    RANK,
+    BREADTH,
+    MODEL_SCORING,
+    FUNDAMENTAL_POLL,
+    SHARE_COUNT,
+    VALUATION
 }

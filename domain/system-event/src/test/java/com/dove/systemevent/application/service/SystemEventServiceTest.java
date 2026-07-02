@@ -74,6 +74,20 @@ class SystemEventServiceTest {
         }
 
         @Test
+        @DisplayName("recordModelScoringFailure — 모델 유형·modelId/errorCode/message 상세를 저장한다")
+        void shouldRecordModelScoringFailure() {
+            service.recordModelScoringFailure(7L, "FEATURE_MISMATCH", "피처 불일치");
+
+            SystemEvent e = captureSaved();
+            assertThat(e.getEventType()).isEqualTo(SystemEventType.MODEL_SCORING_FAILURE);
+            assertThat(e.getMarketType()).isNull();
+            assertThat(e.getDetail())
+                    .containsEntry("modelId", "7")
+                    .containsEntry("errorCode", "FEATURE_MISMATCH")
+                    .containsEntry("message", "피처 불일치");
+        }
+
+        @Test
         @DisplayName("recordKrxRateLimit — 응답 본문을 200자로 잘라 저장한다")
         void shouldTruncateRateLimitBodyTo200() {
             String body = "x".repeat(300);

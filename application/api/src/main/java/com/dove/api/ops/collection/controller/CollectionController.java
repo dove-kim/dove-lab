@@ -6,9 +6,10 @@ import com.dove.api.global.security.authorization.RequireRole;
 import com.dove.api.global.security.authorization.Role;
 import com.dove.api.ops.collection.dto.CollectionTaskResponse;
 import com.dove.api.ops.collection.dto.EventCollectionRequest;
-import com.dove.api.ops.collection.dto.InvestorCollectionRequest;
+import com.dove.api.ops.collection.dto.FundamentalCollectionRequest;
 import com.dove.api.ops.collection.dto.PriceCollectionRequest;
 import com.dove.api.ops.collection.dto.StockCollectionRequest;
+import com.dove.api.ops.collection.dto.ValuationCollectionRequest;
 import com.dove.stock.domain.enums.StockExchange;
 import com.dove.stockcollection.application.service.CollectionLauncher;
 import com.dove.stockcollection.application.service.CollectionTaskService;
@@ -94,13 +95,24 @@ public class CollectionController {
     }
 
     /**
-     * 투자자매매동향 재조회 시작 → 작업ID 반환.
+     * 재무제표(DART) 재조회 시작 → 작업ID 반환.
      */
-    @PostMapping("/investor")
+    @PostMapping("/fundamental")
     @ResponseStatus(HttpStatus.ACCEPTED)
-    public Map<String, Long> collectInvestor(@Valid @RequestBody InvestorCollectionRequest req,
-                                             @AuthenticationPrincipal AuthenticatedUser user) {
-        Long taskId = launcher.enqueueInvestorCollection(req.from(), req.to(), user.memberId());
+    public Map<String, Long> collectFundamental(@Valid @RequestBody FundamentalCollectionRequest req,
+                                                @AuthenticationPrincipal AuthenticatedUser user) {
+        Long taskId = launcher.enqueueFundamentalCollection(req.from(), req.to(), user.memberId());
+        return Map.of("taskId", taskId);
+    }
+
+    /**
+     * 일별 밸류에이션 재계산 시작 → 작업ID 반환. 외부 API 없이 DB만 재계산.
+     */
+    @PostMapping("/valuation")
+    @ResponseStatus(HttpStatus.ACCEPTED)
+    public Map<String, Long> collectValuation(@Valid @RequestBody ValuationCollectionRequest req,
+                                              @AuthenticationPrincipal AuthenticatedUser user) {
+        Long taskId = launcher.enqueueValuationCollection(req.from(), req.to(), user.memberId());
         return Map.of("taskId", taskId);
     }
 

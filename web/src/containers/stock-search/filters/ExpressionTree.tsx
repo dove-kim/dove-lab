@@ -6,6 +6,7 @@ import {
   ConditionNode,
   ConditionType,
   LogicOperator,
+  DateRule,
 } from "@/types/filter";
 import {
   summarizeCondition,
@@ -25,6 +26,7 @@ interface Props {
   onSelectGroup: (id: string) => void;
   pendingAddType: ConditionType | null;
   onPendingAddConsumed: () => void;
+  dateRule?: DateRule;
 }
 
 export default function ExpressionTree({
@@ -34,6 +36,7 @@ export default function ExpressionTree({
   onSelectGroup,
   pendingAddType,
   onPendingAddConsumed,
+  dateRule = "LATEST",
 }: Props) {
   const [editingCondition, setEditingCondition] = useState<{ node: ConditionNode } | null>(null);
   const [addingToGroup, setAddingToGroup] = useState<{ groupId: string; type: ConditionType } | null>(null);
@@ -142,6 +145,7 @@ export default function ExpressionTree({
                 onUpdateChildOp={handleUpdateChildOp}
                 onEditCondition={(n) => setEditingCondition({ node: n })}
                 onAddCondition={(groupId, type) => setAddingToGroup({ groupId, type })}
+                dateRule={dateRule}
               />
             ) : (
               <ConditionNodeView
@@ -149,6 +153,7 @@ export default function ExpressionTree({
                 onRemove={handleRemove}
                 onEdit={(n) => setEditingCondition({ node: n })}
                 onToggleNegated={handleToggleNegated}
+                dateRule={dateRule}
               />
             )}
           </div>
@@ -210,6 +215,7 @@ function GroupNodeView({
   onUpdateChildOp,
   onEditCondition,
   onAddCondition,
+  dateRule,
 }: {
   node: GroupNode;
   selectedGroupId: string | null;
@@ -220,6 +226,7 @@ function GroupNodeView({
   onUpdateChildOp: (groupId: string, opIndex: number, current: LogicOperator) => void;
   onEditCondition: (n: ConditionNode) => void;
   onAddCondition: (groupId: string, type: ConditionType) => void;
+  dateRule: DateRule;
 }) {
   const isSelected = selectedGroupId === node.id;
 
@@ -289,6 +296,7 @@ function GroupNodeView({
                 onUpdateChildOp={onUpdateChildOp}
                 onEditCondition={onEditCondition}
                 onAddCondition={onAddCondition}
+                dateRule={dateRule}
               />
             ) : (
               <ConditionNodeView
@@ -296,6 +304,7 @@ function GroupNodeView({
                 onRemove={onRemove}
                 onEdit={onEditCondition}
                 onToggleNegated={onToggleNegated}
+                dateRule={dateRule}
               />
             )}
           </div>
@@ -349,6 +358,13 @@ const CONDITION_TYPE_ICONS: Record<ConditionType, string> = {
   VOLUME_VALUE: "📈",
   VOLUME_RANGE: "📉",
   MARKET_FILTER: "🏢",
+  MODEL_SCORE_VALUE: "🤖",
+  MODEL_SCORE_RANGE: "🎯",
+  RANK_VALUE: "🏆",
+  RANK_RANGE: "📊",
+  BREADTH_VALUE: "📶",
+  BREADTH_RANGE: "📊",
+  STOCK_STATUS: "🚫",
 };
 
 function ConditionNodeView({
@@ -356,15 +372,21 @@ function ConditionNodeView({
   onRemove,
   onEdit,
   onToggleNegated,
+  dateRule,
 }: {
   node: ConditionNode;
   onRemove: (id: string) => void;
   onEdit: (n: ConditionNode) => void;
   onToggleNegated: (id: string) => void;
+  dateRule: DateRule;
 }) {
+  // 종목상태는 현재값이라 최신일자에서만 유효 — 과거일자 기준이면 무시됨을 반투명으로 표시.
+  const inactive = node.conditionType === "STOCK_STATUS" && dateRule !== "LATEST";
+
   return (
     <div
-      className="flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-700/50 border border-white/8 group"
+      className={`flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-700/50 border border-white/8 group${inactive ? " opacity-50" : ""}`}
+      title={inactive ? "현재 상태 기준 — 최신일자에서만 적용됩니다" : undefined}
       onClick={(e) => e.stopPropagation()}
     >
       <NotBadge
@@ -374,6 +396,7 @@ function ConditionNodeView({
       <span className="text-sm leading-none flex-shrink-0">{CONDITION_TYPE_ICONS[node.conditionType]}</span>
       <span className="flex-1 text-sm text-slate-200 font-mono truncate">
         {summarizeCondition(node)}
+        {inactive && <span className="ml-2 not-italic text-xs text-amber-400/80 font-sans">(최신일자에서만 적용)</span>}
       </span>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">
         <button

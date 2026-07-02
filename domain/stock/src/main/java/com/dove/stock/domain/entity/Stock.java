@@ -28,6 +28,7 @@ import java.time.LocalDateTime;
                 @Index(name = "IDX_STOCK_SECUGRP", columnList = "SECUGRP_NM"),
                 @Index(name = "IDX_STOCK_STKCERT", columnList = "KIND_STKCERT_TP_NM"),
                 @Index(name = "IDX_STOCK_MARKET", columnList = "MARKET"),
+                @Index(name = "IDX_STOCK_CORP_CODE", columnList = "CORP_CODE"),
         })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class Stock {
@@ -58,6 +59,10 @@ public class Stock {
     @Comment("KRX 주권종류명 원문 (보통주/우선주 등, 비주권은 NULL)")
     private String kindStkCertTpNm;
 
+    @Column(name = "CORP_CODE", length = 8)
+    @Comment("DART 고유번호 (재무 조회 키)")
+    private String corpCode;
+
     @CreationTimestamp
     @Column(name = "CREATED_AT", nullable = false, updatable = false)
     @Comment("DB 최초 등록 일시")
@@ -82,5 +87,12 @@ public class Stock {
         this.listingDate = listingDate;
         this.secugrpNm = secugrpNm;
         this.kindStkCertTpNm = kindStkCertTpNm;
+    }
+
+    /**
+     * DART 고유번호를 부여한다.
+     */
+    public void assignCorpCode(String corpCode) {
+        this.corpCode = corpCode;
     }
 }

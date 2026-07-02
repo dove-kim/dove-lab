@@ -171,6 +171,18 @@ const ROOT_STOCK_TAGS_ITEM: NavItem = {
   ),
 };
 
+const ROOT_MODELS_ITEM: NavItem = {
+  href: "/root/models",
+  label: "모델 관리",
+  icon: (
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 2 2 7l10 5 10-5-10-5z" />
+      <path d="M2 17l10 5 10-5" />
+      <path d="M2 12l10 5 10-5" />
+    </svg>
+  ),
+};
+
 const STORAGE_KEY = "sidebar-collapsed";
 
 export default function Sidebar({ role, capabilities, mobileOpen, onMobileClose }: Props) {
@@ -281,6 +293,7 @@ export default function Sidebar({ role, capabilities, mobileOpen, onMobileClose 
               )}
               <NavLink item={ROOT_BACKFILL_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
               <NavLink item={ROOT_STOCK_TAGS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+              <NavLink item={ROOT_MODELS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
               <NavLink item={ROOT_SYSTEM_EVENTS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
             </>
           )}

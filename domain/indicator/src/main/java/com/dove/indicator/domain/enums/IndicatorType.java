@@ -23,7 +23,10 @@ public enum IndicatorType {
     GAP_OPEN,
     IS_52W_HIGH, IS_52W_LOW, IS_20D_HIGH, IS_20D_LOW,
     RET_1D, RET_5D, RET_10D,
-    BODY_RATIO, LOWER_WICK;
+    BODY_RATIO, LOWER_WICK,
+    UPPER_WICK_RATIO, CLOSE_POS,
+    BULLISH_ENGULFING, BEARISH_ENGULFING,
+    BREAKOUT_20D;
 
     /**
      * 이름으로 IndicatorType을 찾고, 알 수 없는 이름이면 null을 반환한다.

@@ -1,6 +1,7 @@
 package com.dove.krx.quota;
 
 import com.dove.apiquota.ApiQuotaStatus;
+import com.dove.apiquota.DailyApiQuota;
 import com.dove.apiquota.QuotaStatusProvider;
 import com.dove.apiquota.QuotaType;
 import com.dove.apiquota.RateLimiter;

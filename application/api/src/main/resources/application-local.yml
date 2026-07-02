@@ -1,0 +1,4 @@
+# 로컬(local) 프로파일 전용 — 운영 설정 위에 덮어쓴다.
+# 임시 작업파일을 OS 숨김 임시폴더가 아닌 실행 디렉터리 하위 .dove-work 로 고정(통제·가시성).
+workspace:
+  base-dir: ${user.dir}/.dove-work

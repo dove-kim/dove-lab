@@ -39,9 +39,21 @@ const PALETTE_SECTIONS: PaletteSection[] = [
     ],
   },
   {
+    title: "모델·순위",
+    items: [
+      { type: "MODEL_SCORE_VALUE", label: "모델 점수 비교", description: "ML 모델 점수 ≥ 0.7 처럼 점수와 숫자 비교", icon: "🤖" },
+      { type: "MODEL_SCORE_RANGE", label: "모델 점수 범위", description: "0.6 ≤ 모델 점수 ≤ 0.9 처럼 점수 범위 지정", icon: "🎯" },
+      { type: "RANK_VALUE", label: "순위 비교", description: "거래대금/모멘텀 순위 ≥ 0.9(상위 10%) 비교", icon: "🏆" },
+      { type: "RANK_RANGE", label: "순위 범위", description: "순위(0~1)의 최솟값~최댓값 범위 지정", icon: "📊" },
+      { type: "BREADTH_VALUE", label: "당일 상승비율 비교", description: "당일 상승비율 ≥ 0.45 처럼 시장 폭과 숫자 비교", icon: "📶" },
+      { type: "BREADTH_RANGE", label: "당일 상승비율 범위", description: "당일 상승비율(0~1)의 최솟값~최댓값 범위 지정", icon: "📊" },
+    ],
+  },
+  {
     title: "시장",
     items: [
       { type: "MARKET_FILTER", label: "시장 필터", description: "KOSPI, KOSDAQ, KONEX 시장 선택", icon: "🏢" },
+      { type: "STOCK_STATUS", label: "종목상태", description: "거래정지·관리종목을 결과에서 제외 (최신일자에서만 적용)", icon: "🚫" },
     ],
   },
 ];

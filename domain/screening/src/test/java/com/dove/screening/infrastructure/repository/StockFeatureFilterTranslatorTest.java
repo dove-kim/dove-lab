@@ -5,6 +5,7 @@ import com.dove.screening.domain.value.FilterModel;
 import com.fasterxml.jackson.databind.JsonNode;
 import com.fasterxml.jackson.databind.ObjectMapper;
 import org.junit.jupiter.api.DisplayName;
+import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 
 import java.util.Optional;
@@ -69,6 +70,12 @@ class StockFeatureFilterTranslatorTest {
     }
 
     @Test
+    @DisplayName("종목 상태(STOCK_STATUS) — SQL 미지원 → 폴백")
+    void shouldFallbackForStockStatus() {
+        assertThat(translate("{\"conditionType\":\"STOCK_STATUS\",\"exclude\":[\"TRADING_HALT\"]}")).isEmpty();
+    }
+
+    @Test
     @DisplayName("알 수 없는 지표·연산자·조건종류 — 폴백")
     void shouldFallbackForUnknownTokens() {
         assertThat(translate("{\"conditionType\":\"INDICATOR_VALUE\",\"indicator\":\"NOPE\",\"operator\":\"GT\",\"value\":1}")).isEmpty();
@@ -105,5 +112,112 @@ class StockFeatureFilterTranslatorTest {
     void shouldTranslateNegatedSupported() {
         String n = "{\"negated\":true,\"conditionType\":\"INDICATOR_VALUE\",\"indicator\":\"RSI_14\",\"operator\":\"GT\",\"value\":30}";
         assertThat(translate(n)).isPresent();
+    }
+
+    @Nested
+    @DisplayName("MODEL_SCORE — 모델점수 join 별칭 생성")
+    class ModelScore {
+
+        @Test
+        @DisplayName("모델점수 비교 — SQL 변환 가능 + 해당 모델 join 별칭 생성")
+        void shouldTranslateModelScoreValue() {
+            String n = "{\"conditionType\":\"MODEL_SCORE_VALUE\",\"modelId\":7,\"operator\":\"GT\",\"value\":0.9}";
+            Optional<TranslatedFilter> result = translate(n);
+            assertThat(result).isPresent();
+            assertThat(result.get().modelScoreAliases()).hasSize(1);
+            assertThat(result.get().modelScoreAliases().get(0).modelId()).isEqualTo(7L);
+            assertThat(result.get().modelScoreAliases().get(0).offset()).isZero();
+        }
+
+        @Test
+        @DisplayName("오프셋 모델점수 — 오프셋 피처 별칭과 모델 join 별칭이 함께 생성")
+        void shouldTranslateModelScoreWithOffset() {
+            String n = "{\"conditionType\":\"MODEL_SCORE_VALUE\",\"modelId\":3,\"offset\":-5,\"operator\":\"GT\",\"value\":0.5}";
+            Optional<TranslatedFilter> result = translate(n);
+            assertThat(result).isPresent();
+            assertThat(result.get().offsetAliases()).containsKey(-5);
+            assertThat(result.get().modelScoreAliases().get(0).offset()).isEqualTo(-5);
+        }
+
+        @Test
+        @DisplayName("서로 다른 모델 두 개 — 별칭 두 개 생성")
+        void shouldCreateDistinctAliasesPerModel() {
+            String n = "{\"nodeType\":\"GROUP\",\"childOps\":[\"AND\"],\"children\":["
+                    + "{\"conditionType\":\"MODEL_SCORE_VALUE\",\"modelId\":1,\"operator\":\"GT\",\"value\":0.5},"
+                    + "{\"conditionType\":\"MODEL_SCORE_VALUE\",\"modelId\":2,\"operator\":\"GT\",\"value\":0.5}]}";
+            Optional<TranslatedFilter> result = translate(n);
+            assertThat(result).isPresent();
+            assertThat(result.get().modelScoreAliases()).hasSize(2);
+        }
+    }
+
+    @Nested
+    @DisplayName("RANK — 순위 join 별칭 생성")
+    class Rank {
+
+        @Test
+        @DisplayName("순위 비교 — SQL 변환 가능 + 순위 join 별칭 생성")
+        void shouldTranslateRankValue() {
+            String n = "{\"conditionType\":\"RANK_VALUE\",\"rank\":\"RANK_RSI_14\",\"operator\":\"GTE\",\"value\":0.8}";
+            Optional<TranslatedFilter> result = translate(n);
+            assertThat(result).isPresent();
+            assertThat(result.get().rankAliases()).hasSize(1);
+            assertThat(result.get().rankAliases().get(0).offset()).isZero();
+        }
+
+        @Test
+        @DisplayName("순위 범위 — SQL 변환 가능")
+        void shouldTranslateRankRange() {
+            String n = "{\"conditionType\":\"RANK_RANGE\",\"rank\":\"RANK_TURNOVER\",\"minValue\":0.7,\"maxValue\":0.9}";
+            assertThat(translate(n)).isPresent();
+        }
+
+        @Test
+        @DisplayName("오프셋 순위 — 오프셋 피처 별칭과 순위 join 별칭이 함께 생성")
+        void shouldTranslateRankWithOffset() {
+            String n = "{\"conditionType\":\"RANK_VALUE\",\"rank\":\"RANK_RET_5D\",\"offset\":-3,\"operator\":\"GT\",\"value\":0.5}";
+            Optional<TranslatedFilter> result = translate(n);
+            assertThat(result).isPresent();
+            assertThat(result.get().offsetAliases()).containsKey(-3);
+            assertThat(result.get().rankAliases().get(0).offset()).isEqualTo(-3);
+        }
+
+        @Test
+        @DisplayName("알 수 없는 순위 이름 — 폴백")
+        void shouldFallbackForUnknownRank() {
+            assertThat(translate("{\"conditionType\":\"RANK_VALUE\",\"rank\":\"NOPE\",\"operator\":\"GT\",\"value\":1}")).isEmpty();
+        }
+    }
+
+    @Nested
+    @DisplayName("BREADTH — 당일 상승비율 join 별칭 생성")
+    class Breadth {
+
+        @Test
+        @DisplayName("상승비율 비교 — SQL 변환 가능 + 상승비율 join 별칭 생성")
+        void shouldTranslateBreadthValue() {
+            String n = "{\"conditionType\":\"BREADTH_VALUE\",\"operator\":\"GT\",\"value\":0.5}";
+            Optional<TranslatedFilter> result = translate(n);
+            assertThat(result).isPresent();
+            assertThat(result.get().breadthAliases()).hasSize(1);
+            assertThat(result.get().breadthAliases().get(0).offset()).isZero();
+        }
+
+        @Test
+        @DisplayName("상승비율 범위 — SQL 변환 가능")
+        void shouldTranslateBreadthRange() {
+            String n = "{\"conditionType\":\"BREADTH_RANGE\",\"minValue\":0.6,\"maxValue\":0.7}";
+            assertThat(translate(n)).isPresent();
+        }
+
+        @Test
+        @DisplayName("오프셋 상승비율 — 오프셋 피처 별칭과 상승비율 join 별칭이 함께 생성")
+        void shouldTranslateBreadthWithOffset() {
+            String n = "{\"conditionType\":\"BREADTH_VALUE\",\"offset\":-3,\"operator\":\"GT\",\"value\":0.5}";
+            Optional<TranslatedFilter> result = translate(n);
+            assertThat(result).isPresent();
+            assertThat(result.get().offsetAliases()).containsKey(-3);
+            assertThat(result.get().breadthAliases().get(0).offset()).isEqualTo(-3);
+        }
     }
 }

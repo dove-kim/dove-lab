@@ -21,9 +21,9 @@ class TechnicalIndicatorConfigTest {
     private List<TechnicalIndicatorCalculator> calculators;
 
     @Test
-    @DisplayName("33개 계산기가 모두 등록된다 (SMA 7 + EMA 6 + RSI 3 + 나머지 17)")
+    @DisplayName("36개 계산기가 모두 등록된다 (SMA 7 + EMA 6 + RSI 3 + 나머지 20)")
     void shouldRegisterAllCalculators() {
-        assertThat(calculators).hasSize(33);
+        assertThat(calculators).hasSize(36);
     }
 
     @Test

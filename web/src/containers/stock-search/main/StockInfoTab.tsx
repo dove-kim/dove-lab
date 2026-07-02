@@ -29,6 +29,16 @@ interface StockDetail {
   sctsMketLstgDt: string | null;
 }
 
+interface LatestValuation {
+  tradeDate: string;
+  closePrice: number | null;
+  marketCap: number | null;
+  per: number | null;
+  pbr: number | null;
+  psr: number | null;
+  gpa: number | null;
+}
+
 function text(v: string | null | undefined): string {
   return v != null && v !== "" ? v : "-";
 }
@@ -51,6 +61,18 @@ function rate(v: string | null | undefined): string {
   const n = Number(v);
   if (Number.isNaN(n)) return v;
   return `${n.toLocaleString(undefined, { maximumFractionDigits: 4 })}%`;
+}
+
+/** 시가총액 → 조/억 표기. */
+function cap(n: number | null | undefined): string {
+  if (n == null) return "-";
+  const v = n / 1e8;
+  if (Math.abs(v) >= 10000) return `${(v / 10000).toFixed(2)}조`;
+  return `${Math.round(v).toLocaleString()}억`;
+}
+
+function ratio(n: number | null | undefined): string {
+  return n == null ? "-" : n.toFixed(2);
 }
 
 function yn(v: string | null | undefined): string {
@@ -83,17 +105,23 @@ function Section({ title, children }: { title: string; children: React.ReactNode
  */
 export default function StockInfoTab({ code }: { code: string }) {
   const [detail, setDetail] = useState<StockDetail | null>(null);
+  const [valuation, setValuation] = useState<LatestValuation | null>(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     setLoading(true);
     setError(null);
+    setValuation(null);
     fetch(`/api/stocks/${code}/detail`)
       .then((res) => (res.ok ? res.json() : Promise.reject()))
       .then((data: StockDetail) => setDetail(data))
       .catch(() => setError("상세 정보를 불러오지 못했습니다."))
       .finally(() => setLoading(false));
+    fetch(`/api/stocks/${code}/valuation/latest`)
+      .then((res) => (res.ok && res.status !== 204 ? res.json() : null))
+      .then((data: LatestValuation | null) => setValuation(data))
+      .catch(() => setValuation(null));
   }, [code]);
 
   if (loading) {
@@ -105,6 +133,17 @@ export default function StockInfoTab({ code }: { code: string }) {
 
   return (
     <div className="h-full overflow-y-auto px-5 py-4 space-y-6">
+      {valuation && (
+        <Section title={`밸류에이션 (${valuation.tradeDate} 기준)`}>
+          <Row label="종가" value={numUnit(valuation.closePrice, "원")} />
+          <Row label="시가총액" value={cap(valuation.marketCap)} />
+          <Row label="PER" value={ratio(valuation.per)} />
+          <Row label="PBR" value={ratio(valuation.pbr)} />
+          <Row label="PSR" value={ratio(valuation.psr)} />
+          <Row label="GP/A" value={ratio(valuation.gpa)} />
+        </Section>
+      )}
+
       <Section title="기본 정보">
         <Row label="종목명" value={text(detail.name)} />
         <Row label="코드" value={text(detail.ticker)} />

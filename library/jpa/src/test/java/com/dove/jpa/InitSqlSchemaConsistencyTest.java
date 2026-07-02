@@ -36,7 +36,8 @@ class InitSqlSchemaConsistencyTest {
     private static final Pattern TABLE = Pattern.compile(
             "CREATE TABLE IF NOT EXISTS (\\w+)\\s*\\((.*?)\\n\\)\\s*COMMENT", Pattern.DOTALL);
     private static final Pattern SQL_COL = Pattern.compile(
-            "^\\s*([A-Z_]+)\\s+(VARCHAR|BIGINT|INT|DOUBLE|FLOAT|DATE|DATETIME|TINYINT|JSON|TEXT)\\b");
+            "^\\s*([A-Z_]+)\\s+(VARCHAR|BIGINT|SMALLINT|INT|DOUBLE|FLOAT|DATE|DATETIME|TINYINT"
+                    + "|LONGBLOB|LONGTEXT|MEDIUMBLOB|MEDIUMTEXT|BLOB|JSON|TEXT)\\b");
     private static final Pattern COL = Pattern.compile(
             "@(?:Column|JoinColumn)\\(\\s*name\\s*=\\s*\"([A-Za-z_]+)\"");
     private static final Pattern TABLE_NAME = Pattern.compile("name\\s*=\\s*\"([A-Za-z_]+)\"");

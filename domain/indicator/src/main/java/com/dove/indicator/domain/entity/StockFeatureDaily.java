@@ -107,6 +107,21 @@ public class StockFeatureDaily {
     // 캔들
     @Column(name = "BODY_RATIO") private Float bodyRatio;
     @Column(name = "LOWER_WICK") private Float lowerWick;
+    @Column(name = "UPPER_WICK_RATIO")
+    @Comment("윗꼬리 비율 (고가-max(시가,종가))/(고가-저가)")
+    private Float upperWickRatio;
+    @Column(name = "CLOSE_POS")
+    @Comment("당일 범위 내 종가 위치 (종가-저가)/(고가-저가)")
+    private Float closePos;
+    @Column(name = "BULLISH_ENGULFING")
+    @Comment("상승 장악형 캔들 여부(1/0)")
+    private Float bullishEngulfing;
+    @Column(name = "BEARISH_ENGULFING")
+    @Comment("하락 장악형 캔들 여부(1/0)")
+    private Float bearishEngulfing;
+    @Column(name = "BREAKOUT_20D")
+    @Comment("직전 20일 고점 상향 돌파 여부(1/0)")
+    private Float breakout20d;
     // 신고저 플래그
     @Column(name = "IS_52W_HIGH") private Boolean is52wHigh;
     @Column(name = "IS_52W_LOW") private Boolean is52wLow;
@@ -186,6 +201,11 @@ public class StockFeatureDaily {
             case RET_10D -> ret10d = v;
             case BODY_RATIO -> bodyRatio = v;
             case LOWER_WICK -> lowerWick = v;
+            case UPPER_WICK_RATIO -> upperWickRatio = v;
+            case CLOSE_POS -> closePos = v;
+            case BULLISH_ENGULFING -> bullishEngulfing = v;
+            case BEARISH_ENGULFING -> bearishEngulfing = v;
+            case BREAKOUT_20D -> breakout20d = v;
             case IS_52W_HIGH -> is52wHigh = value != 0.0;
             case IS_52W_LOW -> is52wLow = value != 0.0;
             case IS_20D_HIGH -> is20dHigh = value != 0.0;
@@ -245,6 +265,11 @@ public class StockFeatureDaily {
         putIfNotNull(m, IndicatorType.RET_10D, ret10d);
         putIfNotNull(m, IndicatorType.BODY_RATIO, bodyRatio);
         putIfNotNull(m, IndicatorType.LOWER_WICK, lowerWick);
+        putIfNotNull(m, IndicatorType.UPPER_WICK_RATIO, upperWickRatio);
+        putIfNotNull(m, IndicatorType.CLOSE_POS, closePos);
+        putIfNotNull(m, IndicatorType.BULLISH_ENGULFING, bullishEngulfing);
+        putIfNotNull(m, IndicatorType.BEARISH_ENGULFING, bearishEngulfing);
+        putIfNotNull(m, IndicatorType.BREAKOUT_20D, breakout20d);
         putFlag(m, IndicatorType.IS_52W_HIGH, is52wHigh);
         putFlag(m, IndicatorType.IS_52W_LOW, is52wLow);
         putFlag(m, IndicatorType.IS_20D_HIGH, is20dHigh);

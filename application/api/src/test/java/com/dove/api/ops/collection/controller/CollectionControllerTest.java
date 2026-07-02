@@ -51,7 +51,6 @@ class CollectionControllerTest {
         given(launcher.enqueueEventCollection(any(), any(), anyLong())).willReturn(22L);
         given(launcher.enqueueStockSyncCollection(any(), any(), anyLong())).willReturn(33L);
         given(launcher.enqueueStockDetailCollection(anyLong())).willReturn(34L);
-        given(launcher.enqueueInvestorCollection(any(), any(), anyLong())).willReturn(55L);
         given(launcher.reenqueue(anyLong(), anyLong())).willReturn(44L);
 
         CollectionTask task = new CollectionTask(CollectionType.PRICE, StockExchange.KOSPI,
@@ -173,47 +172,6 @@ class CollectionControllerTest {
             mockMvc.perform(post("/admin/ops/collection/stock-detail"))
                     .andExpect(status().isAccepted())
                     .andExpect(jsonPath("$.taskId").value(34));
-        }
-    }
-
-    @Nested
-    @DisplayName("POST /admin/ops/collection/investor")
-    class StartInvestorCollection {
-
-        @Test
-        @DisplayName("인증 없으면 401")
-        void shouldReturn401WhenUnauthenticated() throws Exception {
-            mockMvc.perform(post("/admin/ops/collection/investor")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("""
-                                    {"from":"2026-01-01","to":"2026-01-31"}
-                                    """))
-                    .andExpect(status().isUnauthorized());
-        }
-
-        @Test
-        @WithApiUser(role = "ROOT")
-        @DisplayName("ROOT 권한이면 투자자동향 재조회 시작 202 + 작업ID")
-        void shouldStartInvestorCollectionWhenRoot() throws Exception {
-            mockMvc.perform(post("/admin/ops/collection/investor")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("""
-                                    {"from":"2026-01-01","to":"2026-01-31"}
-                                    """))
-                    .andExpect(status().isAccepted())
-                    .andExpect(jsonPath("$.taskId").value(55));
-        }
-
-        @Test
-        @WithApiUser(role = "ROOT")
-        @DisplayName("from 누락 시 400 (@Valid)")
-        void shouldReturn400WhenFromMissing() throws Exception {
-            mockMvc.perform(post("/admin/ops/collection/investor")
-                            .contentType(MediaType.APPLICATION_JSON)
-                            .content("""
-                                    {"to":"2026-01-31"}
-                                    """))
-                    .andExpect(status().isBadRequest());
         }
     }
 

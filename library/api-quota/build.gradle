@@ -2,4 +2,8 @@ bootJar.enabled = false
 
 dependencies {
     compileOnly 'org.redisson:redisson:3.27.2'
+    compileOnly 'org.springframework.boot:spring-boot-starter-data-redis'
+
+    testImplementation 'org.springframework.boot:spring-boot-starter-test'
+    testImplementation 'org.springframework.boot:spring-boot-starter-data-redis'
 }

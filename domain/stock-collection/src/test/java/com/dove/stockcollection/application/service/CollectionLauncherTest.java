@@ -79,6 +79,39 @@ class CollectionLauncherTest {
     }
 
     @Test
+    void shouldEnqueueValuationWithDateRange() {
+        when(taskService.create(any(), any(), any(), any(), any())).thenReturn(55L);
+
+        launcher.enqueueValuationCollection(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 12, 31), 7L);
+
+        verify(taskService).create(eq(CollectionType.VALUATION), eq(null),
+                eq(LocalDate.of(2024, 1, 1)), eq(LocalDate.of(2024, 12, 31)), eq(7L));
+    }
+
+    @Test
+    void shouldRejectValuationWhenRangeReversed() {
+        assertThatThrownBy(() -> launcher.enqueueValuationCollection(
+                LocalDate.of(2024, 12, 31), LocalDate.of(2024, 1, 1), 7L))
+                .isInstanceOf(IllegalArgumentException.class)
+                .hasMessage("INVALID_BACKFILL_RANGE");
+
+        verify(taskService, never()).create(any(), any(), any(), any(), any());
+    }
+
+    @Test
+    void shouldReenqueueValuationFromStructuredParams() {
+        CollectionTask source = new CollectionTask(CollectionType.VALUATION, null,
+                LocalDate.of(2022, 1, 1), LocalDate.of(2022, 12, 31), 7L);
+        when(taskService.find(3L)).thenReturn(Optional.of(source));
+        when(taskService.create(any(), any(), any(), any(), any())).thenReturn(77L);
+
+        launcher.reenqueue(3L, 7L);
+
+        verify(taskService).create(eq(CollectionType.VALUATION), eq(null),
+                eq(LocalDate.of(2022, 1, 1)), eq(LocalDate.of(2022, 12, 31)), eq(7L));
+    }
+
+    @Test
     void shouldThrowWhenReenqueueSourceNotFound() {
         when(taskService.find(404L)).thenReturn(Optional.empty());
 
