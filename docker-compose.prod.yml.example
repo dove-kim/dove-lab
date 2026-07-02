@@ -25,6 +25,11 @@ services:
       # KIS API  ← 절대 커밋 금지
       KIS_APP_KEY: <KIS 앱 키>
       KIS_APP_SECRET: <KIS 앱 시크릿>
+      # DART OpenAPI (재무제표 수집)  ← 절대 커밋 금지
+      DART_API_KEY: <DART OpenAPI 인증키>
+      DART_DAILY_QUOTA: "18000"
+      # 임시 작업파일 루트 (DART 원본 zip·ML 아티팩트 — 기동/작업 전후 자동 정리). 컨테이너 내부 경로.
+      DOVE_WORK_DIR: /app/work
     volumes:
       - ./logs/scheduler:/logs
     network_mode: "host"

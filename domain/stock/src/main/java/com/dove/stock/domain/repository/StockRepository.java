@@ -13,4 +13,6 @@ import java.util.List;
 @Repository
 public interface StockRepository extends JpaRepository<Stock, String> {
     List<Stock> findByMarket(MarketType market);
+
+    List<Stock> findByCorpCodeIsNotNull();
 }

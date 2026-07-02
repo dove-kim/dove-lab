@@ -1,6 +1,6 @@
 # scheduler
 
-KRX/KIS에서 종목·주가·투자자동향을 수집하고 기술적 지표를 계산하는 배치 애플리케이션.
+KRX/KIS/DART에서 종목·주가·투자자동향·재무를 수집하고 지표·순위·밸류에이션·모델 점수를 계산하는 배치 애플리케이션.
 
 ## 스케줄
 
@@ -10,10 +10,11 @@ KRX/KIS에서 종목·주가·투자자동향을 수집하고 기술적 지표�
 |---|---|---|
 | 08:05 | `StockSyncJob` | KRX 당일 종목 스냅샷을 최신 상태로 upsert (신규 종목 포함) |
 | 12:00 | `StockDetailJob` | 전 종목 KIS 상세정보(`STOCK_DETAIL`) + 투자자매매동향(`INVESTOR_DAILY`) + 당일 권리이벤트(`STOCK_EVENT`, KSD) 수집 |
-| 21:00 | `DailyPriceJob` | 거래소별 당일 주가 수집 + 수정주가 이벤트 감지 시 ADJUSTED 재조회/지표 커서 rewind |
-| 00:00 | `IndicatorJob` | 그룹 커서 기반 기술적 지표 계산 → wide(`STOCK_FEATURE_DAILY`) 저장 |
+| 21:00 | `DailyPipelineOrchestrator` | 당일 주가 수집(하드 게이트) → **병렬** {① 지표 → 순위(rank) → 상승비율(breadth) ∥ ② DART 공시 폴링 → 상장주식수 → 밸류에이션} → 모델 채점. 각 단계 실패는 시스템 이벤트로 격리(다음 단계 계속). |
+| 일 06:00 | `FundamentalScheduledJobs` | DART 고유번호(corp_code) 주간 동기화 (신규 상장 반영) |
 
-> **KIS 데이터 가용 시각**: 장 마감(15:30) 후 약 20:00 KST부터 당일 주가 조회 가능 → 주가 수집은 21:00.
+> **KIS 데이터 가용 시각**: 장 마감(15:30) 후 약 20:00 KST부터 당일 주가 조회 가능 → 파이프라인은 21:00.
+> 과거 재조회(백필)는 ROOT 전용 비동기 API로 처리(`PendingCollectionJob`). DART 재무 과거 백필·상장주식수·투자자동향 대량 과거 데이터는 별도 스크립트로 채운다.
 
 ## 동시성·자원
 
@@ -28,10 +29,14 @@ KRX/KIS에서 종목·주가·투자자동향을 수집하고 기술적 지표�
 | `DB_HOST` / `DB_PORT` | MySQL 호스트/포트 | `127.0.0.1` / `3307` |
 | `DB_USERNAME` / `DB_PASSWORD` | DB 계정 | `dove_app` / `dove1234` |
 | `REDIS_HOST` / `REDIS_PORT` | Redis 호스트/포트 | `127.0.0.1` / `6380` |
-| `KRX_API_AUTH_KEY` | KRX Open API 인증키 | — (필수) |
+| `KRX_API_AUTH_KEY` | KRX Open API 인증키 (주가·상장주식수) | — (필수) |
 | `KIS_APP_KEY` / `KIS_APP_SECRET` | KIS API 앱키/시크릿 | — (필수) |
+| `DART_API_KEY` | DART OpenAPI 인증키 (재무제표 수집) | — (재무 기능 시 필수) |
+| `DART_DAILY_QUOTA` | DART 일일 호출 한도 (백필+폴링+corp동기화 공유) | `18000` |
+| `DOVE_WORK_DIR` | 임시 작업파일 루트 (DART 원본·ML 아티팩트, 작업 전후 자동 정리). 비면 OS 임시폴더 하위 | (비움) |
 | `MARKET_INITIAL_DATE` | 시장 데이터 시작일 | `2010-01-01` |
 | `SCHEDULER_POOL_SIZE` | @Scheduled 스레드 풀 크기 | `5` |
+| `COLLECTION_CONCURRENCY` | 수집(API) 동시 실행 수 | `40` |
 | `INDICATOR_CONCURRENCY` | 지표 계산 동시 그룹 수 | `10` |
 | `INDICATOR_START_DATE` | 지표 계산 시작일 하한 (비우면 전체 이력). 최초 계산량 제한용 — 예: `2026-01-01` | (비움) |
 
@@ -41,8 +46,11 @@ KRX/KIS에서 종목·주가·투자자동향을 수집하고 기술적 지표�
 
 | 환경변수 | 값 |
 |---|---|
-| `SPRING_PROFILES_ACTIVE` | `local` (필수) |
-| `JOB` | `stock-sync` \| `stock-detail` \| `daily-price` \| `indicator` |
+| `SPRING_PROFILES_ACTIVE` | `local` (필수 — 없으면 잡 안 돎, 웹서버만 대기) |
+| `JOB` | `pipeline`(전체) \| `derived`(지표→rank→breadth) \| `indicator` \| `rank` \| `breadth` \| `model-score` \| `stock-sync` \| `stock-detail` \| `fund-corp-sync` \| `fund-backfill` \| `fund-poll` \| `share-count` \| `share-count-range` \| `valuation` \| `valuation-range` |
+| `FUND_FROM_YEAR` / `FUND_TO_YEAR` | `fund-backfill`·`valuation-range`·`share-count-range` 의 연도 범위 (기본 2015~2024) |
+
+> DART 잡(`fund-*`)은 `DART_API_KEY`, 상장주식수 잡(`share-count*`)은 `KRX_API_AUTH_KEY` 필요.
 
 ```powershell
 # Windows (PowerShell) — 예: 종목 동기화

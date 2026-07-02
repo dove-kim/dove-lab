@@ -12,6 +12,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.stream.Collectors;
 
@@ -37,6 +38,22 @@ public class StockCommandService {
                 () -> stockRepository.save(
                         new Stock(ticker, isin, market, listingDate, secugrpNm, kindStkCertTpNm))
         );
+    }
+
+    /**
+     * DART 고유번호(corp_code)를 보유 종목에 매핑한다(ticker→corpCode). 매핑된 종목 수를 반환한다.
+     */
+    @Transactional
+    public int assignCorpCodes(Map<String, String> tickerToCorpCode) {
+        int matched = 0;
+        for (Map.Entry<String, String> e : tickerToCorpCode.entrySet()) {
+            Stock stock = stockRepository.findById(e.getKey()).orElse(null);
+            if (stock != null) {
+                stock.assignCorpCode(e.getValue());
+                matched++;
+            }
+        }
+        return matched;
     }
 
     /** DB에 없는 종목만 insert한다. 기존 종목은 보존. 백필 전용. */

@@ -1,7 +1,7 @@
 package com.dove.scheduler.fundamental;
 
+import com.dove.stock.application.service.StockShareCountService;
 import com.dove.stock.domain.entity.StockShareCount;
-import com.dove.stock.domain.repository.StockShareCountRepository;
 import com.dove.stockcollection.application.port.ShareCountFetcher;
 import com.dove.stockcollection.application.port.ShareCountRow;
 import com.dove.stockcollection.application.service.CollectionProgress;
@@ -31,7 +31,7 @@ class ShareCountCollectionServiceTest {
     @Mock
     private ShareCountFetcher fetcher;
     @Mock
-    private StockShareCountRepository repository;
+    private StockShareCountService shareCountService;
     @InjectMocks
     private ShareCountCollectionService service;
 
@@ -48,15 +48,14 @@ class ShareCountCollectionServiceTest {
             when(fetcher.fetch(d1)).thenReturn(List.of(new ShareCountRow("005930", 100L)));
             when(fetcher.fetch(d2)).thenReturn(List.of(new ShareCountRow("005930", 100L)));
             when(fetcher.fetch(d3)).thenReturn(List.of(new ShareCountRow("005930", 200L)));
-            // 첫 관측일에만 DB 직전값 조회 → 없음
-            when(repository.findFirstByTickerAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
-                    eq("005930"), any())).thenReturn(Optional.empty());
+            // 첫 관측일에만 as-of 직전값 조회 → 없음
+            when(shareCountService.findAsOf(eq("005930"), any())).thenReturn(Optional.empty());
 
             int saved = service.collect(d1, d3, CollectionProgress.NOOP);
 
             assertThat(saved).isEqualTo(2);   // d1(신규) + d3(변경), d2 동일값 skip
             ArgumentCaptor<StockShareCount> captor = ArgumentCaptor.forClass(StockShareCount.class);
-            verify(repository, times(2)).save(captor.capture());
+            verify(shareCountService, times(2)).save(captor.capture());
             assertThat(captor.getAllValues()).extracting(StockShareCount::getEffectiveDate)
                     .containsExactly(d1, d3);
             assertThat(captor.getAllValues()).extracting(StockShareCount::getListedShares)

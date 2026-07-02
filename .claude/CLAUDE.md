@@ -86,19 +86,21 @@ domain/                Aggregate 단위 모듈 (entity + repo + JPA/QueryDSL + C
   user-feature         UserFeatureGrant, UserModuleDisplay, UserFeatureDisplay
   market               MarketType, Exchange, ExchangeTradingDate, MarketListingSync
   stock                Stock, StockDetail, StockEvent(권리이벤트), StockPrice, StockTagValue
-  stock-collection     KIS 주가/KSD 권리이벤트 수집 코어 + KRX 종목 동기화(StockSyncService) + TradingDayPort(KRX 포트) + 수집 태스크(CollectionLauncher, CollectionTask)
-  indicator            TechnicalIndicator + 지표 계산기 + IndicatorCursor(+CAS)
+  stock-collection     KIS 주가/KSD 권리이벤트 수집 코어 + KRX 종목 동기화(StockSyncService) + TradingDayPort/ShareCountFetcher(KRX 포트) + 수집 태스크(CollectionLauncher, CollectionTask)
+  indicator            StockFeatureDaily(지표 wide) + 지표 계산기 + 횡단면 순위(rank)·상승비율(breadth) 계산 + 각 커서(IndicatorCursor·RankCursor·BreadthCursor, CAS)
+  fundamental          StockFundamental(DART 재무) + StockValuationDaily(PIT 일별 밸류에이션) + StockShareCount(상장주식수 변경이력)
   investor-flow        InvestorDaily (기관·외국인·개인 매매동향)
+  model-serving        ML 모델 레지스트리(ML_MODEL) + 채점 점수(STOCK_MODEL_SCORE) + 아티팩트 실행(score.py)
   system-event         수집·계산 운영 이벤트(KRX/KIS 실패 등) — ROOT 모니터링
-  ml-export            ML 학습 데이터 내보내기 프리셋
   screening            사용자 정의 종목 필터 + 종목 세트 + 지표 프리셋
 
 infrastructure/        Driven adapter — 외부 시스템 연결
-  krx                  KRX API 어댑터 (Feign)
+  krx                  KRX API 어댑터 (Feign) — 종목·일별시세(상장주식수)
   kis                  KIS API 어댑터 (Feign) + KisGate(초당 20회 율제한)
+  dart                 DART OpenAPI 어댑터 (Feign) — 재무제표·고유번호·정기공시
 
 library/               도메인 무관 공통 기술
-  jpa, logging, api-quota, concurrent(Parallel), datetime, job-status(Redis 진행률)
+  jpa, logging, api-quota, concurrent(Parallel), datetime, job-status(Redis 진행률), workspace(임시 작업파일 관리)
 ```
 
 ## 계층 경계 원칙 (필수)

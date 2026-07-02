@@ -45,6 +45,13 @@ public class StockQueryService {
         return stockRepository.findByMarket(market);
     }
 
+    /**
+     * DART 고유번호(corp_code)가 매핑된 종목만 조회한다.
+     */
+    public List<Stock> findWithCorpCode() {
+        return stockRepository.findByCorpCodeIsNotNull();
+    }
+
     /** 단건 Stock 조회. */
     public Optional<Stock> findByTicker(String ticker) {
         return stockRepository.findById(ticker);

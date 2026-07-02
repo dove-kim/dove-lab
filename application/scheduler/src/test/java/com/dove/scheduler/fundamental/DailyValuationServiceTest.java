@@ -1,10 +1,10 @@
 package com.dove.scheduler.fundamental;
 
-import com.dove.fundamental.domain.repository.StockFundamentalRepository;
-import com.dove.fundamental.domain.repository.StockValuationDailyRepository;
+import com.dove.fundamental.application.FundamentalCommandService;
+import com.dove.fundamental.application.FundamentalQueryService;
+import com.dove.stock.application.service.StockPriceQueryService;
+import com.dove.stock.application.service.StockShareCountService;
 import com.dove.stock.domain.enums.PriceType;
-import com.dove.stock.domain.repository.StockShareCountRepository;
-import com.dove.stock.infrastructure.repository.StockPriceRepositorySupport;
 import com.dove.stockcollection.application.service.CollectionProgress;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -16,7 +16,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.beans.factory.ObjectProvider;
 
 import java.time.LocalDate;
-import java.util.List;
+import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.mockito.ArgumentMatchers.any;
@@ -32,13 +32,13 @@ import static org.mockito.Mockito.when;
 class DailyValuationServiceTest {
 
     @Mock
-    private StockPriceRepositorySupport priceSupport;
+    private StockPriceQueryService priceQueryService;
     @Mock
-    private StockFundamentalRepository fundamentalRepository;
+    private FundamentalQueryService fundamentalQueryService;
     @Mock
-    private StockShareCountRepository shareCountRepository;
+    private StockShareCountService shareCountService;
     @Mock
-    private StockValuationDailyRepository valuationRepository;
+    private FundamentalCommandService fundamentalCommandService;
     @Mock
     private ObjectProvider<DailyValuationService> self;
     @InjectMocks
@@ -52,15 +52,15 @@ class DailyValuationServiceTest {
         void shouldComputeEachDayAndReportTotalWhenRangeGiven() {
             // computeRange가 프록시(self) 경유로 하루 단위 compute를 호출
             when(self.getObject()).thenReturn(service);
-            when(priceSupport.findByExchangesAndDate(anyList(), eq(PriceType.RAW), any()))
-                    .thenReturn(List.of());
+            when(priceQueryService.findByExchangesAndDate(anyList(), eq(PriceType.RAW), any()))
+                    .thenReturn(Map.of());
             CollectionProgress progress = mock(CollectionProgress.class);
 
             int saved = service.computeRange(LocalDate.of(2024, 1, 1), LocalDate.of(2024, 1, 3), progress);
 
             assertThat(saved).isZero();
             verify(progress).onTotal(3);
-            verify(priceSupport, times(3)).findByExchangesAndDate(anyList(), eq(PriceType.RAW), any());
+            verify(priceQueryService, times(3)).findByExchangesAndDate(anyList(), eq(PriceType.RAW), any());
             verify(progress, times(3)).onProgress(anyInt());
         }
     }

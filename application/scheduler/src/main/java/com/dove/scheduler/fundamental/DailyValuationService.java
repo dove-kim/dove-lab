@@ -1,17 +1,17 @@
 package com.dove.scheduler.fundamental;
 
+import com.dove.fundamental.application.FundamentalCommandService;
+import com.dove.fundamental.application.FundamentalQueryService;
 import com.dove.fundamental.application.Valuation;
 import com.dove.fundamental.application.ValuationCalculator;
 import com.dove.fundamental.domain.entity.StockFundamental;
 import com.dove.fundamental.domain.entity.StockValuationDaily;
 import com.dove.fundamental.domain.enums.FinancialStatementDiv;
-import com.dove.fundamental.domain.repository.StockFundamentalRepository;
-import com.dove.fundamental.domain.repository.StockValuationDailyRepository;
+import com.dove.stock.application.service.StockPriceQueryService;
+import com.dove.stock.application.service.StockShareCountService;
 import com.dove.stock.domain.entity.StockPrice;
 import com.dove.stock.domain.enums.PriceType;
 import com.dove.stock.domain.enums.StockExchange;
-import com.dove.stock.domain.repository.StockShareCountRepository;
-import com.dove.stock.infrastructure.repository.StockPriceRepositorySupport;
 import com.dove.stockcollection.application.service.CollectionProgress;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -21,6 +21,7 @@ import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -34,10 +35,10 @@ public class DailyValuationService {
 
     private static final List<StockExchange> UNIVERSE = List.of(StockExchange.KOSPI, StockExchange.KOSDAQ);
 
-    private final StockPriceRepositorySupport priceSupport;
-    private final StockFundamentalRepository fundamentalRepository;
-    private final StockShareCountRepository shareCountRepository;
-    private final StockValuationDailyRepository valuationRepository;
+    private final StockPriceQueryService priceQueryService;
+    private final FundamentalQueryService fundamentalQueryService;
+    private final StockShareCountService shareCountService;
+    private final FundamentalCommandService fundamentalCommandService;
     /**
      * 자기 자신(프록시) — computeRange가 하루 단위 트랜잭션 compute를 프록시 경유로 호출(자기호출 우회).
      */
@@ -51,11 +52,11 @@ public class DailyValuationService {
      */
     @Transactional
     public int compute(LocalDate date) {
-        List<StockPrice> rows = priceSupport.findByExchangesAndDate(UNIVERSE, PriceType.RAW, date);
+        Map<String, StockPrice> rows = priceQueryService.findByExchangesAndDate(UNIVERSE, PriceType.RAW, date);
         int saved = 0;
-        for (StockPrice row : rows) {
-            String ticker = row.getId().getTicker();
-            Long close = row.getClosePrice();
+        for (Map.Entry<String, StockPrice> entry : rows.entrySet()) {
+            String ticker = entry.getKey();
+            Long close = entry.getValue().getClosePrice();
             if (close == null) {
                 continue;
             }
@@ -66,7 +67,7 @@ public class DailyValuationService {
             StockFundamental f = fundamental.get();
             Long marketCap = marketCap(ticker, date, close);
             Valuation v = ValuationCalculator.compute(marketCap, f);
-            valuationRepository.save(StockValuationDaily.builder()
+            fundamentalCommandService.saveValuation(StockValuationDaily.builder()
                     .ticker(ticker)
                     .tradeDate(date)
                     .closePrice(close)
@@ -107,8 +108,7 @@ public class DailyValuationService {
      * 시가총액 = 종가 × as-of 상장주식수(KRX). 주식수 미확보 시 null(시총 산출 불가 → 4비율 중 PER·PBR·PSR만 null).
      */
     private Long marketCap(String ticker, LocalDate date, long close) {
-        return shareCountRepository
-                .findFirstByTickerAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(ticker, date)
+        return shareCountService.findAsOf(ticker, date)
                 .map(sc -> close * sc.getListedShares())
                 .orElse(null);
     }
@@ -118,13 +118,10 @@ public class DailyValuationService {
      * 원본만 사용 = 정정 미반영(PIT 무결성). 원본은 회계기 순서대로 공시되어 공시일 최신 = 최신 회계기.
      */
     private Optional<StockFundamental> latestPitFundamental(String ticker, LocalDate date) {
-        Optional<StockFundamental> cfs = fundamentalRepository
-                .findFirstByTickerAndFsDivAndAmendmentFalseAndRceptDtLessThanEqualOrderByRceptDtDesc(
-                        ticker, FinancialStatementDiv.CFS, date);
+        Optional<StockFundamental> cfs = fundamentalQueryService.findLatestOriginal(ticker, FinancialStatementDiv.CFS, date);
         if (cfs.isPresent()) {
             return cfs;
         }
-        return fundamentalRepository.findFirstByTickerAndFsDivAndAmendmentFalseAndRceptDtLessThanEqualOrderByRceptDtDesc(
-                ticker, FinancialStatementDiv.OFS, date);
+        return fundamentalQueryService.findLatestOriginal(ticker, FinancialStatementDiv.OFS, date);
     }
 }

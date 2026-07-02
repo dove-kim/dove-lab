@@ -6,13 +6,15 @@ import com.dove.dart.application.DartRateLimitException;
 import com.dove.dart.application.dto.CorpMapping;
 import com.dove.dart.application.dto.DartDisclosure;
 import com.dove.dart.application.dto.FinancialStatement;
+import com.dove.fundamental.application.FundamentalCommandService;
 import com.dove.fundamental.application.FundamentalFactory;
+import com.dove.fundamental.application.FundamentalQueryService;
 import com.dove.fundamental.domain.entity.StockFundamental;
 import com.dove.fundamental.domain.enums.FinancialStatementDiv;
 import com.dove.fundamental.domain.enums.ReportCode;
-import com.dove.fundamental.domain.repository.StockFundamentalRepository;
+import com.dove.stock.application.service.StockCommandService;
+import com.dove.stock.application.service.StockQueryService;
 import com.dove.stock.domain.entity.Stock;
-import com.dove.stock.domain.repository.StockRepository;
 import com.dove.stockcollection.application.service.CollectionProgress;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -35,8 +37,10 @@ public class FundamentalCollectionService {
 
     private final CorpCodeDownloader corpCodeDownloader;
     private final DartFinancialAdapter dartAdapter;
-    private final StockRepository stockRepository;
-    private final StockFundamentalRepository fundamentalRepository;
+    private final StockQueryService stockQueryService;
+    private final StockCommandService stockCommandService;
+    private final FundamentalQueryService fundamentalQueryService;
+    private final FundamentalCommandService fundamentalCommandService;
 
     /**
      * DART 고유번호를 내려받아 보유 종목(STOCK)에 매핑·저장한다.
@@ -45,15 +49,9 @@ public class FundamentalCollectionService {
      */
     public int syncCorpCodes() {
         List<CorpMapping> mappings = corpCodeDownloader.download();
-        int matched = 0;
-        for (CorpMapping m : mappings) {
-            Optional<Stock> stock = stockRepository.findById(m.stockCode());
-            if (stock.isPresent()) {
-                stock.get().assignCorpCode(m.corpCode());
-                stockRepository.save(stock.get());
-                matched++;
-            }
-        }
+        Map<String, String> byTicker = mappings.stream()
+                .collect(Collectors.toMap(CorpMapping::stockCode, CorpMapping::corpCode, (a, b) -> a));
+        int matched = stockCommandService.assignCorpCodes(byTicker);
         log.info("DART 고유번호 매핑 완료: {}/{}", matched, mappings.size());
         return matched;
     }
@@ -65,10 +63,10 @@ public class FundamentalCollectionService {
      * @return 신규 저장 건수
      */
     public int backfill(int fromYear, int toYear, List<ReportCode> reports, CollectionProgress progress) {
-        List<Stock> targets = corpCodedStocks();
+        List<Stock> targets = stockQueryService.findWithCorpCode();
         if (targets.isEmpty()) {
             syncCorpCodes();
-            targets = corpCodedStocks();
+            targets = stockQueryService.findWithCorpCode();
         }
         int totalUnits = targets.size() * (toYear - fromYear + 1) * reports.size();
         progress.onTotal(totalUnits);
@@ -81,7 +79,7 @@ public class FundamentalCollectionService {
                 for (int year = fromYear; year <= toYear; year++) {
                     for (ReportCode report : reports) {
                         done++;
-                        if (fundamentalRepository.existsByTickerAndFiscalYearAndReportCode(
+                        if (fundamentalQueryService.existsStatement(
                                 stock.getTicker(), (short) year, report.code())) {
                             progress.onProgress(done);
                             continue;
@@ -100,23 +98,17 @@ public class FundamentalCollectionService {
         return saved;
     }
 
-    private List<Stock> corpCodedStocks() {
-        return stockRepository.findAll().stream()
-                .filter(s -> s.getCorpCode() != null && !s.getCorpCode().isBlank())
-                .toList();
-    }
-
     /**
      * 기간 내 신규·정정 정기공시를 폴링해 아직 없는 것만 수집한다(일일 잡).
      *
      * @return 신규 저장 건수
      */
     public int pollRecent(LocalDate from, LocalDate to) {
-        List<Stock> stocks = corpCodedStocks();
+        List<Stock> stocks = stockQueryService.findWithCorpCode();
         if (stocks.isEmpty()) {
             // 최초 배포 직후 등 매핑 전이면 자가 부트스트랩 — 주간 corp-sync를 기다리지 않음
             syncCorpCodes();
-            stocks = corpCodedStocks();
+            stocks = stockQueryService.findWithCorpCode();
         }
         Map<String, Stock> byTicker = stocks.stream()
                 .collect(Collectors.toMap(Stock::getTicker, Function.identity(), (a, b) -> a));
@@ -128,8 +120,8 @@ public class FundamentalCollectionService {
                 if (stock == null) {
                     continue;
                 }
-                if (fundamentalRepository.existsByRceptNoAndFsDiv(d.rceptNo(), FinancialStatementDiv.CFS)
-                        || fundamentalRepository.existsByRceptNoAndFsDiv(d.rceptNo(), FinancialStatementDiv.OFS)) {
+                if (fundamentalQueryService.existsStatement(d.rceptNo(), FinancialStatementDiv.CFS)
+                        || fundamentalQueryService.existsStatement(d.rceptNo(), FinancialStatementDiv.OFS)) {
                     continue;
                 }
                 int year = d.rceptDt().getYear();
@@ -173,6 +165,6 @@ public class FundamentalCollectionService {
                 statement.rceptNo(), statement.rceptDt(),
                 FinancialStatementDiv.valueOf(statement.fsDiv()), amendment,
                 statement.amounts(), shares);
-        fundamentalRepository.save(entity);
+        fundamentalCommandService.saveStatement(entity);
     }
 }

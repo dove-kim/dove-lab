@@ -1,7 +1,7 @@
 package com.dove.scheduler.fundamental;
 
+import com.dove.stock.application.service.StockShareCountService;
 import com.dove.stock.domain.entity.StockShareCount;
-import com.dove.stock.domain.repository.StockShareCountRepository;
 import com.dove.stockcollection.application.port.ShareCountFetcher;
 import com.dove.stockcollection.application.port.ShareCountRow;
 import com.dove.stockcollection.application.service.CollectionProgress;
@@ -25,7 +25,7 @@ public class ShareCountCollectionService {
     private static final String SOURCE = "KRX";
 
     private final ShareCountFetcher fetcher;
-    private final StockShareCountRepository repository;
+    private final StockShareCountService shareCountService;
 
     /**
      * [from..to] 각 거래일의 상장주식수를 조회해 직전값과 다를 때만 저장한다(변경이력).
@@ -45,7 +45,7 @@ public class ShareCountCollectionService {
                         ? lastSeen.get(row.ticker())
                         : latestBefore(row.ticker(), date);
                 if (prev == null || prev != row.listedShares()) {
-                    repository.save(new StockShareCount(row.ticker(), date, row.listedShares(), SOURCE));
+                    shareCountService.save(new StockShareCount(row.ticker(), date, row.listedShares(), SOURCE));
                     saved++;
                 }
                 lastSeen.put(row.ticker(), row.listedShares());
@@ -57,8 +57,7 @@ public class ShareCountCollectionService {
     }
 
     private Long latestBefore(String ticker, LocalDate date) {
-        return repository
-                .findFirstByTickerAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(ticker, date.minusDays(1))
+        return shareCountService.findAsOf(ticker, date.minusDays(1))
                 .map(StockShareCount::getListedShares)
                 .orElse(null);
     }
