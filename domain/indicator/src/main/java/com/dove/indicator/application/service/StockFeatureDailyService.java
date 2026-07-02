@@ -65,4 +65,15 @@ public class StockFeatureDailyService {
         }
         return result;
     }
+
+    /** 특정 종목의 before 직전 N일치 지표. key = tradeDate (내림차순). 과거 페이지네이션용. */
+    @Transactional(readOnly = true)
+    public Map<LocalDate, Map<IndicatorType, Double>> findBeforeByStock(
+            String ticker, StockExchange exchange, PriceType priceType, LocalDate before, int limit) {
+        Map<LocalDate, Map<IndicatorType, Double>> result = new TreeMap<>((a, b) -> b.compareTo(a));
+        for (StockFeatureDaily row : support.findBeforeByTicker(ticker, exchange, priceType, before, limit)) {
+            result.put(row.getId().getTradeDate(), row.toIndicatorMap());
+        }
+        return result;
+    }
 }

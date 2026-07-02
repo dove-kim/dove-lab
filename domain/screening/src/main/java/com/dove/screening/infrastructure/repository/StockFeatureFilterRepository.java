@@ -1,6 +1,9 @@
 package com.dove.screening.infrastructure.repository;
 
+import com.dove.indicator.domain.breadth.entity.QStockBreadthDaily;
 import com.dove.indicator.domain.entity.QStockFeatureDaily;
+import com.dove.indicator.domain.rank.entity.QStockRankDaily;
+import com.dove.modelserving.domain.entity.QStockModelScore;
 import com.dove.screening.domain.value.FeatureMatch;
 import com.dove.screening.domain.value.FilterNode;
 import com.dove.stock.domain.enums.PriceType;
@@ -53,6 +56,36 @@ public class StockFeatureFilterRepository {
                                 a.id.exchange.eq(stockFeatureDaily.id.exchange),
                                 a.id.priceType.eq(stockFeatureDaily.id.priceType),
                                 a.seq.eq(stockFeatureDaily.seq.add(e.getKey())));
+                    }
+                    // 순위 별칭을 오프셋 피처 행의 (ticker,exchange,price_type,trade_date)로 left join.
+                    for (RankJoinAlias ra : tr.rankAliases()) {
+                        QStockFeatureDaily f = tr.offsetAliases().get(ra.offset());
+                        QStockRankDaily a = ra.alias();
+                        query.leftJoin(a).on(
+                                a.id.ticker.eq(f.id.ticker),
+                                a.id.exchange.eq(f.id.exchange),
+                                a.id.priceType.eq(f.id.priceType),
+                                a.id.tradeDate.eq(f.id.tradeDate));
+                    }
+                    // 상승비율 별칭을 오프셋 피처 행의 (exchange,price_type,trade_date)로 left join (universe 단일 스칼라 — ticker 없음).
+                    for (BreadthJoinAlias ba : tr.breadthAliases()) {
+                        QStockFeatureDaily f = tr.offsetAliases().get(ba.offset());
+                        QStockBreadthDaily a = ba.alias();
+                        query.leftJoin(a).on(
+                                a.id.exchange.eq(f.id.exchange),
+                                a.id.priceType.eq(f.id.priceType),
+                                a.id.tradeDate.eq(f.id.tradeDate));
+                    }
+                    // 모델점수 별칭을 오프셋 피처 행 + model_id로 left join.
+                    for (ModelScoreJoinAlias ma : tr.modelScoreAliases()) {
+                        QStockFeatureDaily f = tr.offsetAliases().get(ma.offset());
+                        QStockModelScore a = ma.alias();
+                        query.leftJoin(a).on(
+                                a.id.ticker.eq(f.id.ticker),
+                                a.id.exchange.eq(f.id.exchange),
+                                a.id.priceType.eq(f.id.priceType),
+                                a.id.tradeDate.eq(f.id.tradeDate),
+                                a.id.modelId.eq(ma.modelId()));
                     }
                     return query.where(
                             stockFeatureDaily.id.exchange.in(exchanges),

@@ -65,6 +65,27 @@ public class SystemEventService {
     }
 
     /**
+     * 일일 파이프라인 단계 실패를 기록하는 편의 메서드.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordPipelineStageFailure(String stage, String errorMessage) {
+        record(SystemEventType.PIPELINE_STAGE_FAILURE, null,
+                Map.of("stage", stage, "error", errorMessage == null ? "" : errorMessage));
+    }
+
+    /**
+     * 모델 채점 실패를 기록하는 편의 메서드.
+     */
+    @Transactional(propagation = Propagation.REQUIRES_NEW)
+    public void recordModelScoringFailure(Long modelId, String errorCode, String message) {
+        Map<String, String> detail = new HashMap<>();
+        detail.put("modelId", modelId == null ? "" : modelId.toString());
+        detail.put("errorCode", errorCode == null ? "" : errorCode);
+        detail.put("message", message == null ? "" : message);
+        record(SystemEventType.MODEL_SCORING_FAILURE, null, detail);
+    }
+
+    /**
      * 전체 이벤트 페이징 조회 (발생 일시 내림차순).
      */
     @Transactional(readOnly = true)

@@ -44,6 +44,8 @@ const TYPE_CONFIG: Record<string, { label: string; color: string }> = {
   STOCK_DETAIL: { label: "종목 상세", color: "bg-violet-500/20 text-violet-300 border-violet-500/30" },
   INVESTOR:     { label: "투자자",    color: "bg-teal-500/20 text-teal-300 border-teal-500/30" },
   EVENT:        { label: "이벤트",    color: "bg-amber-500/20 text-amber-300 border-amber-500/30" },
+  FUNDAMENTAL:  { label: "재무제표",  color: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30" },
+  VALUATION:    { label: "밸류에이션", color: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30" },
   STOCK:        { label: "종목(구)",  color: "bg-slate-500/20 text-slate-300 border-slate-500/30" },
 };
 
@@ -180,19 +182,26 @@ export default function BackfillClient() {
   // 종목 상세 폼 (STOCK_DETAIL, KIS)
   const [stockDetailLoading, setStockDetailLoading] = useState(false);
 
-  // 투자자동향 폼 (INVESTOR, KIS)
-  const [investorMode, setInvestorMode] = useState<Mode>("year");
-  const [investorYear, setInvestorYear] = useState(currentYear);
-  const [investorFromYear, setInvestorFromYear] = useState(currentYear);
-  const [investorToYear, setInvestorToYear] = useState(currentYear);
-  const [investorLoading, setInvestorLoading] = useState(false);
-
   // 이벤트 폼
   const [eventMode, setEventMode] = useState<Mode>("year");
   const [eventYear, setEventYear] = useState(currentYear);
   const [eventFromYear, setEventFromYear] = useState(currentYear);
   const [eventToYear, setEventToYear] = useState(currentYear);
   const [eventLoading, setEventLoading] = useState(false);
+
+  // 재무제표 폼 (FUNDAMENTAL, DART)
+  const [fundMode, setFundMode] = useState<Mode>("range");
+  const [fundYear, setFundYear] = useState(currentYear);
+  const [fundFromYear, setFundFromYear] = useState(currentYear - 1);
+  const [fundToYear, setFundToYear] = useState(currentYear);
+  const [fundLoading, setFundLoading] = useState(false);
+
+  // 밸류에이션 재계산 폼 (VALUATION, DB 전용)
+  const [valMode, setValMode] = useState<Mode>("range");
+  const [valYear, setValYear] = useState(currentYear);
+  const [valFromYear, setValFromYear] = useState(currentYear - 1);
+  const [valToYear, setValToYear] = useState(currentYear);
+  const [valLoading, setValLoading] = useState(false);
 
   const runningCount = tasks.filter(t => t.status === "PENDING" || t.status === "RUNNING").length;
 
@@ -265,20 +274,6 @@ export default function BackfillClient() {
     } finally { setStockDetailLoading(false); }
   }
 
-  async function startInvestorCollection() {
-    if (investorMode === "range" && investorFromYear > investorToYear) return;
-    setPage(0); setInvestorLoading(true);
-    try {
-      const { from, to } = dateRange(investorMode, investorYear, investorFromYear, investorToYear);
-      const res = await fetch("/api/admin/ops/collection/investor", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ from, to }),
-      });
-      if (res.ok) await fetchTasks();
-    } finally { setInvestorLoading(false); }
-  }
-
   async function startEventCollection() {
     if (eventMode === "range" && eventFromYear > eventToYear) return;
     setPage(0); setEventLoading(true);
@@ -293,6 +288,34 @@ export default function BackfillClient() {
     } finally { setEventLoading(false); }
   }
 
+  async function startFundamentalCollection() {
+    if (fundMode === "range" && fundFromYear > fundToYear) return;
+    setPage(0); setFundLoading(true);
+    try {
+      const { from, to } = dateRange(fundMode, fundYear, fundFromYear, fundToYear);
+      const res = await fetch("/api/admin/ops/collection/fundamental", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from, to }),
+      });
+      if (res.ok) await fetchTasks();
+    } finally { setFundLoading(false); }
+  }
+
+  async function startValuationCollection() {
+    if (valMode === "range" && valFromYear > valToYear) return;
+    setPage(0); setValLoading(true);
+    try {
+      const { from, to } = dateRange(valMode, valYear, valFromYear, valToYear);
+      const res = await fetch("/api/admin/ops/collection/valuation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ from, to }),
+      });
+      if (res.ok) await fetchTasks();
+    } finally { setValLoading(false); }
+  }
+
   async function retryTask(id: number) {
     await fetch(`/api/admin/ops/collection/tasks/${id}`, { method: "POST" });
     await fetchTasks();
@@ -300,8 +323,9 @@ export default function BackfillClient() {
 
   const priceRangeInvalid = priceMode === "range" && priceFromYear > priceToYear;
   const stockSyncRangeInvalid = stockSyncMode === "range" && stockSyncFromYear > stockSyncToYear;
-  const investorRangeInvalid = investorMode === "range" && investorFromYear > investorToYear;
   const eventRangeInvalid = eventMode === "range" && eventFromYear > eventToYear;
+  const fundRangeInvalid = fundMode === "range" && fundFromYear > fundToYear;
+  const valRangeInvalid = valMode === "range" && valFromYear > valToYear;
 
   return (
     <div className="flex flex-col min-h-full p-6 gap-4">
@@ -398,26 +422,6 @@ export default function BackfillClient() {
             </button>
           </div>
 
-          {/* 투자자동향 (KIS) */}
-          <div className="flex flex-wrap items-end gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
-            <span className="text-sm font-semibold text-slate-200 w-16 self-center">투자자</span>
-            <div className="block">
-              <span className="text-[11px] text-slate-500 mb-0.5 block">기간</span>
-              <YearSelector
-                mode={investorMode} setMode={setInvestorMode}
-                year={investorYear} setYear={setInvestorYear}
-                fromYear={investorFromYear} setFromYear={setInvestorFromYear}
-                toYear={investorToYear} setToYear={setInvestorToYear}
-                years={ADJ_YEARS}
-              />
-              {investorRangeInvalid && <span className="text-[11px] text-rose-400 mt-1 block">시작 연도가 종료보다 큽니다</span>}
-            </div>
-            <span className="self-center text-[11px] text-slate-500">KIS 통합 투자자 매매동향 재수집</span>
-            <button onClick={startInvestorCollection} disabled={investorLoading || investorRangeInvalid} className={cx.btnPrimary + " ml-auto"}>
-              {investorLoading ? "요청 중..." : "재조회 시작"}
-            </button>
-          </div>
-
           {/* 이벤트 */}
           <div className="flex flex-wrap items-end gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
             <span className="text-sm font-semibold text-slate-200 w-16 self-center">이벤트</span>
@@ -435,6 +439,46 @@ export default function BackfillClient() {
             <span className="self-center text-[11px] text-slate-500">배당·유무상증자·감자·합병/분할·액면교체 (KIS 예탁원정보)</span>
             <button onClick={startEventCollection} disabled={eventLoading || eventRangeInvalid} className={cx.btnPrimary + " ml-auto"}>
               {eventLoading ? "요청 중..." : "재조회 시작"}
+            </button>
+          </div>
+
+          {/* 재무제표 (DART) */}
+          <div className="flex flex-wrap items-end gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+            <span className="text-sm font-semibold text-slate-200 w-16 self-center">재무제표</span>
+            <div className="block">
+              <span className="text-[11px] text-slate-500 mb-0.5 block">기간(연도)</span>
+              <YearSelector
+                mode={fundMode} setMode={setFundMode}
+                year={fundYear} setYear={setFundYear}
+                fromYear={fundFromYear} setFromYear={setFundFromYear}
+                toYear={fundToYear} setToYear={setFundToYear}
+                years={KRX_YEARS}
+              />
+              {fundRangeInvalid && <span className="text-[11px] text-rose-400 mt-1 block">시작 연도가 종료보다 큽니다</span>}
+            </div>
+            <span className="self-center text-[11px] text-slate-500">매출·이익·자산·자본 등 (DART 사업보고서). 일일 한도로 며칠에 걸쳐 재개 — 하루 2년 권장</span>
+            <button onClick={startFundamentalCollection} disabled={fundLoading || fundRangeInvalid} className={cx.btnPrimary + " ml-auto"}>
+              {fundLoading ? "요청 중..." : "재조회 시작"}
+            </button>
+          </div>
+
+          {/* 밸류에이션 재계산 (DB 전용) */}
+          <div className="flex flex-wrap items-end gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+            <span className="text-sm font-semibold text-slate-200 w-16 self-center">밸류에이션</span>
+            <div className="block">
+              <span className="text-[11px] text-slate-500 mb-0.5 block">기간</span>
+              <YearSelector
+                mode={valMode} setMode={setValMode}
+                year={valYear} setYear={setValYear}
+                fromYear={valFromYear} setFromYear={setValFromYear}
+                toYear={valToYear} setToYear={setValToYear}
+                years={ADJ_YEARS}
+              />
+              {valRangeInvalid && <span className="text-[11px] text-rose-400 mt-1 block">시작 연도가 종료보다 큽니다</span>}
+            </div>
+            <span className="self-center text-[11px] text-slate-500">종가×PIT재무로 시총·PER·PBR·PSR·GPA 재계산 (외부 API 없음). 재무 백필 후 실행</span>
+            <button onClick={startValuationCollection} disabled={valLoading || valRangeInvalid} className={cx.btnPrimary + " ml-auto"}>
+              {valLoading ? "요청 중..." : "재계산 시작"}
             </button>
           </div>
         </div>

@@ -7,12 +7,14 @@ CREATE TABLE IF NOT EXISTS STOCK (
     LISTING_DATE        DATE,
     SECUGRP_NM          VARCHAR(40),
     KIND_STKCERT_TP_NM  VARCHAR(40),
+    CORP_CODE           VARCHAR(8)            COMMENT 'DART 고유번호(재무 조회 키)',
     CREATED_AT          DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     PRIMARY KEY (TICKER),
     INDEX IDX_STOCK_ISIN (ISIN),
     INDEX IDX_STOCK_SECUGRP (SECUGRP_NM),
     INDEX IDX_STOCK_STKCERT (KIND_STKCERT_TP_NM),
-    INDEX IDX_STOCK_MARKET (MARKET)
+    INDEX IDX_STOCK_MARKET (MARKET),
+    INDEX IDX_STOCK_CORP_CODE (CORP_CODE)
 ) COMMENT='종목 마스터';
 
 CREATE TABLE IF NOT EXISTS STOCK_DETAIL (
@@ -156,6 +158,11 @@ CREATE TABLE IF NOT EXISTS STOCK_FEATURE_DAILY (
     RET_10D           FLOAT,
     BODY_RATIO        FLOAT,
     LOWER_WICK        FLOAT,
+    UPPER_WICK_RATIO  FLOAT        COMMENT '윗꼬리 비율 (고가-max(시가,종가))/(고가-저가)',
+    CLOSE_POS         FLOAT        COMMENT '당일 범위 내 종가 위치 (종가-저가)/(고가-저가)',
+    BULLISH_ENGULFING FLOAT        COMMENT '상승 장악형 캔들 여부(1/0)',
+    BEARISH_ENGULFING FLOAT        COMMENT '하락 장악형 캔들 여부(1/0)',
+    BREAKOUT_20D      FLOAT        COMMENT '직전 20일 고점 상향 돌파 여부(1/0)',
     IS_52W_HIGH       TINYINT,
     IS_52W_LOW        TINYINT,
     IS_20D_HIGH       TINYINT,
@@ -177,6 +184,89 @@ CREATE TABLE IF NOT EXISTS INDICATOR_CURSOR (
     UNIQUE KEY UK_IC (TICKER, EXCHANGE, PRICE_TYPE),
     INDEX IDX_IC_TICKER (TICKER)
 ) COMMENT='지표 계산 커서(그룹 단위)';
+
+CREATE TABLE IF NOT EXISTS STOCK_RANK_DAILY (
+    TICKER               VARCHAR(20)  NOT NULL,
+    EXCHANGE             TINYINT      NOT NULL COMMENT '거래소 코드',
+    PRICE_TYPE           TINYINT      NOT NULL COMMENT '가격유형 코드',
+    TRADE_DATE           DATE         NOT NULL,
+    RANK_RET_1D          FLOAT        COMMENT '1일 수익률 횡단면 percentile(0~1)',
+    RANK_RET_5D          FLOAT        COMMENT '5일 수익률 횡단면 percentile(0~1)',
+    RANK_RET_10D         FLOAT        COMMENT '10일 수익률 횡단면 percentile(0~1)',
+    RANK_VOLUME_RATIO_20 FLOAT        COMMENT '20일 거래량비율 횡단면 percentile(0~1)',
+    RANK_RSI_14          FLOAT        COMMENT 'RSI(14) 횡단면 percentile(0~1)',
+    RANK_MACD_HISTOGRAM  FLOAT        COMMENT 'MACD 히스토그램 횡단면 percentile(0~1)',
+    RANK_HIGH_52W_RATIO  FLOAT        COMMENT '52주 고가대비비율 횡단면 percentile(0~1)',
+    RANK_VOLATILITY_20D  FLOAT        COMMENT '20일 변동성 횡단면 percentile(0~1)',
+    RANK_TURNOVER        FLOAT        COMMENT '거래대금 횡단면 percentile(0~1)',
+    CALCULATED_AT        DATETIME(6)  NOT NULL,
+    PRIMARY KEY (TICKER, EXCHANGE, PRICE_TYPE, TRADE_DATE),
+    INDEX IDX_SRD_EXCHANGE_DATE (EXCHANGE, PRICE_TYPE, TRADE_DATE),
+    INDEX IDX_SRD_TICKER_DATE (TICKER, EXCHANGE, PRICE_TYPE, TRADE_DATE)
+) COMMENT='종목·거래일별 횡단면 순위(wide)' ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;
+
+CREATE TABLE IF NOT EXISTS RANK_CURSOR (
+    ID           BIGINT       NOT NULL AUTO_INCREMENT,
+    UNIVERSE     TINYINT      NOT NULL COMMENT 'universe 코드(KRX/KONEX)',
+    PRICE_TYPE   TINYINT      NOT NULL COMMENT '가격유형 코드',
+    CURSOR_DATE  DATE         COMMENT '순위 계산이 완료된 마지막 거래일. NULL=처음부터',
+    UPDATED_AT   DATETIME(6)  NOT NULL,
+    PRIMARY KEY (ID),
+    UNIQUE KEY UK_RC_UNIVERSE_PRICETYPE (UNIVERSE, PRICE_TYPE)
+) COMMENT='횡단면 순위 계산 커서(universe·가격유형 단위)';
+
+CREATE TABLE IF NOT EXISTS STOCK_BREADTH_DAILY (
+    EXCHANGE       TINYINT      NOT NULL COMMENT '거래소 코드',
+    PRICE_TYPE     TINYINT      NOT NULL COMMENT '가격유형 코드',
+    TRADE_DATE     DATE         NOT NULL,
+    ADVANCE_RATIO  DOUBLE       COMMENT '당일 RET_1D>0 종목 비율(0~1)',
+    CALCULATED_AT  DATETIME(6)  NOT NULL,
+    PRIMARY KEY (EXCHANGE, PRICE_TYPE, TRADE_DATE)
+) COMMENT='거래일별 당일 상승비율(거래소·가격유형 단위 단일 스칼라)';
+
+CREATE TABLE IF NOT EXISTS BREADTH_CURSOR (
+    ID           BIGINT       NOT NULL AUTO_INCREMENT,
+    UNIVERSE     TINYINT      NOT NULL COMMENT 'universe 코드(KRX/KONEX)',
+    PRICE_TYPE   TINYINT      NOT NULL COMMENT '가격유형 코드',
+    CURSOR_DATE  DATE         COMMENT '상승비율 계산이 완료된 마지막 거래일. NULL=처음부터',
+    UPDATED_AT   DATETIME(6)  NOT NULL,
+    PRIMARY KEY (ID),
+    UNIQUE KEY UK_BC_UNIVERSE_PRICETYPE (UNIVERSE, PRICE_TYPE)
+) COMMENT='당일 상승비율 계산 커서(universe·가격유형 단위)';
+
+CREATE TABLE IF NOT EXISTS ML_MODEL (
+    ID               BIGINT       NOT NULL AUTO_INCREMENT,
+    NAME             VARCHAR(100) NOT NULL COMMENT '모델 이름(예: swing_entry)',
+    VERSION          VARCHAR(50)  NOT NULL COMMENT '버전(예: 1.0.0)',
+    ARTIFACT         LONGBLOB     NOT NULL COMMENT '모델 파일(joblib pickle: model·calibrator·meta)',
+    META_JSON        LONGTEXT     NOT NULL COMMENT 'meta.json 원본(features 목록·entry_zone·feature_hash 포함)',
+    OUTPUT_TYPE      VARCHAR(20)  NOT NULL COMMENT '출력 의미(PROBABILITY/REGRESSION)',
+    SCORE_EXCHANGES  VARCHAR(40)  NOT NULL COMMENT '채점 대상 거래소 코드 CSV(예: 0,1)',
+    SCORE_PRICE_TYPE TINYINT      NOT NULL COMMENT '채점 대상 주가유형 코드(기본 ADJUSTED)',
+    STATUS           VARCHAR(20)  NOT NULL COMMENT '채점 활성 상태(ACTIVE/INACTIVE)',
+    SCORE_CURSOR     DATE                  COMMENT '마지막으로 채점 완료된 거래일. NULL이면 미시작',
+    LAST_SCORED_AT   DATETIME(6)           COMMENT '마지막 채점 성공 일시',
+    LAST_ERROR       VARCHAR(500)          COMMENT '마지막 채점 실패 사유(코드:메시지). 성공 시 NULL',
+    CREATED_BY       VARCHAR(100) NOT NULL COMMENT '등록자',
+    CREATED_AT       DATETIME     NOT NULL COMMENT '생성 일시',
+    UPDATED_AT       DATETIME     NOT NULL COMMENT '최종 갱신 일시',
+    PRIMARY KEY (ID),
+    INDEX IDX_MM_STATUS (STATUS),
+    INDEX IDX_MM_NAME_VERSION (NAME, VERSION)
+) COMMENT='등록된 ML 모델 레지스트리';
+
+CREATE TABLE IF NOT EXISTS STOCK_MODEL_SCORE (
+    TICKER      VARCHAR(20) NOT NULL,
+    EXCHANGE    TINYINT     NOT NULL COMMENT '거래소 코드',
+    PRICE_TYPE  TINYINT     NOT NULL COMMENT '가격유형 코드',
+    TRADE_DATE  DATE        NOT NULL,
+    MODEL_ID    BIGINT      NOT NULL COMMENT '모델 ID(ML_MODEL.ID)',
+    SCORE       FLOAT       NOT NULL COMMENT '모델 출력값(0~1 보정 확률 또는 연속값)',
+    SCORED_AT   DATETIME    NOT NULL COMMENT '채점 일시',
+    PRIMARY KEY (TICKER, EXCHANGE, PRICE_TYPE, TRADE_DATE, MODEL_ID),
+    INDEX IDX_SMS_CHART (TICKER, EXCHANGE, PRICE_TYPE, MODEL_ID, TRADE_DATE),
+    INDEX IDX_SMS_SEARCH (TRADE_DATE, MODEL_ID, SCORE)
+) COMMENT='종목·거래일·모델별 채점 점수' ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;
 
 CREATE TABLE IF NOT EXISTS EXCHANGE_TRADING_DATE (
     EXCHANGE        VARCHAR(10)  NOT NULL,
@@ -333,3 +423,66 @@ CREATE TABLE IF NOT EXISTS SYSTEM_EVENT (
     INDEX IDX_SYSTEM_EVENT_OCCURRED_AT (OCCURRED_AT),
     INDEX IDX_SYSTEM_EVENT_TYPE (EVENT_TYPE)
 ) COMMENT='운영 이벤트';
+
+-- DART 재무제표 원자료(공시 단위). 원본1+정정N을 접수번호로 각각 보존. 표준계정코드 기준 컬럼 매핑.
+CREATE TABLE IF NOT EXISTS STOCK_FUNDAMENTAL (
+    RCEPT_NO             VARCHAR(14)  NOT NULL COMMENT 'DART 접수번호(공시 고유)',
+    FS_DIV               VARCHAR(3)   NOT NULL COMMENT '재무구분 CFS(연결)/OFS(별도)',
+    TICKER               VARCHAR(20)  NOT NULL COMMENT '종목코드',
+    CORP_CODE            VARCHAR(8)   NOT NULL COMMENT 'DART 고유번호',
+    FISCAL_YEAR          SMALLINT     NOT NULL COMMENT '회계연도',
+    REPORT_CODE          VARCHAR(5)   NOT NULL COMMENT '보고서(11011사업/11012반기/11013·11014분기)',
+    RCEPT_DT             DATE         NOT NULL COMMENT '공시일(PIT 기준)',
+    IS_AMENDMENT         TINYINT(1)   NOT NULL DEFAULT 0 COMMENT '정정 여부',
+    REVENUE              BIGINT                COMMENT '매출액(ifrs-full_Revenue)',
+    COST_OF_SALES        BIGINT                COMMENT '매출원가(ifrs-full_CostOfSales)',
+    GROSS_PROFIT         BIGINT                COMMENT '매출총이익(ifrs-full_GrossProfit)',
+    OPERATING_INCOME     BIGINT                COMMENT '영업이익(dart_OperatingIncomeLoss)',
+    PROFIT_BEFORE_TAX    BIGINT                COMMENT '법인세차감전순이익(ifrs-full_ProfitLossBeforeTax)',
+    NET_INCOME           BIGINT                COMMENT '당기순이익(ifrs-full_ProfitLoss)',
+    NET_INCOME_CTRL      BIGINT                COMMENT '지배기업소유주순이익',
+    TOTAL_ASSET          BIGINT                COMMENT '자산총계(ifrs-full_Assets)',
+    CURRENT_ASSET        BIGINT                COMMENT '유동자산',
+    NONCURRENT_ASSET     BIGINT                COMMENT '비유동자산',
+    CASH_AND_EQUIV       BIGINT                COMMENT '현금및현금성자산',
+    INVENTORIES          BIGINT                COMMENT '재고자산',
+    TOTAL_LIABILITY      BIGINT                COMMENT '부채총계(ifrs-full_Liabilities)',
+    CURRENT_LIABILITY    BIGINT                COMMENT '유동부채',
+    TOTAL_EQUITY         BIGINT                COMMENT '자본총계(ifrs-full_Equity)',
+    EQUITY_CTRL          BIGINT                COMMENT '지배기업소유주지분',
+    ISSUED_CAPITAL       BIGINT                COMMENT '자본금(ifrs-full_IssuedCapital)',
+    CF_OPERATING         BIGINT                COMMENT '영업활동현금흐름',
+    CF_INVESTING         BIGINT                COMMENT '투자활동현금흐름',
+    CF_FINANCING         BIGINT                COMMENT '재무활동현금흐름',
+    COMMON_SHARES        BIGINT                COMMENT '보통주 상장주식수(stockTotqySttus)',
+    CREATED_AT           DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (RCEPT_NO, FS_DIV),
+    INDEX IDX_FUND_TICKER_PERIOD (TICKER, FISCAL_YEAR, REPORT_CODE),
+    INDEX IDX_FUND_TICKER_RCEPT (TICKER, RCEPT_DT)
+) COMMENT='DART 재무제표 원자료(공시단위·표준계정)' ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;
+
+-- 일별 밸류에이션(미리계산). 실제(RAW) 종가 × PIT 최신 재무로 시총·4비율 산출 → 아무 날이나 스크리닝은 조회.
+CREATE TABLE IF NOT EXISTS STOCK_VALUATION_DAILY (
+    TICKER          VARCHAR(20)  NOT NULL COMMENT '종목코드',
+    TRADE_DATE      DATE         NOT NULL COMMENT '거래일',
+    CLOSE_PRICE     BIGINT                COMMENT '실제(RAW) 종가',
+    MARKET_CAP      BIGINT                COMMENT '시가총액(RAW종가×KRX상장주식수 as-of)',
+    PER             DOUBLE                COMMENT '시총/당기순이익',
+    PBR             DOUBLE                COMMENT '시총/자본총계',
+    PSR             DOUBLE                COMMENT '시총/매출액',
+    GPA             DOUBLE                COMMENT '매출총이익/자산총계',
+    FUND_RCEPT_NO   VARCHAR(14)           COMMENT '사용한 재무 공시 접수번호(PIT 감사추적)',
+    CALCULATED_AT   DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (TICKER, TRADE_DATE),
+    INDEX IDX_VAL_DATE_MARKETCAP (TRADE_DATE, MARKET_CAP)
+) COMMENT='종목·일별 밸류에이션(소형주·4비율 랭킹)' ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;
+
+-- 상장주식수 변경이력(KRX 권위값). 값이 바뀐 날만 한 행 → as-of(EFFECTIVE_DATE≤거래일 중 최신) 조회로 그 시점 주식수. 시총 계산의 PIT 입력.
+CREATE TABLE IF NOT EXISTS STOCK_SHARE_COUNT (
+    TICKER          VARCHAR(20)  NOT NULL COMMENT '종목코드',
+    EFFECTIVE_DATE  DATE         NOT NULL COMMENT '이 주식수가 처음 관측된(=변경된) 거래일',
+    LISTED_SHARES   BIGINT       NOT NULL COMMENT '상장주식수(KRX LIST_SHRS)',
+    SOURCE          VARCHAR(10)  NOT NULL DEFAULT 'KRX' COMMENT '출처(KRX 등)',
+    CREATED_AT      DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
+    PRIMARY KEY (TICKER, EFFECTIVE_DATE)
+) COMMENT='상장주식수 변경이력(as-of 조회)' ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;

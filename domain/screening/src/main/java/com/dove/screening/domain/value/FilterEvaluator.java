@@ -29,6 +29,7 @@ public final class FilterEvaluator {
                 yield l != null && r != null && c.operator().compare(l, r);
             }
             case MarketFilterCondition m -> m.markets().contains(ctx.market());
+            case StockStatusCondition s -> s.passes(ctx.tradingHalted(), ctx.adminItem());
             case UnknownCondition u -> false;
         };
     }
@@ -49,6 +50,9 @@ public final class FilterEvaluator {
             case IndicatorOperand i -> ctx.indicators() == null ? null : ctx.indicators().get(i.type());
             case PriceOperand p -> price(p.field(), ctx);
             case VolumeOperand v -> ctx.price() == null ? null : ctx.price().getVolume().doubleValue();
+            case ModelScoreOperand m -> ctx.modelScores() == null ? null : ctx.modelScores().get(m.modelId());
+            case RankOperand r -> ctx.ranks() == null ? null : ctx.ranks().get(r.type());
+            case BreadthOperand b -> ctx.breadth();
         };
     }
 

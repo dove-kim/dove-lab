@@ -12,7 +12,14 @@ public enum FilterConditionType {
     VOLUME_VALUE,
     VOLUME_RANGE,
     PRICE_VS_INDICATOR,
-    MARKET_FILTER;
+    MARKET_FILTER,
+    MODEL_SCORE_VALUE,
+    MODEL_SCORE_RANGE,
+    RANK_VALUE,
+    RANK_RANGE,
+    BREADTH_VALUE,
+    BREADTH_RANGE,
+    STOCK_STATUS;
 
     /**
      * 이름으로 조건 종류를 찾되, 없으면 null을 반환한다.

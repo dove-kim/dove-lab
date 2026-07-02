@@ -6,6 +6,8 @@ import {
   INDICATOR_LABELS,
   COMPARE_OP_LABELS,
   PRICE_FIELD_LABELS,
+  RANK_TYPE_LABELS,
+  STOCK_STATUS_LABELS,
 } from "@/types/filter";
 
 /** 오프셋 표기: 0/미지정→없음, 음수→"(N일전)", 양수→"(N일후)". */
@@ -43,6 +45,32 @@ export function summarizeCondition(node: ConditionNode): string {
     }
     case "MARKET_FILTER":
       return `시장: ${node.markets.join(", ")}`;
+    case "MODEL_SCORE_VALUE":
+      return `모델#${node.modelId} 점수${offsetTag(node.offset)} ${COMPARE_OP_LABELS[node.operator]} ${node.value}`;
+    case "MODEL_SCORE_RANGE": {
+      const lo = node.minInclusive ? "≤" : "<";
+      const hi = node.maxInclusive ? "≤" : "<";
+      return `${node.minValue} ${lo} 모델#${node.modelId} 점수${offsetTag(node.offset)} ${hi} ${node.maxValue}`;
+    }
+    case "RANK_VALUE":
+      return `${RANK_TYPE_LABELS[node.rank]}${offsetTag(node.offset)} ${COMPARE_OP_LABELS[node.operator]} ${node.value}`;
+    case "RANK_RANGE": {
+      const lo = node.minInclusive ? "≤" : "<";
+      const hi = node.maxInclusive ? "≤" : "<";
+      return `${node.minValue} ${lo} ${RANK_TYPE_LABELS[node.rank]}${offsetTag(node.offset)} ${hi} ${node.maxValue}`;
+    }
+    case "BREADTH_VALUE":
+      return `당일 상승비율${offsetTag(node.offset)} ${COMPARE_OP_LABELS[node.operator]} ${node.value}`;
+    case "BREADTH_RANGE": {
+      const lo = node.minInclusive ? "≤" : "<";
+      const hi = node.maxInclusive ? "≤" : "<";
+      return `${node.minValue} ${lo} 당일 상승비율${offsetTag(node.offset)} ${hi} ${node.maxValue}`;
+    }
+    case "STOCK_STATUS": {
+      const targets = (node.exclude.length > 0 ? node.exclude : (["TRADING_HALT", "ADMIN_ITEM"] as const))
+        .map((s) => STOCK_STATUS_LABELS[s]);
+      return `종목상태: ${targets.join("·")} 제외`;
+    }
   }
 }
 

@@ -21,14 +21,21 @@ import type { IndicatorPresetItem } from "@/types/indicator-preset";
 // (캐시 SET 완료 전에 동일 종목을 다시 hover해도 요청이 한 번만 나간다.)
 
 const CACHE_MAX = 50; // 종목당 ~40KB × 50 ≈ 2MB 이하로 유지
+const CHART_BARS = 750; // 초기 로딩 봉 수(약 3년). 좌측 스크롤로 과거 lazy-load.
+const OLDER_CHUNK = 500; // 과거 페이지네이션 청크 크기
+const PREBUFFER = 80;    // 좌측 가장자리에 닿기 전 미리 당겨오는 여유 봉 수
+const PREFETCH_BARS = 120; // hover 프리패치(미리보기)는 가볍게 유지
 
 interface PriceSnapshot {
   bars:         PriceBar[];
   expandedBars: (PriceBar | null)[];
+  /** 차트 본조회(CHART_BARS)로 채워졌는지. hover 프리패치(미리보기)면 false. */
+  full?:        boolean;
 }
 
 const _priceCache     = new Map<string, PriceSnapshot>(); // key: `${code}|${source}|${adjusted}`
 const _indicatorCache = new Map<string, IndicatorBar[]>(); // key: `${code}|${source}|${adjusted}|${typesKey}`
+const _indicatorFull  = new Set<string>();                 // 본조회(CHART_BARS)로 채워진 지표 키
 const _priceInflight  = new Set<string>();                 // fetch 진행 중인 가격 키
 const _indicatorInflight = new Set<string>();              // fetch 진행 중인 지표 키
 
@@ -59,12 +66,12 @@ export function prefetchChart(
   const pk = _cacheKey(code, source, adjusted);
   if (!_priceCache.has(pk) && !_priceInflight.has(pk)) {
     _priceInflight.add(pk);
-    fetch(`/api/stocks/${code}/prices?source=${source}&adjusted=${adjusted}&limit=120`)
+    fetch(`/api/stocks/${code}/prices?source=${source}&adjusted=${adjusted}&limit=${PREFETCH_BARS}`)
       .then(r => r.ok ? r.json() : null)
       .then((data: PriceBar[] | null) => {
         if (data) {
           const bars = Array.isArray(data) ? data : [];
-          _lruSet(_priceCache, pk, { bars, expandedBars: expandBarsWithGaps(bars) });
+          _lruSet(_priceCache, pk, { bars, expandedBars: expandBarsWithGaps(bars), full: false });
         }
       })
       .catch(() => {})
@@ -74,7 +81,7 @@ export function prefetchChart(
     const ik = _iCacheKey(code, source, adjusted, indicatorsKey);
     if (!_indicatorCache.has(ik) && !_indicatorInflight.has(ik)) {
       _indicatorInflight.add(ik);
-      fetch(`/api/stocks/${code}/indicators?source=${source}&adjusted=${adjusted}&limit=120&types=${indicatorsKey}`)
+      fetch(`/api/stocks/${code}/indicators?source=${source}&adjusted=${adjusted}&limit=${PREFETCH_BARS}&types=${indicatorsKey}`)
         .then(r => r.ok ? r.json() : null)
         .then((data: IndicatorBar[] | null) => {
           if (data) _lruSet(_indicatorCache, ik, Array.isArray(data) ? data : []);
@@ -346,6 +353,13 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
   const widthRef = useRef(0);
   const totalRef = useRef(0);
 
+  // 과거 페이지네이션(lazy-load) 상태 ref
+  const oldestDateRef   = useRef<string | null>(null); // 현재 보유한 가장 오래된 봉 날짜
+  const hasMoreRef      = useRef(true);                 // 더 과거 데이터가 있는지
+  const loadingOlderRef = useRef(false);               // 과거 fetch 인플라이트 가드
+  // loadOlder가 항상 최신 의존성을 읽도록 ref로 미러 (effect 재구성 회피)
+  const loadOlderRef    = useRef<() => void>(() => {});
+
   useEffect(() => { vcRef.current    = visibleCount;        }, [visibleCount]);
   useEffect(() => { riRef.current    = rightIndex;          }, [rightIndex]);
   useEffect(() => { widthRef.current = width;               }, [width]);
@@ -359,9 +373,7 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
     // 종목·소스 전환 시 헤더 가격을 즉시 비워 이전 종목 값이 잔류하지 않게 함
     onLatestBarRef.current?.(null);
 
-    function applyPriceData(arr: PriceBar[], fromCache: boolean) {
-      const expanded = fromCache ? _priceCache.get(_cacheKey(code, source, adjusted))!.expandedBars
-                                 : expandBarsWithGaps(arr);
+    function applyPriceData(arr: PriceBar[], expanded: (PriceBar | null)[], fromCache: boolean) {
       const plotW     = Math.max(1, widthRef.current - PAD.left - PAD.right);
       const defaultVc = Math.max(10, Math.round(plotW / 14));
       const vc        = Math.max(2, Math.min(defaultVc, expanded.length, MAX_VISIBLE));
@@ -370,32 +382,37 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
       totalRef.current  = expanded.length;
       setVisibleCount(vc); vcRef.current = vc;
       setRightIndex(expanded.length - 1); riRef.current = expanded.length - 1;
+      // 과거 페이지네이션 상태 초기화
+      oldestDateRef.current   = arr.length ? arr[0].date : null;
+      hasMoreRef.current      = arr.length >= CHART_BARS; // 본조회가 가득 찼으면 더 있을 수 있음
+      loadingOlderRef.current = false;
       setLoading(false);
       onLatestBarRef.current?.(arr.length ? arr[arr.length - 1] : null);
       perf.pipe.mark(`⑥ setState 완료 (${fromCache ? "캐시 HIT ⚡" : "네트워크"})`);
     }
 
-    // 캐시 HIT → 즉시 표시, fetch 없음
+    // 캐시 HIT(본조회로 채워진 경우만) → 즉시 표시, fetch 없음.
+    // hover 프리패치(미리보기, full=false)는 본조회로 갱신해야 하므로 통과시킨다.
     const cached = _priceCache.get(_cacheKey(code, source, adjusted));
-    if (cached) {
+    if (cached && cached.full) {
       perf.pipe.mark("⑤ 캐시 HIT — 즉시 반환");
-      applyPriceData(cached.bars, true);
+      applyPriceData(cached.bars, cached.expandedBars, true);
       return () => {};  // cleanup 불필요
     }
 
-    // 캐시 MISS → 네트워크
+    // 캐시 MISS(또는 미리보기만 있음) → 네트워크 본조회
     setLoading(true);
     setError(null);
-    perf.measure("API", `GET /api/stocks/${code}/prices?source=${source}&adjusted=${adjusted}&limit=120`, () =>
-      fetch(`/api/stocks/${code}/prices?source=${source}&adjusted=${adjusted}&limit=120`, { signal: controller.signal })
+    perf.measure("API", `GET /api/stocks/${code}/prices?source=${source}&adjusted=${adjusted}&limit=${CHART_BARS}`, () =>
+      fetch(`/api/stocks/${code}/prices?source=${source}&adjusted=${adjusted}&limit=${CHART_BARS}`, { signal: controller.signal })
         .then(r => { if (!r.ok) throw new Error(); return r; })
     ).then(r => r.json())
       .then((data: PriceBar[]) => {
         perf.pipe.mark("⑤ prices fetch 완료");
         const arr      = Array.isArray(data) ? data : [];
         const expanded = expandBarsWithGaps(arr);
-        _lruSet(_priceCache, _cacheKey(code, source, adjusted), { bars: arr, expandedBars: expanded });
-        applyPriceData(arr, false);
+        _lruSet(_priceCache, _cacheKey(code, source, adjusted), { bars: arr, expandedBars: expanded, full: true });
+        applyPriceData(arr, expanded, false);
       })
       .catch((e: unknown) => {
         if (e instanceof Error && e.name === "AbortError") return;
@@ -408,25 +425,26 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
   useEffect(() => {
     if (selectedIndicatorsKey === "") { setIndicatorData([]); return; }
 
-    // 캐시 HIT
+    // 캐시 HIT(본조회로 채워진 경우만). 미리보기 캐시는 본조회로 갱신한다.
     const ik     = _iCacheKey(code, source, adjusted, selectedIndicatorsKey);
     const cached = _indicatorCache.get(ik);
-    if (cached) {
+    if (cached && _indicatorFull.has(ik)) {
       setIndicatorData(cached);
       setIndicatorLoading(false);
       return;
     }
 
-    // 캐시 MISS
+    // 캐시 MISS(또는 미리보기만 있음)
     const controller = new AbortController();
     setIndicatorLoading(true);
-    perf.measure("API", `GET /api/stocks/${code}/indicators?source=${source}&adjusted=${adjusted}&limit=120&types=${selectedIndicatorsKey}`, () =>
-      fetch(`/api/stocks/${code}/indicators?source=${source}&adjusted=${adjusted}&limit=120&types=${selectedIndicatorsKey}`, { signal: controller.signal })
+    perf.measure("API", `GET /api/stocks/${code}/indicators?source=${source}&adjusted=${adjusted}&limit=${CHART_BARS}&types=${selectedIndicatorsKey}`, () =>
+      fetch(`/api/stocks/${code}/indicators?source=${source}&adjusted=${adjusted}&limit=${CHART_BARS}&types=${selectedIndicatorsKey}`, { signal: controller.signal })
         .then(r => { if (!r.ok) throw new Error(); return r; })
     ).then(r => r.json())
       .then((data: IndicatorBar[]) => {
         const arr = Array.isArray(data) ? data : [];
         _lruSet(_indicatorCache, ik, arr);
+        _indicatorFull.add(ik);
         setIndicatorData(arr);
         setIndicatorLoading(false);
       })
@@ -436,6 +454,73 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
       });
     return () => controller.abort();
   }, [code, source, adjusted, selectedIndicatorsKey]);
+
+  // ── 과거 페이지네이션 (좌측 스크롤 시 프리버퍼 lazy-load) ─────────────────────
+
+  // 항상 최신 상태/props를 읽도록 매 렌더 ref 갱신 (interaction effect 재구성 회피)
+  loadOlderRef.current = function loadOlder() {
+    if (loadingOlderRef.current || !hasMoreRef.current) return;
+    const before = oldestDateRef.current;
+    if (!before) return;
+    loadingOlderRef.current = true;
+
+    const wantIndicators = selectedIndicatorsKey !== "";
+    const pricesUrl = `/api/stocks/${code}/prices?source=${source}&adjusted=${adjusted}&before=${before}&limit=${OLDER_CHUNK}`;
+    const indicatorsUrl = `/api/stocks/${code}/indicators?source=${source}&adjusted=${adjusted}&before=${before}&limit=${OLDER_CHUNK}&types=${selectedIndicatorsKey}`;
+
+    const fetchPrices = fetch(pricesUrl).then(r => r.ok ? r.json() : []);
+    const fetchIndicators = wantIndicators
+      ? fetch(indicatorsUrl).then(r => r.ok ? r.json() : [])
+      : Promise.resolve([] as IndicatorBar[]);
+
+    Promise.all([fetchPrices, fetchIndicators])
+      .then(([priceData, indicatorRaw]: [PriceBar[], IndicatorBar[]]) => {
+        const older = Array.isArray(priceData) ? priceData : []; // 오름차순 older 봉
+        if (older.length === 0) { hasMoreRef.current = false; return; }
+
+        // 합쳐 재확장 — older(과거) + 기존 bars(최근)
+        const rawNew      = [...older, ...bars];
+        const expandedNew = expandBarsWithGaps(rawNew);
+        const prepended   = expandedNew.length - expandedBars.length;
+
+        // 위치 보존: 좌측에 prepended 만큼 늘었으므로 rightIndex를 그만큼 밀어 동일 봉을 가리키게 함
+        setBars(rawNew);
+        setExpandedBars(expandedNew);
+        totalRef.current = expandedNew.length;
+        riRef.current   += prepended;
+        setRightIndex(riRef.current);
+
+        // 지표 머지 (날짜 키 조회이므로 older 날짜 데이터를 앞에 붙이면 됨)
+        if (wantIndicators) {
+          const olderInd = Array.isArray(indicatorRaw) ? indicatorRaw : [];
+          if (olderInd.length > 0) {
+            const ik     = _iCacheKey(code, source, adjusted, selectedIndicatorsKey);
+            const merged = [...olderInd, ...indicatorData];
+            setIndicatorData(merged);
+            _lruSet(_indicatorCache, ik, merged);
+            _indicatorFull.add(ik);
+          }
+        }
+
+        // 가격 캐시도 갱신
+        _lruSet(_priceCache, _cacheKey(code, source, adjusted),
+          { bars: rawNew, expandedBars: expandedNew, full: true });
+
+        oldestDateRef.current = rawNew[0].date;
+        if (older.length < OLDER_CHUNK) hasMoreRef.current = false;
+        // setExpandedBars로 정적 draw effect가 재실행되며 riRef(보정값) 기준으로 다시 그린다.
+      })
+      .catch(() => { /* 네트워크 실패 시 다음 트리거에서 재시도 */ })
+      .finally(() => { loadingOlderRef.current = false; });
+  };
+
+  /** 뷰포트가 좌측 가장자리 근처면 과거 청크를 미리 당긴다. */
+  function maybePrefetchOlder() {
+    const startIdxNow = riRef.current - vcRef.current + 1;
+    if (startIdxNow < PREBUFFER && hasMoreRef.current && !loadingOlderRef.current) {
+      loadOlderRef.current();
+    }
+  }
 
   // ── ResizeObserver (debounce 50ms) ──────────────────────────────────────────
 
@@ -956,8 +1041,12 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
 
   // ── 인터랙션 ──────────────────────────────────────────────────────────────────
 
+  // 인터랙션(드래그/휠) 뷰포트 변경 시 호출되는 프리버퍼 트리거 — ref로 미러
+  const onViewportChangeRef = useRef<() => void>(() => {});
+  onViewportChangeRef.current = maybePrefetchOlder;
+
   const { handleTouchStart, handleTouchMove, handleTouchEnd, handlePointerMove, handlePointerLeave } =
-    useChartInteraction({ containerRef, vcRef, riRef, widthRef, totalRef, setVisibleCount, setRightIndex, setHoverIdx, triggerStaticDrawRef });
+    useChartInteraction({ containerRef, vcRef, riRef, widthRef, totalRef, setVisibleCount, setRightIndex, setHoverIdx, triggerStaticDrawRef, onViewportChangeRef });
 
   const scrollMin      = visibleCount - 1;
   const scrollMax      = expandedBars.length - 1;
@@ -1019,6 +1108,8 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
               const v = Number(e.target.value);
               setRightIndex(v);
               riRef.current = v;
+              // 좌측 가장자리 근처면 과거 청크를 미리 당긴다
+              maybePrefetchOlder();
               // rightIndex는 static draw deps에서 제거됐으므로 직접 트리거
               triggerStaticDrawRef.current();
             }}

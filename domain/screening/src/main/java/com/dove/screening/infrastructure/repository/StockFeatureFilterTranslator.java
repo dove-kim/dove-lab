@@ -1,7 +1,11 @@
 package com.dove.screening.infrastructure.repository;
 
+import com.dove.indicator.domain.breadth.entity.QStockBreadthDaily;
 import com.dove.indicator.domain.enums.IndicatorType;
 import com.dove.indicator.domain.entity.QStockFeatureDaily;
+import com.dove.indicator.domain.rank.entity.QStockRankDaily;
+import com.dove.indicator.domain.rank.enums.RankType;
+import com.dove.modelserving.domain.entity.QStockModelScore;
 import com.dove.screening.domain.value.ComparisonCondition;
 import com.dove.screening.domain.value.FilterChildOp;
 import com.dove.screening.domain.value.FilterGroup;
@@ -13,8 +17,12 @@ import com.dove.screening.domain.value.FilterPriceField;
 import com.dove.screening.domain.value.FilterRange;
 import com.dove.screening.domain.value.IndicatorOperand;
 import com.dove.screening.domain.value.MarketFilterCondition;
+import com.dove.screening.domain.value.ModelScoreOperand;
 import com.dove.screening.domain.value.PriceOperand;
+import com.dove.screening.domain.value.BreadthOperand;
 import com.dove.screening.domain.value.RangeCondition;
+import com.dove.screening.domain.value.RankOperand;
+import com.dove.screening.domain.value.StockStatusCondition;
 import com.dove.screening.domain.value.ThresholdCondition;
 import com.dove.screening.domain.value.UnknownCondition;
 import com.dove.screening.domain.value.VolumeOperand;
@@ -23,15 +31,13 @@ import com.querydsl.core.types.dsl.BooleanExpression;
 import com.querydsl.core.types.dsl.NumberExpression;
 import com.querydsl.core.types.dsl.NumberPath;
 
-import java.util.HashMap;
 import java.util.List;
-import java.util.Map;
 import java.util.Optional;
 
 /**
  * 검색식 모델을 STOCK_FEATURE_DAILY 대상 QueryDSL 조건으로 변환한다.
  * 컬럼으로 표현 못 하는 조건이 하나라도 있으면 빈 값을 반환해 호출 측이 인메모리 평가로 폴백하게 한다.
- * 오프셋(N일 전/후) 피연산자는 SEQ 기준 self-join 별칭으로 변환한다.
+ * 오프셋(N일 전/후) 피연산자는 SEQ 기준 self-join 별칭으로, 순위·상승비율·모델점수는 별도 테이블 left join 별칭으로 변환한다.
  */
 final class StockFeatureFilterTranslator {
 
@@ -39,16 +45,17 @@ final class StockFeatureFilterTranslator {
     }
 
     /**
-     * 모델을 QueryDSL 조건으로 변환한다. 전부 변환 가능하면 술어+오프셋 별칭을, 하나라도 불가하면 빈 값을 반환한다.
+     * 모델을 QueryDSL 조건으로 변환한다. 전부 변환 가능하면 술어+join 별칭을, 하나라도 불가하면 빈 값을 반환한다.
      */
     static Optional<TranslatedFilter> translate(FilterNode root, QStockFeatureDaily base) {
-        Map<Integer, QStockFeatureDaily> aliases = new HashMap<>();
-        aliases.put(0, base);
+        TranslationAliases aliases = new TranslationAliases(base);
         BooleanExpression predicate = node(root, base, aliases);
-        return predicate == null ? Optional.empty() : Optional.of(new TranslatedFilter(predicate, aliases));
+        return predicate == null ? Optional.empty()
+                : Optional.of(new TranslatedFilter(predicate, aliases.offsetAliases(),
+                        aliases.rankAliases(), aliases.breadthAliases(), aliases.modelScoreAliases()));
     }
 
-    private static BooleanExpression node(FilterNode n, QStockFeatureDaily base, Map<Integer, QStockFeatureDaily> aliases) {
+    private static BooleanExpression node(FilterNode n, QStockFeatureDaily base, TranslationAliases aliases) {
         return switch (n) {
             case FilterGroup g -> group(g, base, aliases);
             case FilterNot not -> {
@@ -70,11 +77,12 @@ final class StockFeatureFilterTranslator {
                         : l.isNotNull().and(r.isNotNull()).and(compareExpr(l, c.operator(), r));
             }
             case MarketFilterCondition m -> market(m, base);
+            case StockStatusCondition s -> null; // DB 푸시다운 불가 → 폴백
             case UnknownCondition u -> null;
         };
     }
 
-    private static BooleanExpression group(FilterGroup g, QStockFeatureDaily base, Map<Integer, QStockFeatureDaily> aliases) {
+    private static BooleanExpression group(FilterGroup g, QStockFeatureDaily base, TranslationAliases aliases) {
         if (g.children().isEmpty()) return null; // 빈 그룹은 폴백
         BooleanExpression result = node(g.children().get(0), base, aliases);
         if (result == null) return null;
@@ -101,21 +109,14 @@ final class StockFeatureFilterTranslator {
         return base.id.exchange.in(exchanges);
     }
 
-    /**
-     * 오프셋에 맞는 별칭을 찾거나(없으면) 새로 만든다. 0은 기준 별칭.
-     */
-    private static QStockFeatureDaily aliasFor(int offset, QStockFeatureDaily base, Map<Integer, QStockFeatureDaily> aliases) {
-        if (offset == 0) return base;
-        return aliases.computeIfAbsent(offset,
-                off -> new QStockFeatureDaily("sfdOff" + (off < 0 ? "M" : "P") + Math.abs(off)));
-    }
-
-    private static NumberExpression<Double> operand(FilterOperand o, QStockFeatureDaily base, Map<Integer, QStockFeatureDaily> aliases) {
-        QStockFeatureDaily q = aliasFor(o.offset(), base, aliases);
+    private static NumberExpression<Double> operand(FilterOperand o, QStockFeatureDaily base, TranslationAliases aliases) {
         return switch (o) {
-            case IndicatorOperand i -> indicatorCol(q, i.type());
-            case PriceOperand p -> priceCol(q, p.field());
-            case VolumeOperand v -> q.volume.castToNum(Double.class);
+            case IndicatorOperand i -> indicatorCol(aliases.featureAlias(i.offset()), i.type());
+            case PriceOperand p -> priceCol(aliases.featureAlias(p.offset()), p.field());
+            case VolumeOperand v -> aliases.featureAlias(v.offset()).volume.castToNum(Double.class);
+            case ModelScoreOperand m -> aliases.modelScoreAlias(m.offset(), m.modelId()).score.castToNum(Double.class);
+            case RankOperand r -> rankCol(aliases.rankAlias(r.offset()), r.type());
+            case BreadthOperand b -> aliases.breadthAlias(b.offset()).advanceRatio;
         };
     }
 
@@ -153,6 +154,22 @@ final class StockFeatureFilterTranslator {
             case HIGH -> q.highPrice;
             case LOW -> q.lowPrice;
             case CLOSE -> q.closePrice;
+        };
+        return p.castToNum(Double.class);
+    }
+
+    /** RankType → STOCK_RANK_DAILY 컬럼. */
+    private static NumberExpression<Double> rankCol(QStockRankDaily q, RankType t) {
+        NumberPath<Float> p = switch (t) {
+            case RANK_RET_1D -> q.rankRet1d;
+            case RANK_RET_5D -> q.rankRet5d;
+            case RANK_RET_10D -> q.rankRet10d;
+            case RANK_VOLUME_RATIO_20 -> q.rankVolumeRatio20;
+            case RANK_RSI_14 -> q.rankRsi14;
+            case RANK_MACD_HISTOGRAM -> q.rankMacdHistogram;
+            case RANK_HIGH_52W_RATIO -> q.rankHigh52wRatio;
+            case RANK_VOLATILITY_20D -> q.rankVolatility20d;
+            case RANK_TURNOVER -> q.rankTurnover;
         };
         return p.castToNum(Double.class);
     }
@@ -207,6 +224,11 @@ final class StockFeatureFilterTranslator {
             case RET_10D -> q.ret10d;
             case BODY_RATIO -> q.bodyRatio;
             case LOWER_WICK -> q.lowerWick;
+            case UPPER_WICK_RATIO -> q.upperWickRatio;
+            case CLOSE_POS -> q.closePos;
+            case BULLISH_ENGULFING -> q.bullishEngulfing;
+            case BEARISH_ENGULFING -> q.bearishEngulfing;
+            case BREAKOUT_20D -> q.breakout20d;
             case IS_52W_HIGH, IS_52W_LOW, IS_20D_HIGH, IS_20D_LOW -> null; // 불리언 — SQL 푸시 미지원, 폴백
         };
         return p == null ? null : p.castToNum(Double.class);

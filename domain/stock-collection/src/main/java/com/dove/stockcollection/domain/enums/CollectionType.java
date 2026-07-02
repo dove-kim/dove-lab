@@ -11,5 +11,7 @@ public enum CollectionType {
     STOCK_DETAIL, // 종목 상세 upsert (KIS)
     PRICE,        // 주가 수집 (KIS)
     EVENT,        // 권리 이벤트 수집 (KIS 예탁원정보)
-    INVESTOR      // 투자자매매동향 수집 (KIS)
+    INVESTOR,     // 투자자매매동향 수집 (KIS)
+    FUNDAMENTAL,  // 재무제표 수집 (DART)
+    VALUATION     // 일별 밸류에이션 재계산 (DB 전용, 외부 API 없음)
 }

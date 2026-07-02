@@ -1,6 +1,6 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cx } from "@/utils/cx";
 import Select from "@/components/Select";
 import {
@@ -10,10 +10,15 @@ import {
   IndicatorType,
   PriceField,
   MarketTypeFilter,
+  RankType,
+  ModelSummary,
+  StockStatusExclude,
   INDICATOR_LABELS,
   INDICATOR_GROUPS,
   PRICE_FIELD_LABELS,
   COMPARE_OP_LABELS,
+  RANK_TYPE_LABELS,
+  ALL_RANK_TYPES,
   PriceVsIndicatorCondition,
 } from "@/types/filter";
 import { generateId } from "@/utils/filter";
@@ -34,6 +39,7 @@ const INDICATOR_ITEMS = INDICATOR_GROUPS.map(g => ({
 }));
 const OP_ITEMS = COMPARE_OPS.map(op => ({ value: op as string, label: COMPARE_OP_LABELS[op] }));
 const PRICE_FIELD_ITEMS = PRICE_FIELDS.map(f => ({ value: f as string, label: PRICE_FIELD_LABELS[f] }));
+const RANK_ITEMS = ALL_RANK_TYPES.map(r => ({ value: r as string, label: RANK_TYPE_LABELS[r] }));
 
 function IndicatorSelect({ value, onChange }: { value: IndicatorType; onChange: (v: IndicatorType) => void }) {
   return <Select value={value} items={INDICATOR_ITEMS} onChange={v => onChange(v as IndicatorType)} className="w-full" />;
@@ -235,6 +241,102 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
   const [volRange_offset, setVolRange_offset] = useState<number>(
     initial?.conditionType === "VOLUME_RANGE" ? (initial.offset ?? 0) : 0);
 
+  // ── 종목상태 제외 ───────────────────────────────────────────────────────────────
+  const initStatusExclude =
+    initial?.conditionType === "STOCK_STATUS"
+      ? (initial.exclude.length > 0 ? initial.exclude : (["TRADING_HALT", "ADMIN_ITEM"] as StockStatusExclude[]))
+      : (["TRADING_HALT", "ADMIN_ITEM"] as StockStatusExclude[]);
+  const [excludeHalt, setExcludeHalt] = useState(initStatusExclude.includes("TRADING_HALT"));
+  const [excludeAdmin, setExcludeAdmin] = useState(initStatusExclude.includes("ADMIN_ITEM"));
+
+  // ── 모델 점수 ────────────────────────────────────────────────────────────────
+  const [models, setModels] = useState<ModelSummary[]>([]);
+  const isModelCondition = conditionType === "MODEL_SCORE_VALUE" || conditionType === "MODEL_SCORE_RANGE";
+
+  const [modelScoreVal_modelId, setModelScoreVal_modelId] = useState<number | null>(
+    initial?.conditionType === "MODEL_SCORE_VALUE" ? initial.modelId : null);
+  const [modelScoreVal_offset, setModelScoreVal_offset] = useState<number>(
+    initial?.conditionType === "MODEL_SCORE_VALUE" ? (initial.offset ?? 0) : 0);
+  const [modelScoreVal_op, setModelScoreVal_op] = useState<CompareOp>(
+    initial?.conditionType === "MODEL_SCORE_VALUE" ? initial.operator : "GTE");
+  const [modelScoreVal_val, setModelScoreVal_val] = useState<number>(
+    initial?.conditionType === "MODEL_SCORE_VALUE" ? initial.value : 0);
+
+  const [modelScoreRange_modelId, setModelScoreRange_modelId] = useState<number | null>(
+    initial?.conditionType === "MODEL_SCORE_RANGE" ? initial.modelId : null);
+  const [modelScoreRange_offset, setModelScoreRange_offset] = useState<number>(
+    initial?.conditionType === "MODEL_SCORE_RANGE" ? (initial.offset ?? 0) : 0);
+  const [modelScoreRange_min, setModelScoreRange_min] = useState<number>(
+    initial?.conditionType === "MODEL_SCORE_RANGE" ? initial.minValue : 0);
+  const [modelScoreRange_minInc, setModelScoreRange_minInc] = useState(
+    initial?.conditionType === "MODEL_SCORE_RANGE" ? initial.minInclusive : true);
+  const [modelScoreRange_max, setModelScoreRange_max] = useState<number>(
+    initial?.conditionType === "MODEL_SCORE_RANGE" ? initial.maxValue : 1);
+  const [modelScoreRange_maxInc, setModelScoreRange_maxInc] = useState(
+    initial?.conditionType === "MODEL_SCORE_RANGE" ? initial.maxInclusive : true);
+
+  // ── 순위 ──────────────────────────────────────────────────────────────────────
+  const [rankVal_rank, setRankVal_rank] = useState<RankType>(
+    initial?.conditionType === "RANK_VALUE" ? initial.rank : "RANK_TURNOVER");
+  const [rankVal_offset, setRankVal_offset] = useState<number>(
+    initial?.conditionType === "RANK_VALUE" ? (initial.offset ?? 0) : 0);
+  const [rankVal_op, setRankVal_op] = useState<CompareOp>(
+    initial?.conditionType === "RANK_VALUE" ? initial.operator : "GTE");
+  const [rankVal_val, setRankVal_val] = useState<number>(
+    initial?.conditionType === "RANK_VALUE" ? initial.value : 0);
+
+  const [rankRange_rank, setRankRange_rank] = useState<RankType>(
+    initial?.conditionType === "RANK_RANGE" ? initial.rank : "RANK_TURNOVER");
+  const [rankRange_offset, setRankRange_offset] = useState<number>(
+    initial?.conditionType === "RANK_RANGE" ? (initial.offset ?? 0) : 0);
+  const [rankRange_min, setRankRange_min] = useState<number>(
+    initial?.conditionType === "RANK_RANGE" ? initial.minValue : 0);
+  const [rankRange_minInc, setRankRange_minInc] = useState(
+    initial?.conditionType === "RANK_RANGE" ? initial.minInclusive : true);
+  const [rankRange_max, setRankRange_max] = useState<number>(
+    initial?.conditionType === "RANK_RANGE" ? initial.maxValue : 1);
+  const [rankRange_maxInc, setRankRange_maxInc] = useState(
+    initial?.conditionType === "RANK_RANGE" ? initial.maxInclusive : true);
+
+  // ── 당일 상승비율(시장 폭) ──────────────────────────────────────────────────────
+  const [breadthVal_offset, setBreadthVal_offset] = useState<number>(
+    initial?.conditionType === "BREADTH_VALUE" ? (initial.offset ?? 0) : 0);
+  const [breadthVal_op, setBreadthVal_op] = useState<CompareOp>(
+    initial?.conditionType === "BREADTH_VALUE" ? initial.operator : "GTE");
+  const [breadthVal_val, setBreadthVal_val] = useState<number>(
+    initial?.conditionType === "BREADTH_VALUE" ? initial.value : 0.45);
+
+  const [breadthRange_offset, setBreadthRange_offset] = useState<number>(
+    initial?.conditionType === "BREADTH_RANGE" ? (initial.offset ?? 0) : 0);
+  const [breadthRange_min, setBreadthRange_min] = useState<number>(
+    initial?.conditionType === "BREADTH_RANGE" ? initial.minValue : 0);
+  const [breadthRange_minInc, setBreadthRange_minInc] = useState(
+    initial?.conditionType === "BREADTH_RANGE" ? initial.minInclusive : true);
+  const [breadthRange_max, setBreadthRange_max] = useState<number>(
+    initial?.conditionType === "BREADTH_RANGE" ? initial.maxValue : 1);
+  const [breadthRange_maxInc, setBreadthRange_maxInc] = useState(
+    initial?.conditionType === "BREADTH_RANGE" ? initial.maxInclusive : true);
+
+  useEffect(() => {
+    if (!isModelCondition) return;
+    fetch("/api/stocks/models")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: ModelSummary[]) => {
+        setModels(data);
+        // 신규 조건이면 첫 모델을 기본 선택
+        if (data.length > 0) {
+          setModelScoreVal_modelId((cur) => cur ?? data[0].id);
+          setModelScoreRange_modelId((cur) => cur ?? data[0].id);
+        }
+      })
+      .catch(() => setModels([]));
+  }, [isModelCondition]);
+
+  const MODEL_ITEMS = models.map((m) => ({
+    value: String(m.id),
+    label: `${m.name} (v${m.version})`,
+  }));
+
   function buildNode(): ConditionNode {
     const id = initial?.id ?? generateId();
     const negated = initial?.negated ?? false;
@@ -257,6 +359,24 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
         return { id, nodeType: "CONDITION", negated, conditionType, priceField: priceVsInd_field, leftOffset: pvi_leftOffset, operator: priceVsInd_op, indicator: priceVsInd_ind, rightOffset: pvi_rightOffset } as PriceVsIndicatorCondition;
       case "MARKET_FILTER":
         return { id, nodeType: "CONDITION", negated, conditionType, markets: Array.from(markets) };
+      case "MODEL_SCORE_VALUE":
+        return { id, nodeType: "CONDITION", negated, conditionType, modelId: modelScoreVal_modelId ?? 0, offset: modelScoreVal_offset, operator: modelScoreVal_op, value: modelScoreVal_val };
+      case "MODEL_SCORE_RANGE":
+        return { id, nodeType: "CONDITION", negated, conditionType, modelId: modelScoreRange_modelId ?? 0, offset: modelScoreRange_offset, minValue: modelScoreRange_min, minInclusive: modelScoreRange_minInc, maxValue: modelScoreRange_max, maxInclusive: modelScoreRange_maxInc };
+      case "RANK_VALUE":
+        return { id, nodeType: "CONDITION", negated, conditionType, rank: rankVal_rank, offset: rankVal_offset, operator: rankVal_op, value: rankVal_val };
+      case "RANK_RANGE":
+        return { id, nodeType: "CONDITION", negated, conditionType, rank: rankRange_rank, offset: rankRange_offset, minValue: rankRange_min, minInclusive: rankRange_minInc, maxValue: rankRange_max, maxInclusive: rankRange_maxInc };
+      case "BREADTH_VALUE":
+        return { id, nodeType: "CONDITION", negated, conditionType, offset: breadthVal_offset, operator: breadthVal_op, value: breadthVal_val };
+      case "BREADTH_RANGE":
+        return { id, nodeType: "CONDITION", negated, conditionType, offset: breadthRange_offset, minValue: breadthRange_min, minInclusive: breadthRange_minInc, maxValue: breadthRange_max, maxInclusive: breadthRange_maxInc };
+      case "STOCK_STATUS": {
+        const exclude: StockStatusExclude[] = [];
+        if (excludeHalt) exclude.push("TRADING_HALT");
+        if (excludeAdmin) exclude.push("ADMIN_ITEM");
+        return { id, nodeType: "CONDITION", negated, conditionType, exclude };
+      }
     }
   }
 
@@ -270,7 +390,16 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
     VOLUME_VALUE: "거래량 비교",
     VOLUME_RANGE: "거래량 범위",
     MARKET_FILTER: "시장 필터",
+    MODEL_SCORE_VALUE: "모델 점수 비교",
+    MODEL_SCORE_RANGE: "모델 점수 범위",
+    RANK_VALUE: "순위 비교",
+    RANK_RANGE: "순위 범위",
+    BREADTH_VALUE: "당일 상승비율 비교",
+    BREADTH_RANGE: "당일 상승비율 범위",
+    STOCK_STATUS: "종목상태 (거래정지·관리종목 제외)",
   };
+
+  const noModelAvailable = isModelCondition && models.length === 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
@@ -477,6 +606,172 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
               </div>
             </div>
           )}
+
+          {conditionType === "MODEL_SCORE_VALUE" && (
+            <>
+              {noModelAvailable ? (
+                <p className="text-sm text-amber-400">활성화된 모델이 없습니다. 관리자에게 모델 등록을 요청하세요.</p>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">모델</label>
+                    <Select value={modelScoreVal_modelId != null ? String(modelScoreVal_modelId) : null}
+                      items={MODEL_ITEMS} onChange={v => setModelScoreVal_modelId(Number(v))} className="w-full" />
+                  </div>
+                  <OffsetInput value={modelScoreVal_offset} onChange={setModelScoreVal_offset} />
+                  <div className="flex gap-2">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">비교 연산자</label>
+                      <OpSelect value={modelScoreVal_op} onChange={setModelScoreVal_op} />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-slate-400 mb-1 block">점수</label>
+                      <NumberInput value={modelScoreVal_val} onChange={setModelScoreVal_val} placeholder="예: 0.7" />
+                    </div>
+                  </div>
+                  <p className="text-xs text-slate-500">확률 모델은 0~1, 회귀 모델은 예측값으로 비교합니다.</p>
+                </>
+              )}
+            </>
+          )}
+
+          {conditionType === "MODEL_SCORE_RANGE" && (
+            <>
+              {noModelAvailable ? (
+                <p className="text-sm text-amber-400">활성화된 모델이 없습니다. 관리자에게 모델 등록을 요청하세요.</p>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">모델</label>
+                    <Select value={modelScoreRange_modelId != null ? String(modelScoreRange_modelId) : null}
+                      items={MODEL_ITEMS} onChange={v => setModelScoreRange_modelId(Number(v))} className="w-full" />
+                  </div>
+                  <OffsetInput value={modelScoreRange_offset} onChange={setModelScoreRange_offset} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">최솟값</label>
+                      <NumberInput value={modelScoreRange_min} onChange={setModelScoreRange_min} placeholder="예: 0.6" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">최댓값</label>
+                      <NumberInput value={modelScoreRange_max} onChange={setModelScoreRange_max} placeholder="예: 0.9" />
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <InclusiveToggle label="최솟값 포함" value={modelScoreRange_minInc} onChange={setModelScoreRange_minInc} />
+                    <InclusiveToggle label="최댓값 포함" value={modelScoreRange_maxInc} onChange={setModelScoreRange_maxInc} />
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {conditionType === "RANK_VALUE" && (
+            <>
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">순위 종류</label>
+                <Select value={rankVal_rank} items={RANK_ITEMS} onChange={v => setRankVal_rank(v as RankType)} className="w-full" />
+              </div>
+              <OffsetInput value={rankVal_offset} onChange={setRankVal_offset} />
+              <div className="flex gap-2">
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">비교 연산자</label>
+                  <OpSelect value={rankVal_op} onChange={setRankVal_op} />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs text-slate-400 mb-1 block">순위 (0~1)</label>
+                  <NumberInput value={rankVal_val} onChange={setRankVal_val} placeholder="예: 0.9 (상위 10%)" />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">순위는 0~1 사이 백분위(1=최상위)입니다.</p>
+            </>
+          )}
+
+          {conditionType === "RANK_RANGE" && (
+            <>
+              <div>
+                <label className="text-xs text-slate-400 mb-1 block">순위 종류</label>
+                <Select value={rankRange_rank} items={RANK_ITEMS} onChange={v => setRankRange_rank(v as RankType)} className="w-full" />
+              </div>
+              <OffsetInput value={rankRange_offset} onChange={setRankRange_offset} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">최솟값 (0~1)</label>
+                  <NumberInput value={rankRange_min} onChange={setRankRange_min} placeholder="예: 0.8" />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">최댓값 (0~1)</label>
+                  <NumberInput value={rankRange_max} onChange={setRankRange_max} placeholder="예: 1" />
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <InclusiveToggle label="최솟값 포함" value={rankRange_minInc} onChange={setRankRange_minInc} />
+                <InclusiveToggle label="최댓값 포함" value={rankRange_maxInc} onChange={setRankRange_maxInc} />
+              </div>
+            </>
+          )}
+
+          {conditionType === "BREADTH_VALUE" && (
+            <>
+              <OffsetInput value={breadthVal_offset} onChange={setBreadthVal_offset} />
+              <div className="flex gap-2">
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">비교 연산자</label>
+                  <OpSelect value={breadthVal_op} onChange={setBreadthVal_op} />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs text-slate-400 mb-1 block">당일 상승비율 (0~1)</label>
+                  <NumberInput value={breadthVal_val} onChange={setBreadthVal_val} placeholder="예: 0.45" />
+                </div>
+              </div>
+              <p className="text-xs text-slate-500">당일 상승비율은 0~1 사이 값(1=전종목 상승)입니다.</p>
+            </>
+          )}
+
+          {conditionType === "BREADTH_RANGE" && (
+            <>
+              <OffsetInput value={breadthRange_offset} onChange={setBreadthRange_offset} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">최솟값 (0~1)</label>
+                  <NumberInput value={breadthRange_min} onChange={setBreadthRange_min} placeholder="예: 0.45" />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">최댓값 (0~1)</label>
+                  <NumberInput value={breadthRange_max} onChange={setBreadthRange_max} placeholder="예: 1" />
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <InclusiveToggle label="최솟값 포함" value={breadthRange_minInc} onChange={setBreadthRange_minInc} />
+                <InclusiveToggle label="최댓값 포함" value={breadthRange_maxInc} onChange={setBreadthRange_maxInc} />
+              </div>
+            </>
+          )}
+
+          {conditionType === "STOCK_STATUS" && (
+            <>
+              <label className="text-xs text-slate-400 mb-1 block">결과에서 제외할 종목상태</label>
+              <div className="flex gap-2">
+                <button
+                  type="button"
+                  onClick={() => setExcludeHalt((v) => !v)}
+                  className={excludeHalt ? cx.btnToggleOn : cx.btnToggleOff}
+                >
+                  거래정지 제외
+                </button>
+                <button
+                  type="button"
+                  onClick={() => setExcludeAdmin((v) => !v)}
+                  className={excludeAdmin ? cx.btnToggleOn : cx.btnToggleOff}
+                >
+                  관리종목 제외
+                </button>
+              </div>
+              <p className="text-xs text-slate-500">
+                현재 상태 기준 — 기준일이 최신일자일 때만 적용됩니다(과거일자에선 무시).
+              </p>
+            </>
+          )}
         </div>
 
         <div className="flex gap-3 mt-6">
@@ -488,7 +783,8 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
           </button>
           <button
             onClick={() => onConfirm(buildNode())}
-            className={`flex-1 ${cx.btnPrimary}`}
+            disabled={noModelAvailable}
+            className={`flex-1 ${cx.btnPrimary}${noModelAvailable ? " opacity-40 cursor-not-allowed" : ""}`}
           >
             {initial ? "수정" : "추가"}
           </button>

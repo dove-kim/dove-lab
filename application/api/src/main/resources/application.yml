@@ -46,6 +46,9 @@ krx:
   api:
     daily-quota: ${KRX_DAILY_QUOTA:6000}
 
+workspace:
+  base-dir: ${DOVE_WORK_DIR:}   # 임시 작업파일 루트. 비면 OS 임시폴더 하위. 운영 컨테이너는 볼륨 경로 주입.
+
 jwt:
   secret: ${JWT_SECRET:dove-lab-local-dev-secret-key-minimum-32-characters}
   access-expiration-ms: ${JWT_ACCESS_EXPIRATION_MS:900000}        # 15분

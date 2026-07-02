@@ -5,6 +5,14 @@ bootJar {
 jar {
     enabled = false
 }
+
+// 운영 채점용 Python 스크립트(score.py)를 도커 빌드 컨텍스트(build/scoring)로 복사한다.
+// 단일 원천 = rootDir/scripts/scoring/score.py. (모델 활성화 드라이런이 ProcessBuilder로 호출)
+tasks.register('copyScoringScript', Copy) {
+    from rootProject.file('scripts/scoring/score.py')
+    into layout.buildDirectory.dir('scoring')
+}
+bootJar.dependsOn copyScoringScript
 bootRun {
     enabled = true
 }
@@ -17,11 +25,13 @@ dependencies {
     implementation project(":auth")
     implementation project(":user")
     implementation project(":screening")
+    implementation project(":model-serving")
     implementation project(":user-feature")
     implementation project(":system-event")
     implementation project(":api-quota")
     implementation project(":stock-collection")
     implementation project(":job-status")
+    implementation project(":fundamental")
     runtimeOnly project(":krx")
     runtimeOnly project(":kis")
     implementation project(":investor-flow")

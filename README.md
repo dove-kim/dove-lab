@@ -9,7 +9,7 @@
 
 ![system](./doc/system.svg)
 
-1. **scheduler**: 잡마다 독립 스레드로 — KRX 당일 종목 동기화(08:05), KIS 종목 상세·투자자동향 수집(12:00), 거래소별 당일 주가 수집(21:00), 커서 기반 기술적 지표 계산(00:00). 역사적 수집은 ROOT 전용 백필 API(비동기, 재조회 ≤어제). 진행률은 ROOT 대시보드로 조회.
+1. **scheduler**: 잡마다 독립 스레드로 — KRX 당일 종목 동기화(08:05), KIS 종목 상세·투자자동향 수집(12:00), 일일 파이프라인(21:00: 당일 주가 → 지표·순위·상승비율 ∥ DART 재무폴링·상장주식수·밸류에이션 → 모델 채점), DART 고유번호 주간 동기화(일 06:00). 역사적 수집은 ROOT 전용 백필 API(비동기, 재조회 ≤어제) + 대량 과거 데이터는 별도 스크립트. 진행률은 ROOT 대시보드로 조회.
 2. **api**: REST API 서버 — 회원 인증 + 주식 데이터 조회 + 사용자 기능 권한 관리 + 운영(수집·스케줄러) 관리
 3. **web**: Next.js 기반 UI
 
@@ -28,23 +28,29 @@ domain/                     Aggregate 단위 모듈 (entity + repository + CQRS 
   user-feature              UserFeatureGrant, UserModuleDisplay, UserFeatureDisplay
   market                    Exchange, ExchangeTradingDate, MarketListingSync
   stock                     Stock, StockDetail, StockEvent(권리이벤트), StockPrice(RAW·ADJUSTED), StockTagValue
-  stock-collection          KIS 주가·권리이벤트(KSD)·투자자동향 수집 코어 + 백필 런처(CollectionLauncher)
-  indicator                 StockFeatureDaily(지표 wide 저장) + 지표 계산기 + IndicatorCursor(그룹 단위 CAS)
+  stock-collection          KIS 주가·권리이벤트(KSD)·투자자동향 수집 + KRX 종목 동기화 + 백필 런처(CollectionLauncher)
+  indicator                 StockFeatureDaily(지표 wide) + 지표 계산기 + 횡단면 순위(rank)·상승비율(breadth) + 각 커서(CAS)
+  fundamental               DART 재무제표(StockFundamental) + PIT 일별 밸류에이션(StockValuationDaily) + 상장주식수 이력(StockShareCount)
   screening                 사용자 정의 종목 필터 + 종목 세트 + 지표 프리셋
   investor-flow             종목별 투자자 매매동향 (기관·외국인·개인)
+  model-serving             ML 모델 레지스트리(ML_MODEL) + 일일 채점 점수(STOCK_MODEL_SCORE)
   system-event              수집·계산 운영 이벤트 기록 (ROOT 모니터링)
 
 infrastructure/             Driven adapter
-  krx                       KRX API 어댑터 (Feign)
+  krx                       KRX API 어댑터 (Feign) — 종목·일별시세(상장주식수)
   kis                       KIS API 어댑터 (Feign) + KisGate (초당 20회 율제한)
+  dart                      DART OpenAPI 어댑터 (Feign) — 재무제표·고유번호·공시
 
 library/
   jpa                       JpaConfig, QuerydslConfiguration
   logging                   logback 공통 설정
   concurrent                Parallel (가상 스레드 동시 수 제한)
+  workspace                 임시 작업파일 관리 (DART 원본·ML 아티팩트, 작업 전후 자동 정리)
   api-quota / datetime      공통 API 할당량 / 날짜 유틸
   job-status                스케줄러 진행률 레지스트리 (Redis)
 ```
+
+> ML 모델 아티팩트 실행(score.py ProcessBuilder)은 `domain/model-serving` 이 담당하며, api·scheduler Dockerfile에 python + 런타임(joblib·numpy·pandas·lightgbm·scikit-learn)이 포함된다.
 
 ## 애플리케이션별 문서
 
@@ -196,7 +202,7 @@ docker compose -f docker-compose.prod.yml up -d
 mysql -u <user> -p <DB명> < scripts/migration/backfill_exchange_trading_date.sql
 ```
 
-> 백필 이후의 거래일은 `DailyPriceJob`이 매 거래일 자동 등록한다.
+> 백필 이후의 거래일은 일일 파이프라인(`DailyPipelineOrchestrator`)이 매 거래일 자동 등록한다.
 > 백필은 `STOCK_PRICE`가 EXCHANGE/PRICE_TYPE를 enum ordinal(TINYINT)로 저장하는 것을 전제로 한다 — PriceType.RAW=0, StockExchange KOSPI=0/KOSDAQ=1/KONEX=2.
 
 ## scripts/

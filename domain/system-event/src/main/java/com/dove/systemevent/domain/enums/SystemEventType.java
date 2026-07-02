@@ -15,5 +15,13 @@ public enum SystemEventType {
     /**
      * KIS API 호출 실패 — 일일 수집 또는 백필 중단.
      */
-    KIS_API_FAILURE
+    KIS_API_FAILURE,
+    /**
+     * 일일 파이프라인 단계 실패 — 지표 계산·rank 계산 등.
+     */
+    PIPELINE_STAGE_FAILURE,
+    /**
+     * 모델 채점 실패 — 특정 모델의 sweep 채점 중 오류.
+     */
+    MODEL_SCORING_FAILURE
 }

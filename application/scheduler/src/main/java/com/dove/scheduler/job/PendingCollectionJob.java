@@ -1,6 +1,9 @@
 package com.dove.scheduler.job;
 
 import com.dove.concurrent.ParallelException;
+import com.dove.fundamental.domain.enums.ReportCode;
+import com.dove.scheduler.fundamental.DailyValuationService;
+import com.dove.scheduler.fundamental.FundamentalCollectionService;
 import com.dove.stockcollection.application.service.CollectionProgress;
 import com.dove.stockcollection.application.service.CollectionTaskService;
 import com.dove.stockcollection.application.service.InvestorCollectionService;
@@ -40,6 +43,8 @@ public class PendingCollectionJob {
     private final StockCollectionService stockCollectionService;
     private final StockEventCollectionService eventCollectionService;
     private final InvestorCollectionService investorCollectionService;
+    private final FundamentalCollectionService fundamentalCollectionService;
+    private final DailyValuationService dailyValuationService;
     private final CollectionTaskService taskService;
     /**
      * KIS 상세 수집 — KisStockDetailFetcher가 없는 컨텍스트에선 empty.
@@ -96,6 +101,11 @@ public class PendingCollectionJob {
                     stockDetailCollectionService.ifPresent(s -> s.updateAll(progress));
                 case EVENT -> eventCollectionService.collect(task.getFromDate(), task.getToDate(), progress);
                 case INVESTOR -> investorCollectionService.collect(task.getFromDate(), task.getToDate(), progress);
+                case FUNDAMENTAL -> fundamentalCollectionService.backfill(
+                        task.getFromDate().getYear(), task.getToDate().getYear(),
+                        List.of(ReportCode.ANNUAL), progress);
+                case VALUATION -> dailyValuationService.computeRange(
+                        task.getFromDate(), task.getToDate(), progress);
             }
         });
     }

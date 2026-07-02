@@ -79,6 +79,28 @@ public class CollectionLauncher {
     }
 
     /**
+     * 재무제표(DART) 재조회 태스크를 PENDING으로 등록하고 작업ID를 반환한다.
+     * from~to 의 연도 구간을 백필한다(일 단위는 무시, 연도만 사용).
+     *
+     * @throws IllegalArgumentException 날짜 범위가 역순인 경우 (INVALID_BACKFILL_RANGE)
+     */
+    public Long enqueueFundamentalCollection(LocalDate from, LocalDate to, Long requestedBy) {
+        if (from.isAfter(to)) throw new IllegalArgumentException("INVALID_BACKFILL_RANGE");
+        return taskService.create(CollectionType.FUNDAMENTAL, null, from, to, requestedBy);
+    }
+
+    /**
+     * 일별 밸류에이션 재계산 태스크를 PENDING으로 등록하고 작업ID를 반환한다.
+     * from~to 각 거래일을 재계산한다(외부 API 없음). 재무 백필 후 영향 구간 보정용.
+     *
+     * @throws IllegalArgumentException 날짜 범위가 역순인 경우 (INVALID_BACKFILL_RANGE)
+     */
+    public Long enqueueValuationCollection(LocalDate from, LocalDate to, Long requestedBy) {
+        if (from.isAfter(to)) throw new IllegalArgumentException("INVALID_BACKFILL_RANGE");
+        return taskService.create(CollectionType.VALUATION, null, from, to, requestedBy);
+    }
+
+    /**
      * 실패한 태스크를 같은 범위로 다시 PENDING 등록하고 새 작업ID를 반환한다.
      *
      * @throws IllegalArgumentException 원본 태스크가 없는 경우 (TASK_NOT_FOUND)
@@ -94,6 +116,8 @@ public class CollectionLauncher {
             case STOCK_DETAIL -> enqueueStockDetailCollection(requestedBy);
             case EVENT -> enqueueEventCollection(from, to, requestedBy);
             case INVESTOR -> enqueueInvestorCollection(from, to, requestedBy);
+            case FUNDAMENTAL -> enqueueFundamentalCollection(from, to, requestedBy);
+            case VALUATION -> enqueueValuationCollection(from, to, requestedBy);
         };
     }
 }

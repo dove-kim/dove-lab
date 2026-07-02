@@ -1,11 +1,14 @@
 package com.dove.screening.domain.value;
 
 import com.dove.indicator.domain.enums.IndicatorType;
+import com.dove.indicator.domain.rank.enums.RankType;
 import com.dove.market.domain.enums.MarketType;
 import com.fasterxml.jackson.databind.JsonNode;
 
 import java.util.ArrayList;
+import java.util.EnumSet;
 import java.util.List;
+import java.util.Set;
 
 /**
  * 검색식 JSON 트리를 타입 모델(FilterNode)로 파싱한다. 모든 JSON 키 문자열을 이 클래스 한 곳에 격리한다.
@@ -46,7 +49,27 @@ public final class FilterModel {
             case PRICE_VS_INDICATOR -> comparison(priceOperand(n.path("priceField").asText(), leftOffset(n)),
                     indicatorOperand(n.path("indicator").asText(), rightOffset(n)), n);
             case MARKET_FILTER -> marketFilter(n);
+            case MODEL_SCORE_VALUE -> threshold(new ModelScoreOperand(n.path("modelId").asLong(), offset(n)), n);
+            case MODEL_SCORE_RANGE -> range(new ModelScoreOperand(n.path("modelId").asLong(), offset(n)), n);
+            case RANK_VALUE -> threshold(rankOperand(n.path("rank").asText(), offset(n)), n);
+            case RANK_RANGE -> range(rankOperand(n.path("rank").asText(), offset(n)), n);
+            case BREADTH_VALUE -> threshold(new BreadthOperand(offset(n)), n);
+            case BREADTH_RANGE -> range(new BreadthOperand(offset(n)), n);
+            case STOCK_STATUS -> stockStatus(n);
         };
+    }
+
+    private static FilterNode stockStatus(JsonNode n) {
+        Set<StockStatusType> exclude = EnumSet.noneOf(StockStatusType.class);
+        for (JsonNode e : n.path("exclude")) {
+            StockStatusType t = StockStatusType.parseOrNull(e.asText());
+            if (t != null) exclude.add(t);
+        }
+        // 비어있거나 없으면 둘 다 제외가 기본
+        if (exclude.isEmpty()) {
+            exclude = EnumSet.allOf(StockStatusType.class);
+        }
+        return new StockStatusCondition(exclude);
     }
 
     private static FilterNode threshold(FilterOperand operand, JsonNode n) {
@@ -88,6 +111,11 @@ public final class FilterModel {
     private static FilterOperand priceOperand(String field, int offset) {
         FilterPriceField f = FilterPriceField.parseOrNull(field);
         return f == null ? null : new PriceOperand(f, offset);
+    }
+
+    private static FilterOperand rankOperand(String name, int offset) {
+        RankType t = RankType.parseOrNull(name);
+        return t == null ? null : new RankOperand(t, offset);
     }
 
     /** 거래일 오프셋 상한 — 약 1년치 거래일. */

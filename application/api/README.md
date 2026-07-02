@@ -25,6 +25,11 @@
 /stocks/{code}/investor-flow GET  투자자별 일별 순매수 (개인·기관·외국인)
                                ?source=KRX|NXT|CONSOLIDATED
                                ?limit=N                      (기본값 60, 최신순)
+/stocks/{code}/fundamentals   GET  DART 재무제표 이력 (매출·이익·자산·자본 등)
+/stocks/{code}/valuations     GET  일별 밸류에이션 (시총·PER·PBR·PSR·GPA)
+/stocks/{code}/valuation/latest GET 최신 밸류에이션 (없으면 204)
+/stocks/{code}/scores    GET   종목 모델 채점 점수 (차트 오버레이)
+/stocks/models           GET   활성 모델 요약 목록
 
 /market/trading-days     GET   거래일 목록
 
@@ -50,11 +55,16 @@
 /admin/ops/collection/price   POST  주가 재조회(기간) 시작 → 작업ID (범위 ≤어제, 수정주가 재조회는 ADJUSTED_TOTAL/DONE에 별도 표시)
 /admin/ops/collection/stock   POST  종목 재조회(기간, KRX) 시작 → 작업ID
 /admin/ops/collection/event   POST  권리이벤트(KSD, 기간) 재조회 시작 → 작업ID (백필=종목별 전구간, 일일=날짜범위+캡 시 종목별 보완 → 완전 수집)
+/admin/ops/collection/fundamental POST  재무제표(DART, 연도범위) 재조회 시작 → 작업ID
+/admin/ops/collection/valuation   POST  일별 밸류에이션 재계산 시작 → 작업ID (외부 API 없이 DB 재계산)
 /admin/ops/collection/tasks   GET   수집 작업 목록·상태 폴링
+/admin/ops/models             CRUD  ML 모델 등록·조회·활성/비활성·커서리셋·점수삭제
 /admin/ops/scheduler/status   GET   스케줄러/백필 진행률 (대시보드)
 /admin/ops/system-events      GET   수집·계산 운영 이벤트 (KRX/KIS 실패 등)
 /admin/ops/api-quota          GET   API 호출 할당량 현황
 ```
+
+> 투자자동향 재조회는 KIS가 최근 구간만 제공해 백필이 무의미하므로 제거됨 — 과거 데이터는 별도 스크립트(pykrx)로 채운다.
 
 ## 환경변수
 

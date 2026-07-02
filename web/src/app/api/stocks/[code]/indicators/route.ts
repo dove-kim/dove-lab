@@ -7,9 +7,11 @@ export async function GET(req: NextRequest, { params }: { params: Promise<{ code
   const adjusted = req.nextUrl.searchParams.get("adjusted") ?? "true";
   const limit    = req.nextUrl.searchParams.get("limit")    ?? "120";
   const types    = req.nextUrl.searchParams.get("types")    ?? "";
+  const before   = req.nextUrl.searchParams.get("before")   ?? "";
   if (!types) return NextResponse.json([]);
 
   const qs = new URLSearchParams({ source, adjusted, limit });
+  if (before) qs.set("before", before);
   types.split(",").forEach((t) => qs.append("types", t));
 
   const res = await backendFetch(`/stocks/${encodeURIComponent(code)}/indicators?${qs}`);

@@ -5,5 +5,5 @@ package com.dove.screening.domain.value;
  */
 public sealed interface FilterNode
         permits FilterGroup, FilterNot, ThresholdCondition, RangeCondition,
-        ComparisonCondition, MarketFilterCondition, UnknownCondition {
+        ComparisonCondition, MarketFilterCondition, StockStatusCondition, UnknownCondition {
 }

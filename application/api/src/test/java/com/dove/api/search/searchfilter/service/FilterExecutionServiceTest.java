@@ -1,20 +1,25 @@
 package com.dove.api.search.searchfilter.service;
 
 import com.dove.api.search.searchfilter.dto.FilterExecutionResult;
+import com.dove.indicator.application.service.StockBreadthDailyService;
 import com.dove.indicator.application.service.StockFeatureDailyService;
+import com.dove.indicator.application.service.StockRankDailyService;
 import com.dove.market.domain.enums.MarketType;
+import com.dove.modelserving.application.service.ModelScoreQueryService;
 import com.dove.screening.application.service.StockFeatureFilterQueryService;
 import com.dove.screening.application.service.StockFilterQueryService;
 import com.dove.screening.domain.entity.SearchFilter;
 import com.dove.screening.domain.enums.DateRule;
 import com.dove.screening.domain.value.FeatureMatch;
 import com.dove.screening.domain.value.FilterExpression;
+import com.dove.stock.application.service.StockDetailQueryService;
 import com.dove.stock.application.service.StockPriceQueryService;
 import com.dove.stock.application.service.StockQueryService;
 import com.dove.stock.domain.entity.Stock;
 import com.dove.stock.domain.entity.StockPrice;
 import com.dove.stock.domain.enums.PriceType;
 import com.dove.stock.domain.enums.StockExchange;
+import com.dove.stock.domain.value.StockStatusFlags;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
@@ -51,11 +56,19 @@ class FilterExecutionServiceTest {
     private static final String VOLUME_GT_1000 =
             "{\"conditionType\":\"VOLUME_VALUE\",\"operator\":\"GT\",\"value\":1000}";
 
+    /** 거래정지·관리종목 제외 조건 검색식. */
+    private static final String STOCK_STATUS_EXCLUDE_BOTH =
+            "{\"conditionType\":\"STOCK_STATUS\",\"exclude\":[\"TRADING_HALT\",\"ADMIN_ITEM\"]}";
+
     @Mock StockFilterQueryService stockFilterQueryService;
     @Mock StockPriceQueryService priceQueryService;
     @Mock StockFeatureDailyService featureDailyService;
     @Mock StockFeatureFilterQueryService featureFilterQueryService;
     @Mock StockQueryService stockQueryService;
+    @Mock StockDetailQueryService stockDetailQueryService;
+    @Mock StockRankDailyService rankDailyService;
+    @Mock StockBreadthDailyService breadthDailyService;
+    @Mock ModelScoreQueryService modelScoreQueryService;
 
     @InjectMocks FilterExecutionService service;
 
@@ -190,6 +203,60 @@ class FilterExecutionServiceTest {
             FilterExecutionResult result = service.execute(filter, EVAL_DATE);
 
             assertThat(result.matches()).extracting("ticker").containsExactly("AAA");
+        }
+    }
+
+    @Nested
+    @DisplayName("종목 상태 필터")
+    class StockStatusFilter {
+
+        @Test
+        @DisplayName("거래정지·관리종목 종목을 인메모리 평가로 제외한다")
+        void shouldExcludeHaltedAndAdminInMemory() {
+            SearchFilter filter = SearchFilter.create(1L, "필터", DateRule.LATEST, KOSPI, PriceType.RAW,
+                    FilterExpression.parse(STOCK_STATUS_EXCLUDE_BOTH), null);
+            given(priceQueryService.findNthRecentTradeDateByExchanges(any(), eq(PriceType.RAW), any(), eq(0)))
+                    .willReturn(EVAL_DATE);
+            given(featureFilterQueryService.findMatchingByExpression(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE), any()))
+                    .willReturn(Optional.empty());
+            given(priceQueryService.findByExchangesAndDate(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE)))
+                    .willReturn(Map.of("AAA", price("AAA", 5000L), "BBB", price("BBB", 5000L), "CCC", price("CCC", 5000L)));
+            given(featureDailyService.findAllByExchangeAndDate(StockExchange.KOSPI, PriceType.RAW, EVAL_DATE))
+                    .willReturn(Map.of());
+            given(stockDetailQueryService.findStatusByTickers(any())).willReturn(Map.of(
+                    "AAA", new StockStatusFlags(false, false),
+                    "BBB", new StockStatusFlags(true, false),
+                    "CCC", new StockStatusFlags(false, true)));
+            given(stockQueryService.findByTickers(any()))
+                    .willReturn(Map.of("AAA", stock("AAA"), "BBB", stock("BBB"), "CCC", stock("CCC")));
+            given(stockQueryService.findNamesByTickers(any()))
+                    .willReturn(Map.of("AAA", "에이", "BBB", "비", "CCC", "씨"));
+
+            FilterExecutionResult result = service.execute(filter, EVAL_DATE);
+
+            assertThat(result.matches()).extracting("ticker").containsExactly("AAA");
+        }
+
+        @Test
+        @DisplayName("DateRule이 LATEST가 아니면 종목상태 조건을 무시(no-op)하고 전 종목을 평가한다")
+        void shouldIgnoreStatusWhenNotLatest() {
+            SearchFilter filter = SearchFilter.create(1L, "필터", DateRule.SPECIFIC_DATE, KOSPI, PriceType.RAW,
+                    FilterExpression.parse(STOCK_STATUS_EXCLUDE_BOTH), null);
+            given(featureFilterQueryService.findMatchingByExpression(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE), any()))
+                    .willReturn(Optional.empty());
+            given(priceQueryService.findByExchangesAndDate(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE)))
+                    .willReturn(Map.of("AAA", price("AAA", 5000L), "BBB", price("BBB", 5000L)));
+            given(featureDailyService.findAllByExchangeAndDate(StockExchange.KOSPI, PriceType.RAW, EVAL_DATE))
+                    .willReturn(Map.of());
+            given(stockQueryService.findByTickers(any()))
+                    .willReturn(Map.of("AAA", stock("AAA"), "BBB", stock("BBB")));
+            given(stockQueryService.findNamesByTickers(any()))
+                    .willReturn(Map.of("AAA", "에이", "BBB", "비"));
+
+            // 과거일자라 상태 조회 자체를 하지 않고(거래정지였을 BBB도 제외 안 됨) 나머지 조건만 적용
+            FilterExecutionResult result = service.execute(filter, EVAL_DATE);
+
+            assertThat(result.matches()).extracting("ticker").containsExactlyInAnyOrder("AAA", "BBB");
         }
     }
 }

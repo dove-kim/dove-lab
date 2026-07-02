@@ -12,6 +12,8 @@ interface Params {
   setHoverIdx:         (n: number | null) => void;
   /** 스크롤/줌 중 React 리렌더 없이 canvas를 직접 다시 그리는 트리거 */
   triggerStaticDrawRef: React.MutableRefObject<() => void>;
+  /** 뷰포트(스크롤/줌)가 바뀔 때마다 호출 — 좌측 가장자리 프리버퍼 lazy-load 트리거 */
+  onViewportChangeRef:  React.MutableRefObject<() => void>;
 }
 
 type TouchMode = "undecided" | "pan" | "crosshair" | "two-finger";
@@ -28,7 +30,7 @@ interface TouchState {
 
 export function useChartInteraction({
   containerRef, vcRef, riRef, widthRef, totalRef,
-  setVisibleCount, setRightIndex, setHoverIdx, triggerStaticDrawRef,
+  setVisibleCount, setRightIndex, setHoverIdx, triggerStaticDrawRef, onViewportChangeRef,
 }: Params) {
   const touchRef   = useRef<TouchState | null>(null);
   // rAF 핸들 — 스크롤/줌 시 중복 draw 방지
@@ -36,6 +38,8 @@ export function useChartInteraction({
 
   /** ref 갱신 후 React 리렌더 없이 직접 canvas를 다시 그린다 */
   function scheduleDraw() {
+    // 좌측 가장자리 근처면 과거 청크를 미리 당긴다 (rAF 밖에서 즉시 판정)
+    onViewportChangeRef.current();
     cancelAnimationFrame(drawRafRef.current);
     drawRafRef.current = requestAnimationFrame(() => {
       triggerStaticDrawRef.current();

@@ -20,6 +20,7 @@ include 'api-quota'
 include 'concurrent'
 include 'datetime'
 include 'job-status'
+include 'workspace'
 include 'screening'
 project(':screening').projectDir = file('domain/screening')
 project(':logging').projectDir = file('library/logging')
@@ -28,6 +29,7 @@ project(':api-quota').projectDir = file('library/api-quota')
 project(':concurrent').projectDir = file('library/concurrent')
 project(':datetime').projectDir = file('library/datetime')
 project(':job-status').projectDir = file('library/job-status')
+project(':workspace').projectDir = file('library/workspace')
 
 
 include 'user'
@@ -50,3 +52,12 @@ project(':kis').projectDir = file('infrastructure/kis')
 
 include 'stock-collection'
 project(':stock-collection').projectDir = file('domain/stock-collection')
+
+include 'model-serving'
+project(':model-serving').projectDir = file('domain/model-serving')
+
+include 'fundamental'
+project(':fundamental').projectDir = file('domain/fundamental')
+
+include 'dart'
+project(':dart').projectDir = file('infrastructure/dart')

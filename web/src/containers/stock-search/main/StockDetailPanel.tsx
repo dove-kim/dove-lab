@@ -10,6 +10,10 @@ import StockInfoTab from "./StockInfoTab";
 import StockEventsTab from "./StockEventsTab";
 import StockAnalystSection from "./StockAnalystSection";
 import InvestorFlowTab from "./InvestorFlowTab";
+import ModelScoreTab from "./ModelScoreTab";
+import FundamentalsTab from "./FundamentalsTab";
+import ValuationTab from "./ValuationTab";
+import { useHasCapability } from "@/states/capabilities";
 import type { UseIndicatorPresetsReturn } from "@/hooks/useIndicatorPresets";
 
 interface Props {
@@ -22,11 +26,13 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
   const { presets, activePreset, setActivePreset, loading, create, update, remove, reorder } =
     presetsHook;
 
-  const [tab, setTab]                       = useState<"chart" | "info" | "events" | "research" | "investor-flow">("chart");
+  const canModelScore = useHasCapability("MODEL_SCORE");
+
+  const [tab, setTab]                       = useState<"chart" | "info" | "fundamentals" | "valuation" | "events" | "research" | "investor-flow" | "model-score">("chart");
   const [managerOpen, setManagerOpen]       = useState(false);
   const [panelOrderOpen, setPanelOrderOpen] = useState(false);
   const [mode, setMode]                     = useState<"candle" | "line">("candle");
-  const [source, setSource]                 = useState<"KRX" | "NXT" | "INTEGRATED">("KRX");
+  const [source, setSource]                 = useState<"KRX" | "NXT" | "INTEGRATED">("INTEGRATED");
   const [adjusted, setAdjusted]             = useState(true);
   const [latestBar, setLatestBar]           = useState<PriceBar | null>(null);
 
@@ -89,9 +95,11 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
         </div>
       </div>
 
-      {/* 탭 바 — 전체 폭을 균등 분배 */}
+      {/* 탭 바 — 전체 폭을 균등 분배. 모델 점수 탭은 MODEL_SCORE 권한 있을 때만 노출(HIDE). */}
       <div className="flex border-b border-white/10 flex-shrink-0">
-        {(["chart", "info", "events", "research", "investor-flow"] as const).map((t) => (
+        {(["chart", "info", "fundamentals", "valuation", "events", "research", "investor-flow", "model-score"] as const)
+          .filter((t) => t !== "model-score" || canModelScore)
+          .map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
@@ -101,9 +109,12 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
           >
             {t === "chart" ? "그래프"
               : t === "info" ? "종목 상세"
+              : t === "fundamentals" ? "재무제표"
+              : t === "valuation" ? "밸류에이션"
               : t === "events" ? "권리 이벤트"
               : t === "research" ? "리서치"
-              : "투자자 동향"}
+              : t === "investor-flow" ? "투자자 동향"
+              : "모델 점수"}
           </button>
         ))}
       </div>
@@ -112,6 +123,16 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
       {tab === "info" && (
         <div className="flex-1 overflow-hidden">
           <StockInfoTab code={result.code} />
+        </div>
+      )}
+      {tab === "fundamentals" && (
+        <div className="flex-1 overflow-hidden">
+          <FundamentalsTab code={result.code} />
+        </div>
+      )}
+      {tab === "valuation" && (
+        <div className="flex-1 overflow-hidden">
+          <ValuationTab code={result.code} />
         </div>
       )}
       {tab === "events" && (
@@ -127,6 +148,11 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
       {tab === "investor-flow" && (
         <div className="flex-1 overflow-hidden">
           <InvestorFlowTab code={result.code} />
+        </div>
+      )}
+      {tab === "model-score" && canModelScore && (
+        <div className="flex-1 overflow-hidden">
+          <ModelScoreTab code={result.code} />
         </div>
       )}
 

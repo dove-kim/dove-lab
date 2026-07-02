@@ -62,6 +62,13 @@ indicator:
   concurrency: ${INDICATOR_CONCURRENCY:10}   # 지표 계산 동시 그룹 수. API 아님(DB/코어 기준). DB 풀(20) 이내.
   start-date: ${INDICATOR_START_DATE:}        # 계산 시작일 하한(비우면 전체 이력). 최초 계산량 제한용 — 예: 2026-01-01
 
+dart:
+  api-key: ${DART_API_KEY:}                   # DART OpenAPI 인증키(코드 하드코딩 금지 — env 주입)
+  daily-quota: ${DART_DAILY_QUOTA:18000}      # 일일 호출 한도(20k 하드한도 아래 여유). 백필+폴링+corp동기화 공유
+
+workspace:
+  base-dir: ${DOVE_WORK_DIR:}                 # 임시 작업파일 루트. 비면 OS 임시폴더 하위. 운영 컨테이너는 볼륨 경로 주입.
+
 logging:
   level:
     root: INFO

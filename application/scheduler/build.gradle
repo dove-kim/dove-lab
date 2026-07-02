@@ -5,6 +5,14 @@ bootJar {
 jar {
     enabled = false
 }
+
+// 운영 채점용 Python 스크립트(score.py)를 도커 빌드 컨텍스트(build/scoring)로 복사한다.
+// 단일 원천 = rootDir/scripts/scoring/score.py. (채점 sweep이 ProcessBuilder로 호출)
+tasks.register('copyScoringScript', Copy) {
+    from rootProject.file('scripts/scoring/score.py')
+    into layout.buildDirectory.dir('scoring')
+}
+bootJar.dependsOn copyScoringScript
 bootRun {
     enabled = true
 }
@@ -15,12 +23,16 @@ dependencies {
     implementation project(":market")
     implementation project(":stock")
     implementation project(":indicator")
+    implementation project(":model-serving")
     implementation project(":krx")
     implementation project(":kis")
     implementation project(":stock-collection")
     implementation project(":investor-flow")
     implementation project(":system-event")
     implementation project(":job-status")
+    implementation project(":workspace")
+    implementation project(":fundamental")
+    implementation project(":dart")
 
     implementation 'org.springframework.boot:spring-boot-starter-data-jpa'
     implementation 'org.springframework.cloud:spring-cloud-starter-openfeign'
