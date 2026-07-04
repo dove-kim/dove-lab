@@ -1,7 +1,7 @@
 package com.dove.scheduler.fundamental;
 
 import com.dove.fundamental.application.FundamentalCommandService;
-import com.dove.fundamental.application.FundamentalQueryService;
+import com.dove.fundamental.application.FundamentalTtmService;
 import com.dove.stock.application.service.StockPriceQueryService;
 import com.dove.stock.application.service.StockShareCountService;
 import com.dove.stock.domain.enums.PriceType;
@@ -34,7 +34,7 @@ class DailyValuationServiceTest {
     @Mock
     private StockPriceQueryService priceQueryService;
     @Mock
-    private FundamentalQueryService fundamentalQueryService;
+    private FundamentalTtmService ttmService;
     @Mock
     private StockShareCountService shareCountService;
     @Mock

@@ -29,6 +29,17 @@ public interface StockFundamentalRepository extends JpaRepository<StockFundament
             String ticker, FinancialStatementDiv fsDiv, LocalDate rceptDt);
 
     /**
+     * 특정 (종목, 재무구분, 회계연도, 보고서)의 정정 아닌 공시를 공시일 ≤ 기준일 범위에서 최신으로 반환한다 — TTM 전년 자료 조회용.
+     */
+    Optional<StockFundamental> findFirstByTickerAndFsDivAndFiscalYearAndReportCodeAndAmendmentFalseAndRceptDtLessThanEqualOrderByRceptDtDesc(
+            String ticker, FinancialStatementDiv fsDiv, Short fiscalYear, String reportCode, LocalDate rceptDt);
+
+    /**
+     * 공시일이 [from, to] 구간인 정정 아닌 전 종목 원본을 반환한다 — 날짜별 밸류에이션 배치의 재무 벌크 로드용.
+     */
+    List<StockFundamental> findByAmendmentFalseAndRceptDtBetween(LocalDate from, LocalDate to);
+
+    /**
      * 이미 수집된 공시인지 여부(신규 폴링 중복 방지용).
      */
     boolean existsByRceptNoAndFsDiv(String rceptNo, FinancialStatementDiv fsDiv);

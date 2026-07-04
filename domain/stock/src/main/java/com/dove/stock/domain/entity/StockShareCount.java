@@ -4,6 +4,7 @@ import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
 import jakarta.persistence.IdClass;
+import jakarta.persistence.Index;
 import jakarta.persistence.Table;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -19,7 +20,8 @@ import java.time.LocalDateTime;
  */
 @Getter
 @Entity
-@Table(name = "STOCK_SHARE_COUNT")
+@Table(name = "STOCK_SHARE_COUNT",
+        indexes = @Index(name = "IDX_SHARE_EFFECTIVE", columnList = "EFFECTIVE_DATE"))
 @IdClass(StockShareCountId.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class StockShareCount {

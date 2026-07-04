@@ -29,6 +29,7 @@ import java.time.LocalDateTime;
         indexes = {
                 @Index(name = "IDX_FUND_TICKER_PERIOD", columnList = "TICKER, FISCAL_YEAR, REPORT_CODE"),
                 @Index(name = "IDX_FUND_TICKER_RCEPT", columnList = "TICKER, RCEPT_DT"),
+                @Index(name = "IDX_FUND_AMEND_RCEPT", columnList = "IS_AMENDMENT, RCEPT_DT"),
         })
 @IdClass(StockFundamentalId.class)
 @NoArgsConstructor(access = AccessLevel.PROTECTED)

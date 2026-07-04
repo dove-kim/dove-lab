@@ -458,7 +458,8 @@ CREATE TABLE IF NOT EXISTS STOCK_FUNDAMENTAL (
     CREATED_AT           DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     PRIMARY KEY (RCEPT_NO, FS_DIV),
     INDEX IDX_FUND_TICKER_PERIOD (TICKER, FISCAL_YEAR, REPORT_CODE),
-    INDEX IDX_FUND_TICKER_RCEPT (TICKER, RCEPT_DT)
+    INDEX IDX_FUND_TICKER_RCEPT (TICKER, RCEPT_DT),
+    INDEX IDX_FUND_AMEND_RCEPT (IS_AMENDMENT, RCEPT_DT)
 ) COMMENT='DART 재무제표 원자료(공시단위·표준계정)' ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;
 
 -- 일별 밸류에이션(미리계산). 실제(RAW) 종가 × PIT 최신 재무로 시총·4비율 산출 → 아무 날이나 스크리닝은 조회.
@@ -467,10 +468,10 @@ CREATE TABLE IF NOT EXISTS STOCK_VALUATION_DAILY (
     TRADE_DATE      DATE         NOT NULL COMMENT '거래일',
     CLOSE_PRICE     BIGINT                COMMENT '실제(RAW) 종가',
     MARKET_CAP      BIGINT                COMMENT '시가총액(RAW종가×KRX상장주식수 as-of)',
-    PER             DOUBLE                COMMENT '시총/당기순이익',
-    PBR             DOUBLE                COMMENT '시총/자본총계',
-    PSR             DOUBLE                COMMENT '시총/매출액',
-    GPA             DOUBLE                COMMENT '매출총이익/자산총계',
+    PER             DOUBLE                COMMENT '시총/당기순이익(TTM,지배주주)',
+    PBR             DOUBLE                COMMENT '시총/자본(지배주주지분)',
+    PSR             DOUBLE                COMMENT '시총/매출액(TTM)',
+    GPA             DOUBLE                COMMENT '매출총이익(TTM)/자산총계',
     FUND_RCEPT_NO   VARCHAR(14)           COMMENT '사용한 재무 공시 접수번호(PIT 감사추적)',
     CALCULATED_AT   DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
     PRIMARY KEY (TICKER, TRADE_DATE),
@@ -484,5 +485,6 @@ CREATE TABLE IF NOT EXISTS STOCK_SHARE_COUNT (
     LISTED_SHARES   BIGINT       NOT NULL COMMENT '상장주식수(KRX LIST_SHRS)',
     SOURCE          VARCHAR(10)  NOT NULL DEFAULT 'KRX' COMMENT '출처(KRX 등)',
     CREATED_AT      DATETIME(6)  NOT NULL DEFAULT CURRENT_TIMESTAMP(6),
-    PRIMARY KEY (TICKER, EFFECTIVE_DATE)
+    PRIMARY KEY (TICKER, EFFECTIVE_DATE),
+    INDEX IDX_SHARE_EFFECTIVE (EFFECTIVE_DATE)
 ) COMMENT='상장주식수 변경이력(as-of 조회)' ROW_FORMAT=COMPRESSED KEY_BLOCK_SIZE=8;

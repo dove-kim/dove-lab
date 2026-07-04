@@ -5,6 +5,7 @@ import com.dove.stock.domain.entity.StockShareCountId;
 import org.springframework.data.jpa.repository.JpaRepository;
 
 import java.time.LocalDate;
+import java.util.List;
 import java.util.Optional;
 
 /**
@@ -17,4 +18,9 @@ public interface StockShareCountRepository extends JpaRepository<StockShareCount
      */
     Optional<StockShareCount> findFirstByTickerAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(
             String ticker, LocalDate date);
+
+    /**
+     * 기준일 이하 전 종목 변경이력을 발효일 오름차순으로 반환한다 — 종목별 as-of를 메모리에서 축약(배치용).
+     */
+    List<StockShareCount> findByEffectiveDateLessThanEqualOrderByEffectiveDateAsc(LocalDate date);
 }

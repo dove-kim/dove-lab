@@ -54,6 +54,23 @@ public class FundamentalQueryService {
     }
 
     /**
+     * 특정 (종목, 재무구분, 회계연도, 보고서)의 원본 재무를 공시일 ≤ 기준일 범위에서 반환한다(TTM 전년 자료).
+     */
+    public Optional<StockFundamental> findOriginal(String ticker, FinancialStatementDiv fsDiv,
+                                                   short fiscalYear, String reportCode, LocalDate date) {
+        return fundamentalRepository
+                .findFirstByTickerAndFsDivAndFiscalYearAndReportCodeAndAmendmentFalseAndRceptDtLessThanEqualOrderByRceptDtDesc(
+                        ticker, fsDiv, fiscalYear, reportCode, date);
+    }
+
+    /**
+     * 공시일이 [from, to] 구간인 전 종목 원본 재무를 반환한다(날짜별 배치의 벌크 로드용).
+     */
+    public List<StockFundamental> findOriginalsInWindow(LocalDate from, LocalDate to) {
+        return fundamentalRepository.findByAmendmentFalseAndRceptDtBetween(from, to);
+    }
+
+    /**
      * 해당 접수번호·재무구분의 재무가 이미 저장돼 있는지 여부.
      */
     public boolean existsStatement(String rceptNo, FinancialStatementDiv fsDiv) {
