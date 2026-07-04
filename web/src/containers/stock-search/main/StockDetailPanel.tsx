@@ -1,6 +1,6 @@
 ﻿"use client";
 
-import { useMemo, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import { StockMatchResult } from "@/types/filter";
 import StockChart, { type PriceBar } from "@/components/chart/StockChart";
 import { INDICATOR_META, type PanelId } from "@/components/chart/indicatorMeta";
@@ -33,8 +33,26 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
   const [panelOrderOpen, setPanelOrderOpen] = useState(false);
   const [mode, setMode]                     = useState<"candle" | "line">("candle");
   const [source, setSource]                 = useState<"KRX" | "NXT" | "INTEGRATED">("INTEGRATED");
+  const [availableSources, setAvailableSources] = useState<("KRX" | "NXT" | "INTEGRATED")[]>(["INTEGRATED", "KRX", "NXT"]);
   const [adjusted, setAdjusted]             = useState(true);
   const [latestBar, setLatestBar]           = useState<PriceBar | null>(null);
+
+  // 종목 전환 시 데이터가 있는 가격 소스만 활성화하고, 기본 소스를 가용값으로 맞춘다(통합 우선).
+  useEffect(() => {
+    let cancelled = false;
+    fetch(`/api/stocks/${result.code}/price-sources`)
+      .then(r => (r.ok ? r.json() : []))
+      .then((srcs: ("KRX" | "NXT" | "INTEGRATED")[]) => {
+        if (cancelled) return;
+        const list: ("KRX" | "NXT" | "INTEGRATED")[] =
+          Array.isArray(srcs) && srcs.length ? srcs : ["KRX"];
+        setAvailableSources(list);
+        setSource(prev => (list.includes(prev) ? prev
+          : list.includes("INTEGRATED") ? "INTEGRATED" : (list[0] ?? "KRX")));
+      })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [result.code]);
 
   // 현재 활성화된 서브패널 목록 (panelOrder 기준 정렬)
   const activePanelIds = useMemo((): PanelId[] => {
@@ -212,17 +230,26 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
             {/* 구분선 — 데스크톱만 표시 */}
             <span className="hidden sm:block w-px h-4 bg-white/10" />
 
-            {/* 거래소 선택 */}
+            {/* 거래소 선택 — 데이터 없는 소스는 비활성 */}
             <div className="flex rounded border border-white/10 overflow-hidden text-xs">
-              {(["INTEGRATED", "KRX", "NXT"] as const).map(s => (
-                <button
-                  key={s}
-                  onClick={() => setSource(s)}
-                  className={`px-2 py-1.5 transition ${source === s ? "bg-white/10 text-white" : "text-slate-500 hover:text-slate-300"}`}
-                >
-                  {s === "INTEGRATED" ? "통합" : s}
-                </button>
-              ))}
+              {(["INTEGRATED", "KRX", "NXT"] as const).map(s => {
+                const enabled = availableSources.includes(s);
+                return (
+                  <button
+                    key={s}
+                    onClick={() => enabled && setSource(s)}
+                    disabled={!enabled}
+                    title={enabled ? undefined : "데이터 없음"}
+                    className={`px-2 py-1.5 transition ${
+                      source === s ? "bg-white/10 text-white"
+                        : enabled ? "text-slate-500 hover:text-slate-300"
+                        : "text-slate-700 cursor-not-allowed"
+                    }`}
+                  >
+                    {s === "INTEGRATED" ? "통합" : s}
+                  </button>
+                );
+              })}
             </div>
 
             {/* 수정주가 토글 */}
