@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.LocalDate;
+import java.util.HashMap;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -24,6 +26,18 @@ public class StockShareCountService {
     @Transactional(readOnly = true)
     public Optional<StockShareCount> findAsOf(String ticker, LocalDate date) {
         return repository.findFirstByTickerAndEffectiveDateLessThanEqualOrderByEffectiveDateDesc(ticker, date);
+    }
+
+    /**
+     * 기준일 as-of 전 종목 상장주식수를 반환한다(종목→주식수). 변경이력을 발효일 오름차순으로 훑어 종목별 최신값만 남긴다.
+     */
+    @Transactional(readOnly = true)
+    public Map<String, Long> findAllAsOf(LocalDate date) {
+        Map<String, Long> asOf = new HashMap<>();
+        for (StockShareCount sc : repository.findByEffectiveDateLessThanEqualOrderByEffectiveDateAsc(date)) {
+            asOf.put(sc.getTicker(), sc.getListedShares());     // 오름차순 → 마지막 put = 최신
+        }
+        return asOf;
     }
 
     /**

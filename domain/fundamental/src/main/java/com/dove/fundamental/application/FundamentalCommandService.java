@@ -8,6 +8,8 @@ import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.List;
+
 /**
  * 재무제표·밸류에이션 저장.
  */
@@ -32,5 +34,13 @@ public class FundamentalCommandService {
     @Transactional
     public void saveValuation(StockValuationDaily valuation) {
         valuationRepository.save(valuation);
+    }
+
+    /**
+     * 일별 밸류에이션을 배치 저장한다(멱등 upsert) — 날짜별 배치 계산용.
+     */
+    @Transactional
+    public void saveValuations(List<StockValuationDaily> valuations) {
+        valuationRepository.saveAll(valuations);
     }
 }

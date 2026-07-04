@@ -86,7 +86,8 @@ public class DailyPipelineOrchestrator {
             runStage(SchedulerJobName.FUNDAMENTAL_POLL, () -> fundamentalCollectionService.pollRecent(today.minusDays(14), today));
             // 상장주식수도 14일 창으로 회수(서버 다운·배포 누락 대비). 밸류에이션 시총 입력.
             runStage(SchedulerJobName.SHARE_COUNT, () -> shareCountCollectionService.collect(today.minusDays(14), today, CollectionProgress.NOOP));
-            runStage(SchedulerJobName.VALUATION, () -> dailyValuationService.compute(today));
+            // 밸류에이션도 14일 창 재계산 — 실행 누락일 자동 회수 + 이번에 새로 들어온 공시를 그 공시일~오늘 구간에 반영(멱등 upsert).
+            runStage(SchedulerJobName.VALUATION, () -> dailyValuationService.computeRange(today.minusDays(14), today, CollectionProgress.NOOP));
         };
         Parallel.run(List.of(derivedBranch, fundamentalBranch), 2, Runnable::run);
 

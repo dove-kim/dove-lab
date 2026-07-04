@@ -106,8 +106,8 @@ public class StockController {
                                     @RequestParam(defaultValue = "true") boolean adjusted,
                                     @RequestParam(defaultValue = "120") int limit,
                                     @RequestParam(required = false) String before) {
-        StockExchange exchange = resolveExchange(source, ticker);
         PriceType priceType = adjusted ? PriceType.ADJUSTED : PriceType.RAW;
+        StockExchange exchange = resolveChartExchange(source, ticker, priceType);
         var prices = (before != null && !before.isBlank())
                 ? priceQueryService.findBefore(ticker, exchange, priceType, LocalDate.parse(before), limit)
                 : priceQueryService.findRecent(ticker, exchange, priceType, limit);
@@ -136,8 +136,9 @@ public class StockController {
                 .toList();
         if (indicatorTypes.isEmpty()) return List.of();
 
-        StockExchange exchange = resolveExchange(source, ticker);
         PriceType priceType = adjusted ? PriceType.ADJUSTED : PriceType.RAW;
+        // 가격 차트와 동일 규칙으로 거래소 결정(통합 없으면 홈마켓) → 가격·지표 소스 일관
+        StockExchange exchange = resolveChartExchange(source, ticker, priceType);
         Map<LocalDate, Map<IndicatorType, Double>> bars =
                 (before != null && !before.isBlank())
                         ? featureDailyService.findBeforeByStock(ticker, exchange, priceType, LocalDate.parse(before), limit)
@@ -214,5 +215,18 @@ public class StockController {
         } catch (NoSuchElementException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "STOCK_NOT_FOUND");
         }
+    }
+
+    /**
+     * 차트용 거래소 결정 — 통합(INTEGRATED) 소스인데 그 종목에 통합 데이터가 없으면(NXT 미거래)
+     * 홈마켓(KOSPI/KOSDAQ)으로 폴백한다. 유무는 최신 1건 조회로만 확인해 본조회는 한 번만 돈다.
+     */
+    private StockExchange resolveChartExchange(String source, String ticker, PriceType priceType) {
+        StockExchange exchange = resolveExchange(source, ticker);
+        if (exchange == StockExchange.INTEGRATED
+                && priceQueryService.findRecent(ticker, exchange, priceType, 1).isEmpty()) {
+            return resolveExchange("KRX", ticker);
+        }
+        return exchange;
     }
 }
