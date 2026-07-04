@@ -31,6 +31,7 @@ import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
@@ -155,6 +156,24 @@ public class StockController {
     }
 
     /**
+     * 종목에 데이터가 있는 가격 소스 목록(통합·KRX·NXT). 프론트가 소스 버튼 활성화·기본값 결정에 사용한다.
+     */
+    @GetMapping("/{ticker}/price-sources")
+    public List<String> getPriceSources(@PathVariable String ticker) {
+        List<String> available = new ArrayList<>();
+        if (hasPriceData(ticker, StockExchange.INTEGRATED)) {
+            available.add("INTEGRATED");
+        }
+        if (hasPriceData(ticker, resolveExchange("KRX", ticker))) {
+            available.add("KRX");
+        }
+        if (hasPriceData(ticker, StockExchange.NXT)) {
+            available.add("NXT");
+        }
+        return available;
+    }
+
+    /**
      * 투자자별 일별 순매수 조회. 거래일 오름차순 반환.
      *
      * @param from 조회 시작일 (inclusive)
@@ -228,5 +247,12 @@ public class StockController {
             return resolveExchange("KRX", ticker);
         }
         return exchange;
+    }
+
+    /**
+     * 해당 거래소에 이 종목의 주가 데이터가 있는지(최신 1건 조회로 확인).
+     */
+    private boolean hasPriceData(String ticker, StockExchange exchange) {
+        return !priceQueryService.findRecent(ticker, exchange, PriceType.RAW, 1).isEmpty();
     }
 }
