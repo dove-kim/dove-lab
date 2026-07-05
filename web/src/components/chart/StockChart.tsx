@@ -114,8 +114,8 @@ interface Props {
   presetItems: IndicatorPresetItem[];
   panelOrder?: PanelId[];
   mode: Mode;
-  /** 최신 일봉(가장 최근 봉)을 부모로 올려준다. 데이터 없으면 null. */
-  onLatestBar?: (bar: PriceBar | null) => void;
+  /** 최신 일봉(가장 최근 봉)과 그 직전 봉 종가(등락률용)를 부모로 올려준다. 데이터 없으면 null. */
+  onLatestBar?: (bar: PriceBar | null, prevClose?: number | null) => void;
 }
 
 type Mode = "candle" | "line";
@@ -390,7 +390,9 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
       hasMoreRef.current      = arr.length >= CHART_BARS; // 본조회가 가득 찼으면 더 있을 수 있음
       loadingOlderRef.current = false;
       setLoading(false);
-      onLatestBarRef.current?.(arr.length ? arr[arr.length - 1] : null);
+      onLatestBarRef.current?.(
+        arr.length ? arr[arr.length - 1] : null,
+        arr.length >= 2 ? arr[arr.length - 2].close : null);
       perf.pipe.mark(`⑥ setState 완료 (${fromCache ? "캐시 HIT ⚡" : "네트워크"})`);
     }
 
@@ -557,6 +559,16 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
     for (const bar of indicatorData) m.set(bar.date, bar.values);
     return m;
   }, [indicatorData]);
+
+  // 등락률용 — 각 거래일의 직전 봉 종가 (호버 툴팁)
+  const prevCloseByDate = useMemo(() => {
+    const m = new Map<string, number>();
+    for (let i = 1; i < bars.length; i++) {
+      const prev = bars[i - 1].close;
+      if (prev != null) m.set(bars[i].date, prev);
+    }
+    return m;
+  }, [bars]);
 
   const activePanels = useMemo(() => {
     const s = new Set<PanelId>();
@@ -1128,6 +1140,13 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
           const vals   = indicatorMap.get(hoveredBar.date);
           const overlayActive = selectedIndicators.filter(t => INDICATOR_META[t]?.panel === "OVERLAY");
           const priceColor = rising ? "text-red-400" : "text-blue-400";
+          // 전일대비 등락률 — 직전 봉 종가 기준
+          const prevC = prevCloseByDate.get(hoveredBar.date) ?? null;
+          const chgPct = prevC != null && prevC > 0 && hoveredBar.close != null
+            ? ((hoveredBar.close - prevC) / prevC) * 100 : null;
+          const chgLabel = chgPct == null ? null : `${chgPct > 0 ? "+" : ""}${chgPct.toFixed(2)}%`;
+          const chgColor = chgPct == null ? "text-slate-400"
+            : chgPct > 0 ? "text-red-400" : chgPct < 0 ? "text-blue-400" : "text-slate-400";
           const posStyle = onLeft ? { left: PAD.left + 6 } : { right: PAD.right + 6 };
           return (
             <div className="absolute top-3 pointer-events-none z-10" style={posStyle}>
@@ -1144,6 +1163,7 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
                 ) : (
                   <p className={`font-semibold text-center leading-tight ${priceColor}`}>
                     {hoveredBar.close?.toLocaleString() ?? "-"}
+                    {chgLabel && <span className={`font-normal ml-1 ${chgColor}`}>{chgLabel}</span>}
                     <span className="text-slate-500 font-normal text-[10px] ml-1">
                       {fmtVol(hoveredBar.volume ?? 0)}
                     </span>
@@ -1176,6 +1196,8 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
                     <span className={`text-right font-semibold ${priceColor}`}>
                       {hoveredBar.close?.toLocaleString() ?? "-"}
                     </span>
+                    {chgLabel && <span className="text-slate-500">등락률</span>}
+                    {chgLabel && <span className={`text-right ${chgColor}`}>{chgLabel}</span>}
                     <span className="text-slate-500 mt-0.5">거래량</span>
                     <span className="text-right text-slate-300 mt-0.5">{(hoveredBar.volume ?? 0).toLocaleString()}</span>
                     {overlayActive.map(t => {

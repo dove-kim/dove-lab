@@ -142,7 +142,10 @@ function IndicatorRow({
         )}
       </button>
       <ColorPicker color={item.color} onChange={c => onChange({ color: c })} />
-      <span className="text-sm text-slate-400 flex-1">{meta.label}</span>
+      <span className="text-sm text-slate-400 flex-1">
+        {meta.label}
+        {meta.params && <span className="ml-1 text-xs text-slate-600">({meta.params})</span>}
+      </span>
       <select
         value={item.lineWidth}
         onChange={e => onChange({ lineWidth: Number(e.target.value) })}

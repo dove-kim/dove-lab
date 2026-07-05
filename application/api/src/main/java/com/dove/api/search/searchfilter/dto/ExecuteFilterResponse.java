@@ -30,7 +30,8 @@ public record ExecuteFilterResponse(
 ) {
     public static ExecuteFilterResponse from(SearchFilter filter, FilterExecutionResult result) {
         List<StockMatchResult> results = result.matches().stream()
-                .map(m -> new StockMatchResult(m.ticker(), m.name(), m.market(), m.closePrice(), m.volume()))
+                .map(m -> new StockMatchResult(m.ticker(), m.name(), m.market(), m.openPrice(),
+                        m.highPrice(), m.lowPrice(), m.closePrice(), m.volume(), m.prevClose()))
                 .toList();
         return new ExecuteFilterResponse(
                 filter.getId(), filter.getName(), result.evalDate(),

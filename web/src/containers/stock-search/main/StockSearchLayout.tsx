@@ -10,9 +10,10 @@ import StockDetailPanel from "./StockDetailPanel";
 import TradingDayCalendar from "@/components/TradingDayCalendar";
 import Select from "@/components/Select";
 import { prefetchChart } from "@/components/chart/StockChart";
+import MiniCandle from "@/components/chart/MiniCandle";
 
 // ── Virtual List 상수 ──────────────────────────────────────────────────────────
-const ROW_HEIGHT = 56;
+const ROW_HEIGHT = 68;
 const OVERSCAN = 5;
 const NEW_LISTING_DAYS = 7;
 
@@ -23,6 +24,12 @@ interface StockApiItem {
   listingDate: string | null;
   tradingHalt: boolean;
   adminItem: boolean;
+  openPrice: number | null;
+  highPrice: number | null;
+  lowPrice: number | null;
+  closePrice: number | null;
+  volume: number | null;
+  prevClose: number | null;
 }
 
 type StatusFilter = "all" | "halt" | "admin" | "new";
@@ -97,7 +104,9 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
         setRawItems(data);
         setAllStocks(data.map((s) => ({
           code: s.ticker, name: s.name, marketType: s.market,
-          closePrice: null, volume: null, tradingHalt: s.tradingHalt, adminItem: s.adminItem,
+          openPrice: s.openPrice, highPrice: s.highPrice, lowPrice: s.lowPrice,
+          closePrice: s.closePrice, volume: s.volume, prevClose: s.prevClose,
+          tradingHalt: s.tradingHalt, adminItem: s.adminItem,
         })));
       })
       .catch(() => setAllError("종목 목록을 불러오지 못했습니다."))
@@ -424,6 +433,12 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
                   const top = (startIdx + i) * ROW_HEIGHT;
                   const isSelected = selected?.code === s.code && selected?.marketType === s.marketType;
                   const isNew = newListingSet.has(s.code);
+                  const chgPct = s.prevClose != null && s.prevClose > 0 && s.closePrice != null
+                    ? ((s.closePrice - s.prevClose) / s.prevClose) * 100 : null;
+                  const chgColor = chgPct == null ? "text-slate-500"
+                    : chgPct > 0 ? "text-red-400" : chgPct < 0 ? "text-blue-400" : "text-slate-400";
+                  const hasCandle = s.openPrice != null && s.highPrice != null
+                    && s.lowPrice != null && s.closePrice != null;
                   return (
                     <div key={`${s.marketType}-${s.code}`}
                       style={{ position: "absolute", top, left: 0, right: 0, height: ROW_HEIGHT }}
@@ -446,10 +461,24 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
                         </div>
                         <p className="text-xs text-slate-500 font-mono">{s.code} · {s.marketType}</p>
                       </div>
-                      {mode === "filter" && (
-                        <div className="text-right flex-shrink-0">
-                          <p className="text-white text-sm font-mono">{s.closePrice != null ? s.closePrice.toLocaleString() : "-"}</p>
-                          <p className="text-xs text-slate-500">{s.volume != null ? s.volume.toLocaleString() : ""}</p>
+                      {s.closePrice != null && (
+                        <div className="flex items-center gap-2 flex-shrink-0">
+                          <div className="text-right">
+                            <p className="leading-tight font-mono text-sm">
+                              <span className="text-white">{s.closePrice.toLocaleString()}</span>
+                              {chgPct != null && (
+                                <span className={`ml-1.5 text-xs ${chgColor}`}>
+                                  {chgPct > 0 ? "+" : ""}{chgPct.toFixed(2)}%
+                                </span>
+                              )}
+                            </p>
+                            <p className="leading-tight text-[11px] text-slate-500 font-mono">
+                              {s.volume != null ? s.volume.toLocaleString() : ""}
+                            </p>
+                          </div>
+                          {hasCandle && (
+                            <MiniCandle open={s.openPrice!} high={s.highPrice!} low={s.lowPrice!} close={s.closePrice} />
+                          )}
                         </div>
                       )}
                     </div>

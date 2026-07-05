@@ -275,8 +275,12 @@ export interface StockMatchResult {
   code: string;
   name: string;
   marketType: string;
+  openPrice?: number | null;
+  highPrice?: number | null;
+  lowPrice?: number | null;
   closePrice: number | null;
   volume: number | null;
+  prevClose?: number | null;
   tradingHalt?: boolean;
   adminItem?: boolean;
 }

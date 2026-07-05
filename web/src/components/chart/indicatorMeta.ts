@@ -16,6 +16,7 @@ export interface IndicatorMeta {
   panel: PanelId;
   color: string;
   label: string;
+  params?: string; // 계산 파라미터 표기 (예: "14", "12·26·9"). 기간이 라벨에 없는 지표만.
 }
 
 export const INDICATOR_META: Record<IndicatorType, IndicatorMeta> = {
@@ -51,15 +52,15 @@ export const INDICATOR_META: Record<IndicatorType, IndicatorMeta> = {
   PLUS_DI_14:  { panel: "ADX", color: "#4ade80", label: "+DI" },
   MINUS_DI_14: { panel: "ADX", color: "#f87171", label: "-DI" },
 
-  MFI:       { panel: "OSCILLATOR", color: "#818cf8", label: "MFI" },
-  CCI:       { panel: "OSCILLATOR", color: "#34d399", label: "CCI" },
-  WILLIAMS_R:{ panel: "OSCILLATOR", color: "#fb923c", label: "W%R" },
+  MFI:       { panel: "OSCILLATOR", color: "#818cf8", label: "MFI", params: "14" },
+  CCI:       { panel: "OSCILLATOR", color: "#34d399", label: "CCI", params: "20" },
+  WILLIAMS_R:{ panel: "OSCILLATOR", color: "#fb923c", label: "W%R", params: "14" },
 
-  VOLUME_RATIO_20:  { panel: "VOLUME_IND", color: "#60a5fa", label: "거래량비율" },
+  VOLUME_RATIO_20:  { panel: "VOLUME_IND", color: "#60a5fa", label: "거래량비율", params: "20" },
   VOLUME_MA20_RATIO:{ panel: "VOLUME_IND", color: "#4ade80", label: "거래량/MA20" },
   OBV: { panel: "OBV", color: "#a78bfa", label: "OBV" },
 
-  ATR: { panel: "VOLATILITY", color: "#f87171", label: "ATR" },
+  ATR: { panel: "VOLATILITY", color: "#f87171", label: "ATR", params: "14" },
   VOLATILITY_5D:  { panel: "VOLATILITY", color: "#fbbf24", label: "변동성5일" },
   VOLATILITY_20D: { panel: "VOLATILITY", color: "#fb923c", label: "변동성20일" },
 
@@ -79,20 +80,20 @@ export const INDICATOR_META: Record<IndicatorType, IndicatorMeta> = {
 export const PANEL_LABELS: Record<PanelId, string> = {
   OVERLAY:    "가격 차트 오버레이",
   RSI:        "RSI",
-  MACD:       "MACD",
-  STOCH:      "스토캐스틱",
-  ADX:        "ADX / DI",
+  MACD:       "MACD (12·26·9)",
+  STOCH:      "스토캐스틱 (%K 14·%D 7)",
+  ADX:        "ADX / DI (14)",
   OSCILLATOR: "오실레이터",
   VOLUME_IND: "거래량 지표",
   OBV:        "OBV",
   VOLATILITY: "변동성",
-  BB_MISC:    "볼린저 %B / 폭",
+  BB_MISC:    "볼린저 %B / 폭 (20)",
 };
 
 export const SELECTOR_GROUPS: { label: string; types: IndicatorType[]; bundled?: boolean }[] = [
   { label: "단순이평(SMA)",   types: ["SMA_5","SMA_10","SMA_20","SMA_50","SMA_60","SMA_120","SMA_200"] },
   { label: "지수이평(EMA)",   types: ["EMA_5","EMA_10","EMA_20","EMA_60","EMA_120","EMA_200"] },
-  { label: "볼린저밴드",      types: ["BB_UPPER_20","BB_MIDDLE_20","BB_LOWER_20"], bundled: true },
+  { label: "볼린저밴드 (20·2σ)", types: ["BB_UPPER_20","BB_MIDDLE_20","BB_LOWER_20"], bundled: true },
   { label: "볼린저 %B/폭",    types: ["BB_PERCENT_B_20","BB_WIDTH_20"] },
   { label: "RSI",             types: ["RSI_9","RSI_14","RSI_21"] },
   { label: "MACD",            types: ["MACD_LINE","MACD_SIGNAL","MACD_HISTOGRAM"], bundled: true },

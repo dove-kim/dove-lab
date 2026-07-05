@@ -2,6 +2,7 @@ package com.dove.api.search.stock.dto;
 
 import com.dove.stock.domain.entity.Stock;
 import com.dove.stock.domain.entity.StockDetail;
+import com.dove.stock.domain.entity.StockPrice;
 
 import java.time.LocalDate;
 
@@ -17,6 +18,12 @@ import java.time.LocalDate;
  * @param kindStkCertTpNm 주식 종류명
  * @param tradingHalt     거래정지 여부
  * @param adminItem       관리종목 여부
+ * @param openPrice       최근 거래일 시가 (없으면 null)
+ * @param highPrice       최근 거래일 고가 (없으면 null)
+ * @param lowPrice        최근 거래일 저가 (없으면 null)
+ * @param closePrice      최근 거래일 종가 (없으면 null)
+ * @param volume          최근 거래일 거래량 (없으면 null)
+ * @param prevClose       전일 종가 (등락률 계산용, 없으면 null)
  */
 public record StockResponse(
         String ticker,
@@ -27,9 +34,15 @@ public record StockResponse(
         String secugrpNm,
         String kindStkCertTpNm,
         boolean tradingHalt,
-        boolean adminItem
+        boolean adminItem,
+        Long openPrice,
+        Long highPrice,
+        Long lowPrice,
+        Long closePrice,
+        Long volume,
+        Long prevClose
 ) {
-    public static StockResponse from(Stock s, String name, StockDetail detail) {
+    public static StockResponse from(Stock s, String name, StockDetail detail, StockPrice cur, StockPrice prev) {
         return new StockResponse(
                 s.getTicker(),
                 name,
@@ -39,7 +52,13 @@ public record StockResponse(
                 s.getSecugrpNm(),
                 s.getKindStkCertTpNm(),
                 detail != null && "Y".equals(detail.getTrStopYn()),
-                detail != null && "Y".equals(detail.getAdmnItemYn())
+                detail != null && "Y".equals(detail.getAdmnItemYn()),
+                cur != null ? cur.getOpenPrice() : null,
+                cur != null ? cur.getHighPrice() : null,
+                cur != null ? cur.getLowPrice() : null,
+                cur != null ? cur.getClosePrice() : null,
+                cur != null ? cur.getVolume() : null,
+                prev != null ? prev.getClosePrice() : null
         );
     }
 }

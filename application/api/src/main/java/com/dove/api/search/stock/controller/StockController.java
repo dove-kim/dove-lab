@@ -64,10 +64,24 @@ public class StockController {
         Map<String, String> names = stockQueryService.findNamesByTickers(tickers);
         Map<String, com.dove.stock.domain.entity.StockDetail> details =
                 stockQueryService.findDetailsByTickers(tickers);
+
+        // 최근·전일 거래일 RAW 슬라이스로 미니 봉·등락률용 시세를 부착 (홈마켓 기준)
+        List<StockExchange> homeExchanges = List.of(StockExchange.KOSPI, StockExchange.KOSDAQ, StockExchange.KONEX);
+        LocalDate latest = priceQueryService.findNthRecentTradeDateByExchanges(
+                homeExchanges, PriceType.RAW, LocalDate.now(), 0);
+        Map<String, com.dove.stock.domain.entity.StockPrice> curBars = latest == null
+                ? Map.of() : priceQueryService.findByExchangesAndDate(homeExchanges, PriceType.RAW, latest);
+        LocalDate prev = latest == null ? null
+                : priceQueryService.findNthRecentTradeDateByExchanges(homeExchanges, PriceType.RAW, latest, 1);
+        Map<String, com.dove.stock.domain.entity.StockPrice> prevBars = prev == null
+                ? Map.of() : priceQueryService.findByExchangesAndDate(homeExchanges, PriceType.RAW, prev);
+
         return stocks.stream()
                 .map(s -> StockResponse.from(s,
                         names.getOrDefault(s.getTicker(), s.getTicker()),
-                        details.get(s.getTicker())))
+                        details.get(s.getTicker()),
+                        curBars.get(s.getTicker()),
+                        prevBars.get(s.getTicker())))
                 .toList();
     }
 

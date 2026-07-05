@@ -36,6 +36,7 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
   const [availableSources, setAvailableSources] = useState<("KRX" | "NXT" | "INTEGRATED")[]>(["INTEGRATED", "KRX", "NXT"]);
   const [adjusted, setAdjusted]             = useState(true);
   const [latestBar, setLatestBar]           = useState<PriceBar | null>(null);
+  const [prevClose, setPrevClose]           = useState<number | null>(null);
 
   // 종목 전환 시 데이터가 있는 가격 소스만 활성화하고, 기본 소스를 항상 통합 우선(없으면 KRX)으로 리셋한다.
   // 이전 종목에서 KRX/NXT를 골랐어도, 새 종목에선 다시 통합을 우선한다.
@@ -79,6 +80,11 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
     });
   }
 
+  // 헤더 전일대비 — 최신 종가와 직전 봉 종가로 계산
+  const headerClose = latestBar?.close ?? null;
+  const headerDiff = headerClose != null && prevClose != null && prevClose > 0 ? headerClose - prevClose : null;
+  const headerPct = headerDiff != null && prevClose ? (headerDiff / prevClose) * 100 : null;
+
   return (
     <div className="flex flex-col h-full overflow-hidden">
       {/* 종목 헤더 */}
@@ -99,10 +105,15 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
             <span className="px-1.5 py-0.5 rounded text-xs bg-white/5 text-slate-400 flex-shrink-0">{result.marketType}</span>
           </div>
 
-          {/* 가격 + OHLC — 모든 화면 크기에서 표시, 좁으면 줄바꿈 */}
+          {/* 가격 + 전일대비 + OHLC — 모든 화면 크기에서 표시, 좁으면 줄바꿈 */}
           {latestBar && latestBar.close != null ? (
             <div className="flex flex-wrap items-baseline gap-x-2.5 mt-0.5 text-xs font-mono">
               <span className="text-sm text-white">{latestBar.close.toLocaleString()}원</span>
+              {headerDiff != null && headerPct != null && (
+                <span className={headerDiff > 0 ? "text-red-400" : headerDiff < 0 ? "text-blue-400" : "text-slate-400"}>
+                  {headerDiff > 0 ? "+" : ""}{headerDiff.toLocaleString()} ({headerDiff > 0 ? "+" : ""}{headerPct.toFixed(2)}%)
+                </span>
+              )}
               <span className="text-slate-500">시 <span className="text-slate-200">{latestBar.open?.toLocaleString() ?? "-"}</span></span>
               <span className="text-slate-500">고 <span className="text-red-400">{latestBar.high?.toLocaleString() ?? "-"}</span></span>
               <span className="text-slate-500">저 <span className="text-blue-400">{latestBar.low?.toLocaleString() ?? "-"}</span></span>
@@ -285,7 +296,7 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
             presetItems={activePreset?.items ?? []}
             panelOrder={activePreset?.panelOrder}
             mode={mode}
-            onLatestBar={setLatestBar}
+            onLatestBar={(bar, prev) => { setLatestBar(bar); setPrevClose(prev ?? null); }}
           />
         </div>
 
