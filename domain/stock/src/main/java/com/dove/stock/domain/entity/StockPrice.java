@@ -24,6 +24,8 @@ import java.time.LocalDate;
         indexes = {
                 @Index(name = "IDX_SP_TICKER_DATE", columnList = "TICKER, TRADE_DATE"),
                 @Index(name = "IDX_SP_EXCHANGE_DATE", columnList = "EXCHANGE, TRADE_DATE"),
+                // 거래일 조회(최근일)·거래소별 그날 전종목 조회 — PRICE_TYPE 포함해 인덱스로 좁힘(대용량 풀스캔 방지)
+                @Index(name = "IDX_SP_EXCHANGE_PT_DATE", columnList = "EXCHANGE, PRICE_TYPE, TRADE_DATE"),
         })
 @NoArgsConstructor(access = AccessLevel.PROTECTED)
 public class StockPrice {

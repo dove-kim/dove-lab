@@ -44,6 +44,15 @@ public class EmaCalculator implements TechnicalIndicatorCalculator {
         return true;
     }
 
+    /**
+     * EMA는 무한기억 재귀식이라 유한 lookback을 SMA로 재시드하면 불연속이 생긴다.
+     * 재개·rewind 시 직전 거래일의 저장 EMA를 시드로 이어받아 연속성을 유지한다.
+     */
+    @Override
+    public boolean requiresPersistedSeed() {
+        return true;
+    }
+
     @Override
     public Map<IndicatorType, Double> calculateWithSeed(List<StockPrice> pool, double seed) {
         double multiplier = 2.0 / (period + 1);

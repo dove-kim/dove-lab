@@ -37,6 +37,13 @@ class EmaCalculatorTest {
         assertThat(ema5.indicatorType()).isEqualTo(IndicatorType.EMA_5);
     }
 
+    @Test
+    @DisplayName("requiresPersistedSeed() — 무한기억 재귀라 재개·rewind 시 직전 EMA를 시드로 이어받아야 함")
+    void shouldRequirePersistedSeed() {
+        assertThat(ema5.requiresPersistedSeed()).isTrue();
+        assertThat(ema5.isCumulative()).isTrue();
+    }
+
     // ─── calculate() ─────────────────────────────────────────────────────
 
     @Test
