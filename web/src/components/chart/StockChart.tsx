@@ -374,9 +374,12 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
     onLatestBarRef.current?.(null);
 
     function applyPriceData(arr: PriceBar[], expanded: (PriceBar | null)[], fromCache: boolean) {
-      const plotW     = Math.max(1, widthRef.current - PAD.left - PAD.right);
+      // ResizeObserver 반영 전(첫 렌더)엔 widthRef가 0 → 컨테이너 실제 폭을 동기로 측정해 초기 봉 수를 올바르게 계산
+      const measuredW = widthRef.current > 0 ? widthRef.current : (containerRef.current?.clientWidth ?? 0);
+      const plotW     = Math.max(1, measuredW - PAD.left - PAD.right);
       const defaultVc = Math.max(10, Math.round(plotW / 14));
       const vc        = Math.max(2, Math.min(defaultVc, expanded.length, MAX_VISIBLE));
+      if (widthRef.current === 0 && measuredW > 0) { widthRef.current = measuredW; setWidth(measuredW); }
       setBars(arr);
       setExpandedBars(expanded);
       totalRef.current  = expanded.length;

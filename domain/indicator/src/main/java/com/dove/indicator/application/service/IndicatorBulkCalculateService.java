@@ -116,9 +116,10 @@ public class IndicatorBulkCalculateService {
                                                  long seqBase, Map<IndicatorType, Double> persistedSeeds,
                                                  LocalDateTime now) {
         // 계산기별 누적 시드를 캡슐화한 러너. 비감쇠 누적 지표는 직전 저장값으로 시드, 그 외는 lookback으로 재시드.
+        // 직전 저장값이 있으면(재개·rewind) 그 값을 시드로, 없으면(최초 계산) null → lookback으로 워밍업(EMA는 SMA 시드).
         List<CalculatorRunner> runners = calculators.stream()
                 .map(c -> c.requiresPersistedSeed()
-                        ? new CalculatorRunner(c, persistedSeeds.getOrDefault(c.indicatorType(), 0.0))
+                        ? new CalculatorRunner(c, persistedSeeds.get(c.indicatorType()))
                         : new CalculatorRunner(c))
                 .toList();
 

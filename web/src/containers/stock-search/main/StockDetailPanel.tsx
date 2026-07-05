@@ -37,7 +37,8 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
   const [adjusted, setAdjusted]             = useState(true);
   const [latestBar, setLatestBar]           = useState<PriceBar | null>(null);
 
-  // 종목 전환 시 데이터가 있는 가격 소스만 활성화하고, 기본 소스를 가용값으로 맞춘다(통합 우선).
+  // 종목 전환 시 데이터가 있는 가격 소스만 활성화하고, 기본 소스를 항상 통합 우선(없으면 KRX)으로 리셋한다.
+  // 이전 종목에서 KRX/NXT를 골랐어도, 새 종목에선 다시 통합을 우선한다.
   useEffect(() => {
     let cancelled = false;
     fetch(`/api/stocks/${result.code}/price-sources`)
@@ -47,8 +48,8 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
         const list: ("KRX" | "NXT" | "INTEGRATED")[] =
           Array.isArray(srcs) && srcs.length ? srcs : ["KRX"];
         setAvailableSources(list);
-        setSource(prev => (list.includes(prev) ? prev
-          : list.includes("INTEGRATED") ? "INTEGRATED" : (list[0] ?? "KRX")));
+        setSource(list.includes("INTEGRATED") ? "INTEGRATED"
+          : list.includes("KRX") ? "KRX" : (list[0] ?? "KRX"));
       })
       .catch(() => {});
     return () => { cancelled = true; };
@@ -113,15 +114,15 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
         </div>
       </div>
 
-      {/* 탭 바 — 전체 폭을 균등 분배. 모델 점수 탭은 MODEL_SCORE 권한 있을 때만 노출(HIDE). */}
-      <div className="flex border-b border-white/10 flex-shrink-0">
+      {/* 탭 바 — 모바일: 내용 크기 + 가로 스크롤, 데스크톱: 전체 폭 균등 분배. 모델 점수 탭은 MODEL_SCORE 권한 있을 때만 노출(HIDE). */}
+      <div className="flex border-b border-white/10 flex-shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
         {(["chart", "info", "fundamentals", "valuation", "events", "research", "investor-flow", "model-score"] as const)
           .filter((t) => t !== "model-score" || canModelScore)
           .map((t) => (
           <button
             key={t}
             onClick={() => setTab(t)}
-            className={`flex-1 py-2 text-sm border-b-2 -mb-px transition text-center ${
+            className={`flex-shrink-0 whitespace-nowrap px-4 py-2 md:flex-1 md:px-0 text-sm border-b-2 -mb-px transition text-center ${
               tab === t ? "border-indigo-500 text-white" : "border-transparent text-slate-400 hover:text-white"
             }`}
           >

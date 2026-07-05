@@ -9,7 +9,9 @@ import org.springframework.stereotype.Repository;
 
 import java.time.LocalDate;
 import java.util.Collection;
+import java.util.Comparator;
 import java.util.List;
+import java.util.TreeSet;
 
 import static com.dove.stock.domain.entity.QStockPrice.stockPrice;
 
@@ -99,15 +101,26 @@ public class StockPriceRepositorySupport {
     /** onOrBefore 이하의 offset번째(0-based) 최근 거래일. */
     public LocalDate findNthRecentTradeDate(Collection<StockExchange> exchanges,
                                             PriceType priceType, LocalDate onOrBefore, int offset) {
-        List<LocalDate> dates = queryFactory.select(stockPrice.id.tradeDate).distinct()
-                .from(stockPrice)
-                .where(stockPrice.id.exchange.in(exchanges),
-                        stockPrice.id.priceType.eq(priceType),
-                        stockPrice.id.tradeDate.loe(onOrBefore))
-                .orderBy(stockPrice.id.tradeDate.desc())
-                .offset(offset)
-                .limit(1)
-                .fetch();
-        return dates.isEmpty() ? null : dates.get(0);
+        // 거래소별로 분리 조회 후 메모리 병합 — exchange IN 한방 쿼리는 인덱스 MAX/정렬 최적화가 무력화돼
+        // 대용량(수천만 행) 풀스캔이 된다. 거래소당 top-(offset+1)만 인덱스 시크로 뽑아 합친다.
+        // (거래일은 거래소 간 공유되므로 각 거래소 top-(offset+1) 합집합에 전역 top-(offset+1)이 포함됨)
+        TreeSet<LocalDate> merged = new TreeSet<>(Comparator.reverseOrder());
+        for (StockExchange exchange : exchanges) {
+            merged.addAll(queryFactory.select(stockPrice.id.tradeDate).distinct()
+                    .from(stockPrice)
+                    .where(stockPrice.id.exchange.eq(exchange),
+                            stockPrice.id.priceType.eq(priceType),
+                            stockPrice.id.tradeDate.loe(onOrBefore))
+                    .orderBy(stockPrice.id.tradeDate.desc())
+                    .limit(offset + 1L)
+                    .fetch());
+        }
+        int i = 0;
+        for (LocalDate date : merged) {
+            if (i++ == offset) {
+                return date;
+            }
+        }
+        return null;
     }
 }

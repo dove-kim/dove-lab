@@ -194,7 +194,8 @@ public class FilterExecutionService {
     private LocalDate resolveDate(DateRule rule, List<StockExchange> exchanges, PriceType priceType, LocalDate reference) {
         LocalDate ref = reference != null ? reference : LocalDate.now();
         return switch (rule) {
-            case LATEST -> priceQueryService.findNthRecentTradeDateByExchanges(exchanges, priceType, LocalDate.now(), 0);
+            // 선택한 기준일(ref) 이하의 최신 거래일 — ref가 최신일이면 최신, 과거로 이동하면 그 날짜 기준(날짜 네비게이션 반영)
+            case LATEST -> priceQueryService.findNthRecentTradeDateByExchanges(exchanges, priceType, ref, 0);
             case SPECIFIC_DATE -> ref;
             case PREV_1D -> priceQueryService.findNthRecentTradeDateByExchanges(exchanges, priceType, ref, 0);
             case PREV_3D -> priceQueryService.findNthRecentTradeDateByExchanges(exchanges, priceType, ref, 2);
