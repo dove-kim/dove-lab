@@ -94,7 +94,7 @@ class FilterExecutionServiceTest {
         @DisplayName("DB 푸시다운 성공 시 매칭 행을 결과로 변환한다")
         void shouldMapDbMatchesWhenPushedDown() {
             SearchFilter filter = filter(VOLUME_GT_1000, null);
-            FeatureMatch row = new FeatureMatch("005930", StockExchange.KOSPI, 70000L, 5000L);
+            FeatureMatch row = new FeatureMatch("005930", StockExchange.KOSPI, 68000L, 71000L, 67000L, 70000L, 5000L, 69000L);
             given(featureFilterQueryService.findMatchingByExpression(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE), any()))
                     .willReturn(Optional.of(List.of(row)));
             given(stockQueryService.findByTickers(any())).willReturn(Map.of("005930", stock("005930")));
@@ -109,7 +109,9 @@ class FilterExecutionServiceTest {
             assertThat(result.matches()).hasSize(1);
             assertThat(result.matches().get(0).ticker()).isEqualTo("005930");
             assertThat(result.matches().get(0).name()).isEqualTo("삼성전자");
+            assertThat(result.matches().get(0).openPrice()).isEqualTo(68000L);
             assertThat(result.matches().get(0).closePrice()).isEqualTo(70000L);
+            assertThat(result.matches().get(0).prevClose()).isEqualTo(69000L);
         }
     }
 
@@ -167,8 +169,8 @@ class FilterExecutionServiceTest {
         @DisplayName("종목 필터 지정 시 통과 티커만 남긴다")
         void shouldNarrowByStockFilterWhenSet() {
             SearchFilter filter = filter(VOLUME_GT_1000, 99L);
-            FeatureMatch a = new FeatureMatch("AAA", StockExchange.KOSPI, 100L, 5000L);
-            FeatureMatch b = new FeatureMatch("BBB", StockExchange.KOSPI, 200L, 6000L);
+            FeatureMatch a = new FeatureMatch("AAA", StockExchange.KOSPI, null, null, null, 100L, 5000L, null);
+            FeatureMatch b = new FeatureMatch("BBB", StockExchange.KOSPI, null, null, null, 200L, 6000L, null);
             given(featureFilterQueryService.findMatchingByExpression(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE), any()))
                     .willReturn(Optional.of(List.of(a, b)));
             given(stockQueryService.findByTickers(any())).willReturn(Map.of("AAA", stock("AAA"), "BBB", stock("BBB")));
@@ -192,7 +194,7 @@ class FilterExecutionServiceTest {
         void shouldUseAdjustedPriceTypeWhenFilterIsAdjusted() {
             SearchFilter filter = SearchFilter.create(1L, "필터", DateRule.SPECIFIC_DATE, KOSPI,
                     PriceType.ADJUSTED, FilterExpression.parse(VOLUME_GT_1000), null);
-            FeatureMatch row = new FeatureMatch("AAA", StockExchange.KOSPI, 100L, 5000L);
+            FeatureMatch row = new FeatureMatch("AAA", StockExchange.KOSPI, null, null, null, 100L, 5000L, null);
             given(featureFilterQueryService.findMatchingByExpression(anyCollection(), eq(PriceType.ADJUSTED), eq(EVAL_DATE), any()))
                     .willReturn(Optional.of(List.of(row)));
             given(stockQueryService.findByTickers(any())).willReturn(Map.of("AAA", stock("AAA")));

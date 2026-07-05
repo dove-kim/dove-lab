@@ -99,12 +99,17 @@ public class FilterExecutionService {
                 Stock stock = stockByTicker.get(r.ticker());
                 if (stock == null || !markets.contains(stock.getMarket())) continue; // 시장 유니버스 제한
                 matches.add(new MatchedStock(r.ticker(), names.getOrDefault(r.ticker(), r.ticker()),
-                        stock.getMarket().name(), r.closePrice(), r.volume()));
+                        stock.getMarket().name(), r.openPrice(), r.highPrice(), r.lowPrice(),
+                        r.closePrice(), r.volume(), r.prevClose()));
             }
             total = (int) featureFilterQueryService.countByExchangesAndDate(exchanges, priceType, evalDate);
         } else {
             // 폴백: SQL로 못 미는 조건(또는 식 없음) — 전 종목 로드 후 인메모리 평가
             Map<String, StockPrice> prices = priceQueryService.findByExchangesAndDate(exchanges, priceType, evalDate);
+            // 전일 종가(등락률용) — 평가일 직전 거래일 슬라이스
+            LocalDate prevDate = priceQueryService.findNthRecentTradeDateByExchanges(exchanges, priceType, evalDate, 1);
+            Map<String, StockPrice> prevPrices = prevDate == null
+                    ? Map.of() : priceQueryService.findByExchangesAndDate(exchanges, priceType, prevDate);
             Map<String, Map<IndicatorType, Double>> indicators = loadIndicators(exchanges, priceType, evalDate);
             Map<String, Map<RankType, Double>> ranks = model != null && FilterOperands.usesRank(model)
                     ? loadRanks(exchanges, priceType, evalDate) : Map.of();
@@ -127,8 +132,11 @@ public class FilterExecutionService {
                 EvalContext ctx = new EvalContext(stock.getMarket(), indicators.get(ticker), price,
                         ranks.get(ticker), modelScores.get(ticker), breadth, f.tradingHalted(), f.adminItem());
                 if (model != null && FilterEvaluator.evaluate(model, ctx)) {
+                    StockPrice prev = prevPrices.get(ticker);
                     matches.add(new MatchedStock(ticker, nameByTicker.getOrDefault(ticker, ticker),
-                            stock.getMarket().name(), price.getClosePrice(), price.getVolume()));
+                            stock.getMarket().name(), price.getOpenPrice(), price.getHighPrice(),
+                            price.getLowPrice(), price.getClosePrice(), price.getVolume(),
+                            prev != null ? prev.getClosePrice() : null));
                 }
             }
             total = prices.size();

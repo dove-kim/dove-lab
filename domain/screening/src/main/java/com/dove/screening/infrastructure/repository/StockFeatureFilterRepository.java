@@ -40,13 +40,24 @@ public class StockFeatureFilterRepository {
                                                                  FilterNode expression) {
         return StockFeatureFilterTranslator.translate(expression, stockFeatureDaily)
                 .map(tr -> {
+                    // 전일 종가(등락률용)를 SEQ-1 행에서 이어붙이는 별칭 (거래일 무관, 조건 아닌 표시용).
+                    QStockFeatureDaily prev = new QStockFeatureDaily("prevBar");
                     JPAQuery<FeatureMatch> query = queryFactory
                             .select(Projections.constructor(FeatureMatch.class,
                                     stockFeatureDaily.id.ticker,
                                     stockFeatureDaily.id.exchange,
+                                    stockFeatureDaily.openPrice,
+                                    stockFeatureDaily.highPrice,
+                                    stockFeatureDaily.lowPrice,
                                     stockFeatureDaily.closePrice,
-                                    stockFeatureDaily.volume))
-                            .from(stockFeatureDaily);
+                                    stockFeatureDaily.volume,
+                                    prev.closePrice))
+                            .from(stockFeatureDaily)
+                            .leftJoin(prev).on(
+                                    prev.id.ticker.eq(stockFeatureDaily.id.ticker),
+                                    prev.id.exchange.eq(stockFeatureDaily.id.exchange),
+                                    prev.id.priceType.eq(stockFeatureDaily.id.priceType),
+                                    prev.seq.eq(stockFeatureDaily.seq.subtract(1)));
                     // 오프셋(N일 전/후) 별칭을 SEQ 기준으로 self-join (없으면 NULL → 조건 false).
                     for (Map.Entry<Integer, QStockFeatureDaily> e : tr.offsetAliases().entrySet()) {
                         if (e.getKey() == 0) continue;
