@@ -12,6 +12,8 @@ import org.springframework.transaction.annotation.Transactional;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
+import java.util.Set;
+import java.util.stream.Collectors;
 
 /**
  * 재무제표·밸류에이션 조회(상세 화면용).
@@ -26,9 +28,26 @@ public class FundamentalQueryService {
 
     /**
      * 종목의 재무제표를 최신 회계연도·공시일 순으로 반환한다.
+     * 같은 (회계연도·보고서·재무구분)에 실공시가 있으면 백필(합성 F키) 행은 제외해 중복을 없앤다.
      */
     public List<StockFundamental> findStatements(String ticker) {
-        return fundamentalRepository.findByTickerOrderByFiscalYearDescRceptDtDesc(ticker);
+        List<StockFundamental> rows = fundamentalRepository.findByTickerOrderByFiscalYearDescRceptDtDesc(ticker);
+        Set<String> realStatements = rows.stream()
+                .filter(FundamentalQueryService::isReal)
+                .map(FundamentalQueryService::statementKey)
+                .collect(Collectors.toSet());
+        return rows.stream()
+                .filter(r -> isReal(r) || !realStatements.contains(statementKey(r)))
+                .toList();
+    }
+
+    /** 합성 백필키(F…)가 아닌 실공시 행인지. */
+    private static boolean isReal(StockFundamental f) {
+        return !f.getRceptNo().startsWith("F");
+    }
+
+    private static String statementKey(StockFundamental f) {
+        return f.getFiscalYear() + "|" + f.getReportCode() + "|" + f.getFsDiv();
     }
 
     /**
@@ -49,7 +68,11 @@ public class FundamentalQueryService {
      * 공시일 ≤ 기준일인 원본(정정 아닌) 최신 재무 1건을 반환한다(PIT).
      */
     public Optional<StockFundamental> findLatestOriginal(String ticker, FinancialStatementDiv fsDiv, LocalDate date) {
-        return fundamentalRepository
+        // 실공시 우선: 실공시 원본이 있으면 그것을, 없을 때만 백필(F) 행으로 폴백.
+        Optional<StockFundamental> real = fundamentalRepository
+                .findFirstByTickerAndFsDivAndAmendmentFalseAndRceptNoNotLikeAndRceptDtLessThanEqualOrderByRceptDtDesc(
+                        ticker, fsDiv, "F%", date);
+        return real.isPresent() ? real : fundamentalRepository
                 .findFirstByTickerAndFsDivAndAmendmentFalseAndRceptDtLessThanEqualOrderByRceptDtDesc(ticker, fsDiv, date);
     }
 
@@ -58,7 +81,11 @@ public class FundamentalQueryService {
      */
     public Optional<StockFundamental> findOriginal(String ticker, FinancialStatementDiv fsDiv,
                                                    short fiscalYear, String reportCode, LocalDate date) {
-        return fundamentalRepository
+        // 실공시 우선: 해당 (연도·보고서)에 실공시 원본이 있으면 그것을, 없을 때만 백필(F) 행으로 폴백.
+        Optional<StockFundamental> real = fundamentalRepository
+                .findFirstByTickerAndFsDivAndFiscalYearAndReportCodeAndAmendmentFalseAndRceptNoNotLikeAndRceptDtLessThanEqualOrderByRceptDtDesc(
+                        ticker, fsDiv, fiscalYear, reportCode, "F%", date);
+        return real.isPresent() ? real : fundamentalRepository
                 .findFirstByTickerAndFsDivAndFiscalYearAndReportCodeAndAmendmentFalseAndRceptDtLessThanEqualOrderByRceptDtDesc(
                         ticker, fsDiv, fiscalYear, reportCode, date);
     }

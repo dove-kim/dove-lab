@@ -22,6 +22,7 @@ import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 /**
  * (universe·가격유형)의 일자별 횡단면 percentile 순위를 커서 다음 날부터 지표 프런티어까지 계산·저장하는 서비스.
@@ -29,6 +30,9 @@ import java.util.Optional;
 @Service
 @RequiredArgsConstructor
 public class RankCalculationService {
+
+    /** 한 번에 읽어 날짜별로 나눌 거래일 청크 크기 (메모리 = CHUNK_DAYS × universe 종목수). */
+    private static final int CHUNK_DAYS = 20;
 
     private final RankCursorService cursorService;
     private final RankSourceRepositorySupport sourceSupport;
@@ -53,17 +57,25 @@ public class RankCalculationService {
         List<LocalDate> dates = sourceSupport.findFeatureTradeDates(
                 universe.members(), priceType, expected, frontier);
 
-        for (LocalDate date : dates) {
-            List<StockFeatureDaily> rows =
-                    featureSupport.findByExchangesAndPriceTypeAndDate(universe.members(), priceType, date);
-            List<StockRankDaily> rankRows = rankRowsForDate(priceType, date, rows);
-            try {
-                commitService.commit(universe, priceType, rankRows, expected, cursorExists, date);
-            } catch (RankCursorRewoundException e) {
-                break;
+        // 날짜당 SELECT(수천 왕복) 대신 CHUNK일치를 한 번에 읽어 메모리에서 날짜별로 나눈다(왕복·부하 감소).
+        for (int i = 0; i < dates.size(); i += CHUNK_DAYS) {
+            List<LocalDate> chunk = dates.subList(i, Math.min(i + CHUNK_DAYS, dates.size()));
+            List<StockFeatureDaily> chunkRows = featureSupport.findByExchangesAndPriceTypeAndDateBetween(
+                    universe.members(), priceType, chunk.get(0), chunk.get(chunk.size() - 1));
+            Map<LocalDate, List<StockFeatureDaily>> rowsByDate = chunkRows.stream()
+                    .collect(Collectors.groupingBy(r -> r.getId().getTradeDate()));
+
+            for (LocalDate date : chunk) {
+                List<StockFeatureDaily> rows = rowsByDate.getOrDefault(date, List.of());
+                List<StockRankDaily> rankRows = rankRowsForDate(priceType, date, rows);
+                try {
+                    commitService.commit(universe, priceType, rankRows, expected, cursorExists, date);
+                } catch (RankCursorRewoundException e) {
+                    return; // 계산 중 커서 되돌림 → 이 universe 중단(멱등)
+                }
+                expected = date;
+                cursorExists = true;
             }
-            expected = date;
-            cursorExists = true;
         }
     }
 

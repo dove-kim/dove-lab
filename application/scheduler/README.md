@@ -39,6 +39,7 @@ KRX/KIS/DART에서 종목·주가·투자자동향·재무를 수집하고 지�
 | `COLLECTION_CONCURRENCY` | 수집(API) 동시 실행 수 | `40` |
 | `INDICATOR_CONCURRENCY` | 지표 계산 동시 그룹 수 | `10` |
 | `INDICATOR_START_DATE` | 지표 계산 시작일 하한 (비우면 전체 이력). 최초 계산량 제한용 — 예: `2026-01-01` | (비움) |
+| `RANK_CONCURRENCY` | 순위 유닛(universe×가격유형) 동시 계산 수. DB 공유 병목·OOM 고려해 낮게 | `3` |
 
 ## 로컬 실행
 

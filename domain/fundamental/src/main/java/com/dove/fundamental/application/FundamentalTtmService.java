@@ -72,11 +72,18 @@ public class FundamentalTtmService {
 
     private Optional<TtmFundamental> buildFromReports(List<StockFundamental> reports, FinancialStatementDiv fsDiv) {
         List<StockFundamental> ofDiv = reports.stream().filter(r -> r.getFsDiv() == fsDiv).toList();
-        return ofDiv.stream().max(Comparator.comparing(StockFundamental::getRceptDt))
+        return ofDiv.stream().max(PREFER_REAL)
                 .flatMap(latest -> assemble(latest, (fiscalYear, reportCode) -> ofDiv.stream()
                         .filter(r -> r.getFiscalYear().shortValue() == fiscalYear && r.getReportCode().equals(reportCode))
-                        .max(Comparator.comparing(StockFundamental::getRceptDt))));
+                        .max(PREFER_REAL)));
     }
+
+    /**
+     * 실공시(합성 백필 F키 아님) 우선, 그 다음 공시일 최신. 백필 F행의 보수적 합성 공시일이 실공시를 덮지 않게 한다.
+     */
+    private static final Comparator<StockFundamental> PREFER_REAL =
+            Comparator.<StockFundamental, Boolean>comparing(f -> !f.getRceptNo().startsWith("F"))
+                    .thenComparing(StockFundamental::getRceptDt);
 
     /**
      * 최신 보고서 + (분기/반기면) 전년 자료 조회 함수로 TTM 스냅샷을 조립한다. 전년 자료 없으면 빈 값.
