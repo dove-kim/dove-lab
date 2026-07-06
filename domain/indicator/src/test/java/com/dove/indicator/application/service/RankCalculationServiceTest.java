@@ -112,13 +112,12 @@ class RankCalculationServiceTest {
             when(sourceSupport.findIndicatorFrontier(MEMBERS, PT)).thenReturn(D1.plusDays(1));
             when(sourceSupport.findFeatureTradeDates(eq(MEMBERS), eq(PT), eq(null), eq(D1.plusDays(1))))
                     .thenReturn(List.of(D1, D1.plusDays(1)));
-            when(featureSupport.findByExchangesAndPriceTypeAndDate(MEMBERS, PT, D1))
+            when(featureSupport.findByExchangesAndPriceTypeAndDateBetween(eq(MEMBERS), eq(PT), eq(D1), eq(D1.plusDays(1))))
                     .thenReturn(List.of(
                             feature("A", StockExchange.KOSPI, D1, 10.0, 100L),
                             feature("B", StockExchange.KOSPI, D1, 20.0, 200L),
-                            feature("C", StockExchange.KOSPI, D1, 30.0, 300L)));
-            when(featureSupport.findByExchangesAndPriceTypeAndDate(MEMBERS, PT, D1.plusDays(1)))
-                    .thenReturn(List.of(feature("A", StockExchange.KOSPI, D1.plusDays(1), 5.0, 50L)));
+                            feature("C", StockExchange.KOSPI, D1, 30.0, 300L),
+                            feature("A", StockExchange.KOSPI, D1.plusDays(1), 5.0, 50L)));
 
             service.calculateUniverse(UNIV, PT);
 
@@ -136,7 +135,7 @@ class RankCalculationServiceTest {
             when(sourceSupport.findIndicatorFrontier(MEMBERS, PT)).thenReturn(D1);
             when(sourceSupport.findFeatureTradeDates(eq(MEMBERS), eq(PT), eq(null), eq(D1)))
                     .thenReturn(List.of(D1));
-            when(featureSupport.findByExchangesAndPriceTypeAndDate(MEMBERS, PT, D1))
+            when(featureSupport.findByExchangesAndPriceTypeAndDateBetween(eq(MEMBERS), eq(PT), eq(D1), eq(D1)))
                     .thenReturn(List.of(
                             feature("A", StockExchange.KOSPI, D1, 10.0, 100L),
                             feature("B", StockExchange.KOSPI, D1, 20.0, 200L),
@@ -161,7 +160,7 @@ class RankCalculationServiceTest {
             when(sourceSupport.findIndicatorFrontier(MEMBERS, PT)).thenReturn(D1);
             when(sourceSupport.findFeatureTradeDates(eq(MEMBERS), eq(PT), eq(null), eq(D1)))
                     .thenReturn(List.of(D1));
-            when(featureSupport.findByExchangesAndPriceTypeAndDate(MEMBERS, PT, D1))
+            when(featureSupport.findByExchangesAndPriceTypeAndDateBetween(eq(MEMBERS), eq(PT), eq(D1), eq(D1)))
                     .thenReturn(List.of(
                             feature("A", StockExchange.KOSPI, D1, 10.0, 100L),
                             feature("B", StockExchange.KOSDAQ, D1, 20.0, 200L),
@@ -188,7 +187,7 @@ class RankCalculationServiceTest {
             when(sourceSupport.findIndicatorFrontier(MEMBERS, PT)).thenReturn(D1);
             when(sourceSupport.findFeatureTradeDates(eq(MEMBERS), eq(PT), eq(null), eq(D1)))
                     .thenReturn(List.of(D1));
-            when(featureSupport.findByExchangesAndPriceTypeAndDate(MEMBERS, PT, D1))
+            when(featureSupport.findByExchangesAndPriceTypeAndDateBetween(eq(MEMBERS), eq(PT), eq(D1), eq(D1)))
                     .thenReturn(List.of(
                             feature("A", StockExchange.KOSPI, D1, null, 100L),   // RET_1D 없음
                             feature("B", StockExchange.KOSPI, D1, 20.0, 200L),
@@ -210,8 +209,11 @@ class RankCalculationServiceTest {
             when(sourceSupport.findIndicatorFrontier(MEMBERS, PT)).thenReturn(D1.plusDays(2));
             when(sourceSupport.findFeatureTradeDates(eq(MEMBERS), eq(PT), eq(null), eq(D1.plusDays(2))))
                     .thenReturn(List.of(D1, D1.plusDays(1), D1.plusDays(2)));
-            when(featureSupport.findByExchangesAndPriceTypeAndDate(eq(MEMBERS), eq(PT), any()))
-                    .thenReturn(List.of(feature("A", StockExchange.KOSPI, D1, 10.0, 100L)));
+            when(featureSupport.findByExchangesAndPriceTypeAndDateBetween(eq(MEMBERS), eq(PT), eq(D1), eq(D1.plusDays(2))))
+                    .thenReturn(List.of(
+                            feature("A", StockExchange.KOSPI, D1, 10.0, 100L),
+                            feature("A", StockExchange.KOSPI, D1.plusDays(1), 10.0, 100L),
+                            feature("A", StockExchange.KOSPI, D1.plusDays(2), 10.0, 100L)));
             // 두 번째 날짜 커밋에서 rewind 발생
             doThrow(new RankCursorRewoundException(UNIV, PT))
                     .when(commitService).commit(eq(UNIV), eq(PT), any(), eq(D1), anyBoolean(), eq(D1.plusDays(1)));

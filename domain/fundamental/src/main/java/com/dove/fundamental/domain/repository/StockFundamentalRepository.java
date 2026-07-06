@@ -35,6 +35,18 @@ public interface StockFundamentalRepository extends JpaRepository<StockFundament
             String ticker, FinancialStatementDiv fsDiv, Short fiscalYear, String reportCode, LocalDate rceptDt);
 
     /**
+     * 위와 같되 실공시(합성 백필키 제외)만 — 백필 F행보다 실공시를 우선하기 위한 조회. rceptNoNotLike="F%".
+     */
+    Optional<StockFundamental> findFirstByTickerAndFsDivAndAmendmentFalseAndRceptNoNotLikeAndRceptDtLessThanEqualOrderByRceptDtDesc(
+            String ticker, FinancialStatementDiv fsDiv, String rceptNoNotLike, LocalDate rceptDt);
+
+    /**
+     * 특정 (종목, 재무구분, 회계연도, 보고서)의 실공시(합성 백필키 제외) 원본을 공시일 ≤ 기준일에서 최신으로 반환한다. rceptNoNotLike="F%".
+     */
+    Optional<StockFundamental> findFirstByTickerAndFsDivAndFiscalYearAndReportCodeAndAmendmentFalseAndRceptNoNotLikeAndRceptDtLessThanEqualOrderByRceptDtDesc(
+            String ticker, FinancialStatementDiv fsDiv, Short fiscalYear, String reportCode, String rceptNoNotLike, LocalDate rceptDt);
+
+    /**
      * 공시일이 [from, to] 구간인 정정 아닌 전 종목 원본을 반환한다 — 날짜별 밸류에이션 배치의 재무 벌크 로드용.
      */
     List<StockFundamental> findByAmendmentFalseAndRceptDtBetween(LocalDate from, LocalDate to);

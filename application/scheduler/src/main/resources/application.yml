@@ -28,7 +28,7 @@ spring:
     properties:
       hibernate:
         jdbc:
-          batch_size: 100        # INSERT/UPDATE를 묶어 DB 라운드트립 감소 (지표 대량 저장 가속)
+          batch_size: 500        # INSERT/UPDATE를 묶어 DB 라운드트립 감소 (지표·순위 대량 저장 가속)
         order_inserts: true
         order_updates: true
 
@@ -61,6 +61,9 @@ collection:
 indicator:
   concurrency: ${INDICATOR_CONCURRENCY:10}   # 지표 계산 동시 그룹 수. API 아님(DB/코어 기준). DB 풀(20) 이내.
   start-date: ${INDICATOR_START_DATE:}        # 계산 시작일 하한(비우면 전체 이력). 최초 계산량 제한용 — 예: 2026-01-01
+
+rank:
+  concurrency: ${RANK_CONCURRENCY:3}          # 순위 유닛(universe×가격유형) 동시 계산 수. DB 공유 병목·OOM 고려해 낮게.
 
 dart:
   api-key: ${DART_API_KEY:}                   # DART OpenAPI 인증키(코드 하드코딩 금지 — env 주입)

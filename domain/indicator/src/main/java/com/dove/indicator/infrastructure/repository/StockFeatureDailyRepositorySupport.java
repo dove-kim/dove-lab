@@ -42,6 +42,18 @@ public class StockFeatureDailyRepositorySupport {
                 .fetch();
     }
 
+    /** 거래소 집합(universe)·가격유형의 [from, to] 거래일 구간 전 종목 wide 피처 행 (거래일 오름차순). 순위 청크 계산용. */
+    public List<StockFeatureDaily> findByExchangesAndPriceTypeAndDateBetween(
+            Collection<StockExchange> exchanges, PriceType priceType, LocalDate from, LocalDate to) {
+        return queryFactory.selectFrom(stockFeatureDaily)
+                .where(stockFeatureDaily.id.exchange.in(exchanges),
+                        stockFeatureDaily.id.priceType.eq(priceType),
+                        stockFeatureDaily.id.tradeDate.goe(from),
+                        stockFeatureDaily.id.tradeDate.loe(to))
+                .orderBy(stockFeatureDaily.id.tradeDate.asc())
+                .fetch();
+    }
+
     /** 종목·거래소·가격유형의 최근 거래일 N개 wide 피처 행 (거래일 내림차순). */
     public List<StockFeatureDaily> findRecentByTicker(
             String ticker, StockExchange exchange, PriceType priceType, int limit) {
