@@ -33,19 +33,13 @@ class FilterEvaluatorTest {
         Map<RankType, Double> ranks = new EnumMap<>(RankType.class);
         ranks.put(RankType.RANK_RSI_14, 0.8);
         Map<Long, Double> modelScores = Map.of(7L, 0.92);
-        return new EvalContext(market, indicators, price, ranks, modelScores, 0.65, false, false);
-    }
-
-    /** 상승비율이 비어있는(null) 평가 컨텍스트. */
-    private EvalContext ctxWithoutBreadth() {
-        return new EvalContext(MarketType.KOSPI, new EnumMap<>(IndicatorType.class), null,
-                new EnumMap<>(RankType.class), Map.of(), null, false, false);
+        return new EvalContext(market, indicators, price, ranks, modelScores, Map.of(), false, false);
     }
 
     /** 거래정지·관리종목 플래그를 지정한 평가 컨텍스트. */
     private EvalContext ctxWithStatus(boolean halted, boolean admin) {
         return new EvalContext(MarketType.KOSPI, new EnumMap<>(IndicatorType.class), null,
-                new EnumMap<>(RankType.class), Map.of(), null, halted, admin);
+                new EnumMap<>(RankType.class), Map.of(), Map.of(), halted, admin);
     }
 
     private boolean eval(String json, EvalContext ctx) {
@@ -176,28 +170,64 @@ class FilterEvaluatorTest {
     }
 
     @Nested
-    @DisplayName("BREADTH_VALUE / BREADTH_RANGE — 당일 상승비율 비교")
-    class BreadthConditions {
+    @DisplayName("CUSTOM_METRIC — 커스텀 지표 참조")
+    class CustomMetric {
 
-        @Test
-        @DisplayName("컨텍스트의 상승비율을 연산자로 비교한다")
-        void comparesBreadth() {
-            String n = "{\"conditionType\":\"BREADTH_VALUE\",\"operator\":\"GT\",\"value\":0.5}";
-            assertThat(eval(n, ctx(40, 100, 1000, MarketType.KOSPI))).isTrue();
+        /** 커스텀 지표 값 맵을 지정한 평가 컨텍스트. */
+        private EvalContext ctxWithMetric(Map<Long, Double> metrics) {
+            return new EvalContext(MarketType.KOSPI, new EnumMap<>(IndicatorType.class), null,
+                    new EnumMap<>(RankType.class), Map.of(), metrics, false, false);
         }
 
         @Test
-        @DisplayName("상승비율 범위(경계 포함)를 평가한다")
-        void breadthRange() {
-            String n = "{\"conditionType\":\"BREADTH_RANGE\",\"minValue\":0.6,\"maxValue\":0.7}";
-            assertThat(eval(n, ctx(40, 100, 1000, MarketType.KOSPI))).isTrue();
+        @DisplayName("지표값을 연산자로 비교한다")
+        void comparesMetric() {
+            String n = "{\"conditionType\":\"CUSTOM_METRIC_VALUE\",\"metricId\":5,\"operator\":\"GTE\",\"value\":1}";
+            assertThat(eval(n, ctxWithMetric(Map.of(5L, 1.0)))).isTrue();
+            assertThat(eval(n, ctxWithMetric(Map.of(5L, 0.0)))).isFalse();
         }
 
         @Test
-        @DisplayName("상승비율이 없으면 false")
-        void missingBreadthIsFalse() {
-            String n = "{\"conditionType\":\"BREADTH_VALUE\",\"operator\":\"GT\",\"value\":0}";
-            assertThat(eval(n, ctxWithoutBreadth())).isFalse();
+        @DisplayName("값이 없는 지표는 false")
+        void missingMetricIsFalse() {
+            String n = "{\"conditionType\":\"CUSTOM_METRIC_VALUE\",\"metricId\":9,\"operator\":\"GTE\",\"value\":0}";
+            assertThat(eval(n, ctxWithMetric(Map.of()))).isFalse();
+        }
+    }
+
+    @Nested
+    @DisplayName("TURNOVER_VALUE / TURNOVER_RANGE — 거래대금 비교")
+    class TurnoverConditions {
+
+        /** 거래대금을 지정한 평가 컨텍스트. */
+        private EvalContext ctxWithTurnover(Long turnover) {
+            StockPrice price = new StockPrice("005930", StockExchange.KOSPI, PriceType.RAW,
+                    LocalDate.of(2026, 6, 5), 1000L, 1050L, 950L, 1000L, 5000L, turnover);
+            return new EvalContext(MarketType.KOSPI, new EnumMap<>(IndicatorType.class), price,
+                    new EnumMap<>(RankType.class), Map.of(), Map.of(), false, false);
+        }
+
+        @Test
+        @DisplayName("컨텍스트의 거래대금을 연산자로 비교한다")
+        void comparesTurnover() {
+            String n = "{\"conditionType\":\"TURNOVER_VALUE\",\"operator\":\"GTE\",\"value\":1000000000}";
+            assertThat(eval(n, ctxWithTurnover(2_000_000_000L))).isTrue();
+            assertThat(eval(n, ctxWithTurnover(500_000_000L))).isFalse();
+        }
+
+        @Test
+        @DisplayName("거래대금 범위(경계 포함)를 평가한다")
+        void turnoverRange() {
+            String n = "{\"conditionType\":\"TURNOVER_RANGE\",\"minValue\":1000000000,\"maxValue\":5000000000}";
+            assertThat(eval(n, ctxWithTurnover(3_000_000_000L))).isTrue();
+            assertThat(eval(n, ctxWithTurnover(6_000_000_000L))).isFalse();
+        }
+
+        @Test
+        @DisplayName("거래대금이 없으면(null) false")
+        void missingTurnoverIsFalse() {
+            String n = "{\"conditionType\":\"TURNOVER_VALUE\",\"operator\":\"GTE\",\"value\":0}";
+            assertThat(eval(n, ctxWithTurnover(null))).isFalse();
         }
     }
 

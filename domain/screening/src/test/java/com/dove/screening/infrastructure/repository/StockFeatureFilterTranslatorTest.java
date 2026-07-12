@@ -58,8 +58,19 @@ class StockFeatureFilterTranslatorTest {
     void shouldTranslateOtherSupportedLeaves() {
         assertThat(translate("{\"conditionType\":\"PRICE_RANGE\",\"priceField\":\"CLOSE\",\"minValue\":100,\"maxValue\":200}")).isPresent();
         assertThat(translate("{\"conditionType\":\"VOLUME_VALUE\",\"operator\":\"GT\",\"value\":1000}")).isPresent();
+        assertThat(translate("{\"conditionType\":\"TURNOVER_VALUE\",\"operator\":\"GTE\",\"value\":1000000000}")).isPresent();
+        assertThat(translate("{\"conditionType\":\"TURNOVER_RANGE\",\"minValue\":1000000000,\"maxValue\":5000000000}")).isPresent();
         assertThat(translate("{\"conditionType\":\"MARKET_FILTER\",\"markets\":[\"KOSPI\",\"KOSDAQ\"]}")).isPresent();
         assertThat(translate("{\"conditionType\":\"INDICATOR_CROSS\",\"leftIndicator\":\"SMA_5\",\"rightIndicator\":\"SMA_20\",\"operator\":\"GT\"}")).isPresent();
+    }
+
+    @Test
+    @DisplayName("오프셋 거래대금(N일 전) — SQL 변환 가능 + 오프셋 별칭 생성")
+    void shouldTranslateOffsetTurnover() {
+        String n = "{\"conditionType\":\"TURNOVER_VALUE\",\"offset\":-1,\"operator\":\"GTE\",\"value\":1000000000}";
+        Optional<TranslatedFilter> result = translate(n);
+        assertThat(result).isPresent();
+        assertThat(result.get().offsetAliases()).containsKey(-1);
     }
 
     @Test
@@ -190,34 +201,25 @@ class StockFeatureFilterTranslatorTest {
     }
 
     @Nested
-    @DisplayName("BREADTH — 당일 상승비율 join 별칭 생성")
-    class Breadth {
+    @DisplayName("CUSTOM_METRIC — 커스텀 지표 join 별칭 생성")
+    class CustomMetric {
 
         @Test
-        @DisplayName("상승비율 비교 — SQL 변환 가능 + 상승비율 join 별칭 생성")
-        void shouldTranslateBreadthValue() {
-            String n = "{\"conditionType\":\"BREADTH_VALUE\",\"operator\":\"GT\",\"value\":0.5}";
+        @DisplayName("커스텀 지표 비교 — SQL 변환 가능 + 지표 join 별칭 생성")
+        void shouldTranslateCustomMetricValue() {
+            String n = "{\"conditionType\":\"CUSTOM_METRIC_VALUE\",\"metricId\":5,\"operator\":\"GTE\",\"value\":1}";
             Optional<TranslatedFilter> result = translate(n);
             assertThat(result).isPresent();
-            assertThat(result.get().breadthAliases()).hasSize(1);
-            assertThat(result.get().breadthAliases().get(0).offset()).isZero();
+            assertThat(result.get().customMetricAliases()).hasSize(1);
+            assertThat(result.get().customMetricAliases().get(0).metricId()).isEqualTo(5L);
+            assertThat(result.get().customMetricAliases().get(0).offset()).isZero();
         }
 
         @Test
-        @DisplayName("상승비율 범위 — SQL 변환 가능")
-        void shouldTranslateBreadthRange() {
-            String n = "{\"conditionType\":\"BREADTH_RANGE\",\"minValue\":0.6,\"maxValue\":0.7}";
-            assertThat(translate(n)).isPresent();
-        }
-
-        @Test
-        @DisplayName("오프셋 상승비율 — 오프셋 피처 별칭과 상승비율 join 별칭이 함께 생성")
-        void shouldTranslateBreadthWithOffset() {
-            String n = "{\"conditionType\":\"BREADTH_VALUE\",\"offset\":-3,\"operator\":\"GT\",\"value\":0.5}";
-            Optional<TranslatedFilter> result = translate(n);
-            assertThat(result).isPresent();
-            assertThat(result.get().offsetAliases()).containsKey(-3);
-            assertThat(result.get().breadthAliases().get(0).offset()).isEqualTo(-3);
+        @DisplayName("커스텀 지표 범위 — SQL 변환 가능")
+        void shouldTranslateCustomMetricRange() {
+            assertThat(translate("{\"conditionType\":\"CUSTOM_METRIC_RANGE\",\"metricId\":3,\"minValue\":0.6,\"maxValue\":0.9}")).isPresent();
         }
     }
+
 }

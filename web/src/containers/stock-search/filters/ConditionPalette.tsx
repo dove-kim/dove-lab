@@ -32,10 +32,12 @@ const PALETTE_SECTIONS: PaletteSection[] = [
     ],
   },
   {
-    title: "거래량",
+    title: "거래량·거래대금",
     items: [
       { type: "VOLUME_VALUE", label: "거래량 비교", description: "거래량 > 1,000,000 처럼 거래량 조건 지정", icon: "📈" },
       { type: "VOLUME_RANGE", label: "거래량 범위", description: "거래량 범위를 최솟값~최댓값으로 지정", icon: "📉" },
+      { type: "TURNOVER_VALUE", label: "거래대금 비교", description: "거래대금 ≥ 10억 처럼 거래대금 조건 지정", icon: "💵" },
+      { type: "TURNOVER_RANGE", label: "거래대금 범위", description: "거래대금 범위를 최솟값~최댓값으로 지정", icon: "💵" },
     ],
   },
   {
@@ -43,10 +45,10 @@ const PALETTE_SECTIONS: PaletteSection[] = [
     items: [
       { type: "MODEL_SCORE_VALUE", label: "모델 점수 비교", description: "ML 모델 점수 ≥ 0.7 처럼 점수와 숫자 비교", icon: "🤖" },
       { type: "MODEL_SCORE_RANGE", label: "모델 점수 범위", description: "0.6 ≤ 모델 점수 ≤ 0.9 처럼 점수 범위 지정", icon: "🎯" },
+      { type: "CUSTOM_METRIC_VALUE", label: "커스텀 지표 비교", description: "커스텀 지표 값 ≥ 1 처럼 지표와 숫자 비교", icon: "🧮" },
+      { type: "CUSTOM_METRIC_RANGE", label: "커스텀 지표 범위", description: "0 ≤ 커스텀 지표 ≤ 1 처럼 지표 값의 범위 지정", icon: "🧮" },
       { type: "RANK_VALUE", label: "순위 비교", description: "거래대금/모멘텀 순위 ≥ 0.9(상위 10%) 비교", icon: "🏆" },
       { type: "RANK_RANGE", label: "순위 범위", description: "순위(0~1)의 최솟값~최댓값 범위 지정", icon: "📊" },
-      { type: "BREADTH_VALUE", label: "당일 상승비율 비교", description: "당일 상승비율 ≥ 0.45 처럼 시장 폭과 숫자 비교", icon: "📶" },
-      { type: "BREADTH_RANGE", label: "당일 상승비율 범위", description: "당일 상승비율(0~1)의 최솟값~최댓값 범위 지정", icon: "📊" },
     ],
   },
   {

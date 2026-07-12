@@ -1,7 +1,8 @@
 package com.dove.api.search.searchfilter.service;
 
 import com.dove.api.search.searchfilter.dto.FilterExecutionResult;
-import com.dove.indicator.application.service.StockBreadthDailyService;
+import com.dove.custommetric.application.service.CustomMetricDailyService;
+import com.dove.fundamental.application.StockValuationQueryService;
 import com.dove.indicator.application.service.StockFeatureDailyService;
 import com.dove.indicator.application.service.StockRankDailyService;
 import com.dove.market.domain.enums.MarketType;
@@ -10,6 +11,7 @@ import com.dove.screening.application.service.StockFeatureFilterQueryService;
 import com.dove.screening.application.service.StockFilterQueryService;
 import com.dove.screening.domain.entity.SearchFilter;
 import com.dove.screening.domain.enums.DateRule;
+import com.dove.screening.domain.enums.FilterVenue;
 import com.dove.screening.domain.value.FeatureMatch;
 import com.dove.screening.domain.value.FilterExpression;
 import com.dove.stock.application.service.StockDetailQueryService;
@@ -67,8 +69,9 @@ class FilterExecutionServiceTest {
     @Mock StockQueryService stockQueryService;
     @Mock StockDetailQueryService stockDetailQueryService;
     @Mock StockRankDailyService rankDailyService;
-    @Mock StockBreadthDailyService breadthDailyService;
+    @Mock CustomMetricDailyService customMetricDailyService;
     @Mock ModelScoreQueryService modelScoreQueryService;
+    @Mock StockValuationQueryService valuationQueryService;
 
     @InjectMocks FilterExecutionService service;
 
@@ -259,6 +262,83 @@ class FilterExecutionServiceTest {
             FilterExecutionResult result = service.execute(filter, EVAL_DATE);
 
             assertThat(result.matches()).extracting("ticker").containsExactlyInAnyOrder("AAA", "BBB");
+        }
+    }
+
+    @Nested
+    @DisplayName("파이프라인")
+    class Pipeline {
+
+        /** 모든 종목 통과 검색식(등락률 정렬 대상 확보용). */
+        private static final String PASS_ALL =
+                "{\"conditionType\":\"VOLUME_VALUE\",\"operator\":\"GT\",\"value\":0}";
+
+        private static final LocalDate PREV_DATE = EVAL_DATE.minusDays(1);
+
+        private SearchFilter pipelineFilter(String expression, String pipeline) {
+            return SearchFilter.create(1L, "필터", DateRule.SPECIFIC_DATE, KOSPI, PriceType.RAW,
+                    FilterVenue.KRX, FilterExpression.parse(expression), null, pipeline);
+        }
+
+        private StockPrice priceClose(String ticker, LocalDate date, long close) {
+            return new StockPrice(ticker, StockExchange.KOSPI, PriceType.RAW, date, 100L, 110L, 90L, close, 5000L, 0L);
+        }
+
+        @Test
+        @DisplayName("RANK 단계로 등락률 내림차순 정렬 후 상위 N만 남긴다")
+        void shouldRankByChangeRateDescAndLimit() {
+            String pipeline = "[{\"type\":\"RANK\",\"sort\":[{\"field\":\"CHANGE_RATE\",\"direction\":\"DESC\"}],\"limit\":2}]";
+            SearchFilter filter = pipelineFilter(PASS_ALL, pipeline);
+            given(priceQueryService.findByExchangesAndDate(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE)))
+                    .willReturn(Map.of(
+                            "AAA", priceClose("AAA", EVAL_DATE, 105L),
+                            "BBB", priceClose("BBB", EVAL_DATE, 105L),
+                            "CCC", priceClose("CCC", EVAL_DATE, 105L)));
+            given(priceQueryService.findNthRecentTradeDateByExchanges(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE), eq(1)))
+                    .willReturn(PREV_DATE);
+            given(priceQueryService.findByExchangesAndDate(anyCollection(), eq(PriceType.RAW), eq(PREV_DATE)))
+                    .willReturn(Map.of(
+                            "AAA", priceClose("AAA", PREV_DATE, 100L),   // +5%
+                            "BBB", priceClose("BBB", PREV_DATE, 105L),   // 0%
+                            "CCC", priceClose("CCC", PREV_DATE, 210L)));  // -50%
+            given(featureDailyService.findAllByExchangeAndDate(StockExchange.KOSPI, PriceType.RAW, EVAL_DATE))
+                    .willReturn(Map.of());
+            given(stockQueryService.findByTickers(any()))
+                    .willReturn(Map.of("AAA", stock("AAA"), "BBB", stock("BBB"), "CCC", stock("CCC")));
+            given(stockQueryService.findNamesByTickers(any()))
+                    .willReturn(Map.of("AAA", "에이", "BBB", "비", "CCC", "씨"));
+
+            FilterExecutionResult result = service.execute(filter, EVAL_DATE);
+
+            assertThat(result.totalCandidates()).isEqualTo(3);
+            assertThat(result.matches()).extracting("ticker").containsExactly("AAA", "BBB");
+        }
+
+        @Test
+        @DisplayName("RANK 시총 정렬 시 시총 없는 종목은 마지막, 결과에 시총을 포함한다")
+        void shouldRankByMarketCapWithNullsLastAndExposeMarketCap() {
+            String pipeline = "[{\"type\":\"RANK\",\"sort\":[{\"field\":\"MARKET_CAP\",\"direction\":\"DESC\"}]}]";
+            SearchFilter filter = pipelineFilter(PASS_ALL, pipeline);
+            given(priceQueryService.findByExchangesAndDate(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE)))
+                    .willReturn(Map.of(
+                            "AAA", priceClose("AAA", EVAL_DATE, 105L),
+                            "BBB", priceClose("BBB", EVAL_DATE, 105L)));
+            given(priceQueryService.findNthRecentTradeDateByExchanges(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE), eq(1)))
+                    .willReturn(null);
+            given(featureDailyService.findAllByExchangeAndDate(StockExchange.KOSPI, PriceType.RAW, EVAL_DATE))
+                    .willReturn(Map.of());
+            given(valuationQueryService.findMarketCapByDate(EVAL_DATE))
+                    .willReturn(Map.of("BBB", 500L)); // AAA는 시총 없음 → 마지막
+            given(stockQueryService.findByTickers(any()))
+                    .willReturn(Map.of("AAA", stock("AAA"), "BBB", stock("BBB")));
+            given(stockQueryService.findNamesByTickers(any()))
+                    .willReturn(Map.of("AAA", "에이", "BBB", "비"));
+
+            FilterExecutionResult result = service.execute(filter, EVAL_DATE);
+
+            assertThat(result.matches()).extracting("ticker").containsExactly("BBB", "AAA");
+            assertThat(result.matches().get(0).marketCap()).isEqualTo(500L);
+            assertThat(result.matches().get(1).marketCap()).isNull();
         }
     }
 }

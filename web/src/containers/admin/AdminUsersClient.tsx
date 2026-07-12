@@ -1,10 +1,11 @@
 "use client";
 
-import { useState, useMemo } from "react";
+import { useState, useMemo, useEffect } from "react";
 import { clientFetch } from "@/services/client";
 import { cx } from "@/utils/cx";
 import { CAPABILITY_LABELS, ALL_CAPABILITIES } from "@/utils/capability";
 import type { UserSummary } from "@/types/user";
+import type { CustomMetric } from "@/types/customMetric";
 
 const ROLE_BADGE: Record<string, string> = {
   USER: "bg-slate-600/30 text-slate-300",
@@ -27,6 +28,21 @@ export default function AdminUsersClient({ users }: Props) {
   // 로컬 편집 중인 draft 상태
   const [draftGranted, setDraftGranted] = useState<Set<string>>(new Set());
 
+  // 커스텀 지표 카탈로그(마운트 시 1회 로드)
+  const [metrics, setMetrics] = useState<CustomMetric[]>([]);
+  // 선택 사용자의 커스텀 지표 grant — 서버/draft 상태
+  const [serverGrantedMetrics, setServerGrantedMetrics] = useState<Set<number>>(new Set());
+  const [draftGrantedMetrics, setDraftGrantedMetrics] = useState<Set<number>>(new Set());
+
+  useEffect(() => {
+    (async () => {
+      const res = await clientFetch(`/api/admin/custom-metric-grants/metrics`);
+      if (res?.ok) {
+        setMetrics(await res.json());
+      }
+    })();
+  }, []);
+
   const filteredUsers = useMemo(() => {
     const q = search.trim().toLowerCase();
     if (!q) return users;
@@ -43,8 +59,12 @@ export default function AdminUsersClient({ users }: Props) {
     for (const c of serverGranted) {
       if (!draftGranted.has(c)) return true;
     }
+    if (serverGrantedMetrics.size !== draftGrantedMetrics.size) return true;
+    for (const m of serverGrantedMetrics) {
+      if (!draftGrantedMetrics.has(m)) return true;
+    }
     return false;
-  }, [serverGranted, draftGranted]);
+  }, [serverGranted, draftGranted, serverGrantedMetrics, draftGrantedMetrics]);
 
   const selectedUser = users.find((u) => u.id === selectedUserId);
   const isRootTarget = selectedUser?.role === "ROOT";
@@ -54,13 +74,24 @@ export default function AdminUsersClient({ users }: Props) {
     setLoading(true);
     setServerGranted(new Set());
     setDraftGranted(new Set());
+    setServerGrantedMetrics(new Set());
+    setDraftGrantedMetrics(new Set());
     try {
-      const res = await clientFetch(`/api/admin/users/${userId}/capabilities`);
-      if (res?.ok) {
-        const caps: string[] = await res.json();
+      const [capsRes, metricsRes] = await Promise.all([
+        clientFetch(`/api/admin/users/${userId}/capabilities`),
+        clientFetch(`/api/admin/custom-metric-grants/users/${userId}`),
+      ]);
+      if (capsRes?.ok) {
+        const caps: string[] = await capsRes.json();
         const granted = new Set(caps);
         setServerGranted(granted);
         setDraftGranted(new Set(granted));
+      }
+      if (metricsRes?.ok) {
+        const ids: number[] = await metricsRes.json();
+        const grantedMetrics = new Set(ids);
+        setServerGrantedMetrics(grantedMetrics);
+        setDraftGrantedMetrics(new Set(grantedMetrics));
       }
     } finally {
       setLoading(false);
@@ -76,8 +107,18 @@ export default function AdminUsersClient({ users }: Props) {
     });
   }
 
+  function toggleMetric(metricId: number) {
+    setDraftGrantedMetrics((prev) => {
+      const next = new Set(prev);
+      if (next.has(metricId)) next.delete(metricId);
+      else next.add(metricId);
+      return next;
+    });
+  }
+
   function discardChanges() {
     setDraftGranted(new Set(serverGranted));
+    setDraftGrantedMetrics(new Set(serverGrantedMetrics));
   }
 
   async function saveChanges() {
@@ -86,6 +127,8 @@ export default function AdminUsersClient({ users }: Props) {
     try {
       const toGrant = [...draftGranted].filter((c) => !serverGranted.has(c));
       const toRevoke = [...serverGranted].filter((c) => !draftGranted.has(c));
+      const metricsToGrant = [...draftGrantedMetrics].filter((m) => !serverGrantedMetrics.has(m));
+      const metricsToRevoke = [...serverGrantedMetrics].filter((m) => !draftGrantedMetrics.has(m));
 
       await Promise.all([
         ...toGrant.map((capability) =>
@@ -102,9 +145,24 @@ export default function AdminUsersClient({ users }: Props) {
             body: JSON.stringify({ capability, action: "REVOKE" }),
           })
         ),
+        ...metricsToGrant.map((metricId) =>
+          clientFetch(`/api/admin/custom-metric-grants/users/${selectedUserId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ metricId, action: "GRANT" }),
+          })
+        ),
+        ...metricsToRevoke.map((metricId) =>
+          clientFetch(`/api/admin/custom-metric-grants/users/${selectedUserId}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ metricId, action: "REVOKE" }),
+          })
+        ),
       ]);
 
       setServerGranted(new Set(draftGranted));
+      setServerGrantedMetrics(new Set(draftGrantedMetrics));
     } finally {
       setSaving(false);
     }
@@ -184,7 +242,9 @@ export default function AdminUsersClient({ users }: Props) {
                   ROOT는 모든 권한을 자동 보유합니다. 부여 설정은 적용되지 않습니다.
                 </p>
               )}
-              <div className="divide-y divide-white/5 flex-1">
+              <div className="flex-1 overflow-y-auto">
+                <p className="px-4 pt-3 pb-1 text-xs font-medium uppercase tracking-wide text-slate-500">기능 권한</p>
+                <div className="divide-y divide-white/5">
                 {ALL_CAPABILITIES.map((capability) => {
                   const granted = draftGranted.has(capability);
                   const changed = granted !== serverGranted.has(capability);
@@ -218,6 +278,48 @@ export default function AdminUsersClient({ users }: Props) {
                     </div>
                   );
                 })}
+                </div>
+
+                <p className="px-4 pt-4 pb-1 text-xs font-medium uppercase tracking-wide text-slate-500">커스텀 지표</p>
+                {metrics.length === 0 ? (
+                  <p className="px-4 py-6 text-center text-sm text-slate-500">등록된 커스텀 지표 없음</p>
+                ) : (
+                  <div className="divide-y divide-white/5">
+                    {metrics.map((metric) => {
+                      const granted = draftGrantedMetrics.has(metric.id);
+                      const changed = granted !== serverGrantedMetrics.has(metric.id);
+
+                      return (
+                        <div key={metric.id} className={changed ? "bg-amber-500/5" : ""}>
+                          <div className="flex items-center justify-between px-4 py-3">
+                            <div>
+                              <p className="text-white text-sm font-medium flex items-center gap-2">
+                                {metric.name}
+                                {changed && (
+                                  <span className="text-amber-400 text-xs font-normal">
+                                    {granted ? "(+추가)" : "(−제거)"}
+                                  </span>
+                                )}
+                              </p>
+                              <p className="text-xs text-slate-500 mt-0.5">{metric.shape}</p>
+                            </div>
+                            <button
+                              disabled={saving}
+                              onClick={() => toggleMetric(metric.id)}
+                              className={`min-w-[72px] text-center text-xs py-1.5 px-3 rounded-lg font-medium transition disabled:opacity-50 ${
+                                granted
+                                  ? "bg-indigo-600/30 text-indigo-300 border border-indigo-500/30 hover:bg-red-900/30 hover:text-red-300 hover:border-red-500/30"
+                                  : "bg-white/5 text-slate-400 border border-white/15 hover:bg-indigo-600/20 hover:text-indigo-300 hover:border-indigo-500/30"
+                              }`}
+                            >
+                              {granted ? "부여됨" : "미부여"}
+                            </button>
+                          </div>
+                        </div>
+                      );
+                    })}
+                  </div>
+                )}
               </div>
 
               {/* 저장 / 되돌리기 */}

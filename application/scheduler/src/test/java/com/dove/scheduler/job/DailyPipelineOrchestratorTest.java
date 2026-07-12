@@ -9,8 +9,8 @@ import com.dove.market.domain.enums.Exchange;
 import com.dove.scheduler.fundamental.DailyValuationService;
 import com.dove.scheduler.fundamental.FundamentalCollectionService;
 import com.dove.scheduler.fundamental.ShareCountCollectionService;
-import com.dove.scheduler.service.BreadthComputeService;
 import com.dove.scheduler.service.IndicatorComputeService;
+import com.dove.scheduler.service.CustomMetricComputeService;
 import com.dove.scheduler.service.ModelScoringService;
 import com.dove.scheduler.service.RankComputeService;
 import com.dove.stock.domain.enums.StockExchange;
@@ -61,7 +61,7 @@ class DailyPipelineOrchestratorTest {
     private RankComputeService rankComputeService;
 
     @Mock
-    private BreadthComputeService breadthComputeService;
+    private CustomMetricComputeService customMetricComputeService;
 
     @Mock
     private ModelScoringService modelScoringService;
@@ -89,8 +89,8 @@ class DailyPipelineOrchestratorTest {
 
     private DailyPipelineOrchestrator orchestrator() {
         return new DailyPipelineOrchestrator(priceCollectionService, indicatorComputeService,
-                rankComputeService, breadthComputeService, modelScoringService,
-                fundamentalCollectionService, shareCountCollectionService, dailyValuationService,
+                rankComputeService, customMetricComputeService,
+                modelScoringService, fundamentalCollectionService, shareCountCollectionService, dailyValuationService,
                 systemEventService, jobStatusRegistry, tradingDayAdapter, tradingDateService, CLOCK);
     }
 
@@ -108,7 +108,7 @@ class DailyPipelineOrchestratorTest {
             verify(priceCollectionService, never()).collect(any(), any(), any(), any(), any());
             verify(indicatorComputeService, never()).computeAll(any());
             verify(rankComputeService, never()).calculateAll(any());
-            verify(breadthComputeService, never()).calculateAll(any());
+            verify(customMetricComputeService, never()).calculateAll(any());
             verify(tradingDateService, never()).register(any(), any());
         }
     }
@@ -129,12 +129,13 @@ class DailyPipelineOrchestratorTest {
                         eq(CollectionProgress.NOOP), eq(DailyPriceFetcher.ADJUSTED_DATA_START));
             }
             InOrder inOrder = inOrder(priceCollectionService, indicatorComputeService,
-                    rankComputeService, breadthComputeService, modelScoringService);
+                    rankComputeService,
+                    customMetricComputeService, modelScoringService);
             inOrder.verify(priceCollectionService, times(StockExchange.values().length))
                     .collect(any(), any(), any(), any(), any());
             inOrder.verify(indicatorComputeService).computeAll(TODAY);
             inOrder.verify(rankComputeService).calculateAll(TODAY);
-            inOrder.verify(breadthComputeService).calculateAll(TODAY);
+            inOrder.verify(customMetricComputeService).calculateAll(TODAY);
             inOrder.verify(modelScoringService).scoreAll(TODAY);
 
             verify(tradingDateService).register(Exchange.KRX, TODAY);
@@ -162,7 +163,7 @@ class DailyPipelineOrchestratorTest {
             verify(tradingDateService, never()).markPricesSynced(any(), any());
             verify(indicatorComputeService, never()).computeAll(any());
             verify(rankComputeService, never()).calculateAll(any());
-            verify(breadthComputeService, never()).calculateAll(any());
+            verify(customMetricComputeService, never()).calculateAll(any());
         }
     }
 
@@ -189,7 +190,7 @@ class DailyPipelineOrchestratorTest {
     class WhenRankStageFails {
 
         @Test
-        @DisplayName("rank 계산이 실패해도 이벤트 기록 후 상승비율 단계를 계속 진행한다")
+        @DisplayName("rank 계산이 실패해도 이벤트 기록 후 커스텀 지표 단계를 계속 진행한다")
         void shouldRecordFailureAndContinueWhenRankThrows() {
             given(tradingDayAdapter.isTradingDay(TODAY)).willReturn(true);
             doThrow(new RuntimeException("rank 계산 오류")).when(rankComputeService).calculateAll(TODAY);
@@ -198,25 +199,26 @@ class DailyPipelineOrchestratorTest {
 
             verify(systemEventService).recordPipelineStageFailure(
                     SchedulerJobName.RANK.name(), "rank 계산 오류");
-            verify(breadthComputeService).calculateAll(TODAY);
+            verify(customMetricComputeService).calculateAll(TODAY);
         }
     }
 
     @Nested
-    @DisplayName("run() — 상승비율 단계 실패")
-    class WhenBreadthStageFails {
+    @DisplayName("run() — 커스텀 지표 단계 실패")
+    class WhenCustomMetricStageFails {
 
         @Test
-        @DisplayName("상승비율 계산이 실패해도 이벤트 기록 후 모델 채점 단계를 계속 진행한다")
-        void shouldRecordFailureAndContinueWhenBreadthThrows() {
+        @DisplayName("커스텀 지표 계산이 실패해도 이벤트 기록 후 모델 채점 단계를 계속 진행한다")
+        void shouldRecordFailureAndContinueWhenCustomMetricThrows() {
             given(tradingDayAdapter.isTradingDay(TODAY)).willReturn(true);
-            doThrow(new RuntimeException("상승비율 계산 오류")).when(breadthComputeService).calculateAll(TODAY);
+            doThrow(new RuntimeException("커스텀 지표 계산 오류")).when(customMetricComputeService).calculateAll(TODAY);
 
             orchestrator().run();
 
             verify(systemEventService).recordPipelineStageFailure(
-                    SchedulerJobName.BREADTH.name(), "상승비율 계산 오류");
+                    SchedulerJobName.CUSTOM_METRIC.name(), "커스텀 지표 계산 오류");
             verify(modelScoringService).scoreAll(TODAY);
         }
     }
+
 }

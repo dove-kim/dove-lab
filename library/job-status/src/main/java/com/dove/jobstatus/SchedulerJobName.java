@@ -10,7 +10,7 @@ public enum SchedulerJobName {
     DAILY_PRICE,
     INDICATOR,
     RANK,
-    BREADTH,
+    CUSTOM_METRIC,
     MODEL_SCORING,
     FUNDAMENTAL_POLL,
     SHARE_COUNT,

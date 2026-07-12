@@ -73,6 +73,10 @@ public class SearchFilter {
     @Comment("지표 검색 식 (JSON 트리)")
     private FilterExpression expression;
 
+    @Column(name = "PIPELINE", columnDefinition = "TEXT")
+    @Comment("순서 단계 목록(JSON, null=단순 필터)")
+    private String pipeline;
+
     @Column(name = "STOCK_FILTER_ID")
     @Comment("적용할 종목 필터 ID (null=필터 없음)")
     private Long stockFilterId;
@@ -95,7 +99,7 @@ public class SearchFilter {
     public static SearchFilter create(Long memberId, String name, DateRule dateRule,
                                        List<MarketType> markets, PriceType priceType, FilterExpression expression,
                                        Long stockFilterId) {
-        return create(memberId, name, dateRule, markets, priceType, FilterVenue.KRX, expression, stockFilterId);
+        return create(memberId, name, dateRule, markets, priceType, FilterVenue.KRX, expression, stockFilterId, null);
     }
 
     /**
@@ -103,7 +107,7 @@ public class SearchFilter {
      */
     public static SearchFilter create(Long memberId, String name, DateRule dateRule,
                                        List<MarketType> markets, PriceType priceType, FilterVenue exchange,
-                                       FilterExpression expression, Long stockFilterId) {
+                                       FilterExpression expression, Long stockFilterId, String pipeline) {
         SearchFilter f = new SearchFilter();
         f.memberId = memberId;
         f.name = name;
@@ -112,6 +116,7 @@ public class SearchFilter {
         f.priceType = priceType != null ? priceType : PriceType.RAW;
         f.exchange = exchange != null ? exchange : FilterVenue.KRX;
         f.expression = expression;
+        f.pipeline = pipeline;
         f.stockFilterId = stockFilterId;
         f.createdAt = LocalDateTime.now();
         f.updatedAt = LocalDateTime.now();
@@ -123,20 +128,21 @@ public class SearchFilter {
      */
     public void update(String name, DateRule dateRule, List<MarketType> markets, PriceType priceType,
                        FilterExpression expression, Long stockFilterId) {
-        update(name, dateRule, markets, priceType, FilterVenue.KRX, expression, stockFilterId);
+        update(name, dateRule, markets, priceType, FilterVenue.KRX, expression, stockFilterId, null);
     }
 
     /**
-     * 필터 이름·날짜 규칙·시장·주가 유형·거래소·표현식·종목 필터 연결을 갱신한다.
+     * 필터 이름·날짜 규칙·시장·주가 유형·거래소·표현식·파이프라인·종목 필터 연결을 갱신한다.
      */
     public void update(String name, DateRule dateRule, List<MarketType> markets, PriceType priceType,
-                       FilterVenue exchange, FilterExpression expression, Long stockFilterId) {
+                       FilterVenue exchange, FilterExpression expression, Long stockFilterId, String pipeline) {
         this.name = name;
         this.dateRule = dateRule;
         this.markets = markets;
         this.priceType = priceType != null ? priceType : PriceType.RAW;
         this.exchange = exchange != null ? exchange : FilterVenue.KRX;
         this.expression = expression;
+        this.pipeline = pipeline;
         this.stockFilterId = stockFilterId;
         this.updatedAt = LocalDateTime.now();
     }

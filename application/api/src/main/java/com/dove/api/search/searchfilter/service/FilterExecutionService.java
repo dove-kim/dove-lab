@@ -2,8 +2,9 @@ package com.dove.api.search.searchfilter.service;
 
 import com.dove.api.search.searchfilter.dto.FilterExecutionResult;
 import com.dove.api.search.searchfilter.dto.MatchedStock;
-import com.dove.indicator.application.service.StockBreadthDailyService;
 import com.dove.indicator.application.service.StockFeatureDailyService;
+import com.dove.custommetric.application.service.CustomMetricDailyService;
+import com.dove.fundamental.application.StockValuationQueryService;
 import com.dove.indicator.application.service.StockRankDailyService;
 import com.dove.indicator.domain.enums.IndicatorType;
 import com.dove.indicator.domain.rank.enums.RankType;
@@ -13,6 +14,13 @@ import com.dove.screening.application.service.StockFeatureFilterQueryService;
 import com.dove.screening.application.service.StockFilterQueryService;
 import com.dove.screening.domain.entity.SearchFilter;
 import com.dove.screening.domain.enums.DateRule;
+import com.dove.screening.domain.pipeline.FilterStage;
+import com.dove.screening.domain.pipeline.PipelineStage;
+import com.dove.screening.domain.pipeline.RankStage;
+import com.dove.screening.domain.pipeline.SearchPipeline;
+import com.dove.screening.domain.pipeline.SortDirection;
+import com.dove.screening.domain.pipeline.SortField;
+import com.dove.screening.domain.pipeline.SortKey;
 import com.dove.screening.domain.value.EvalContext;
 import com.dove.screening.domain.value.FeatureMatch;
 import com.dove.screening.domain.value.FilterEvaluator;
@@ -36,11 +44,15 @@ import org.springframework.web.server.ResponseStatusException;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.HashMap;
+import java.util.LinkedHashSet;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.function.Function;
+import java.util.stream.Collectors;
 
 /**
  * 검색 필터를 실행해 조건에 맞는 종목을 찾는다.
@@ -57,8 +69,9 @@ public class FilterExecutionService {
     private final StockQueryService stockQueryService;
     private final StockDetailQueryService stockDetailQueryService;
     private final StockRankDailyService rankDailyService;
-    private final StockBreadthDailyService breadthDailyService;
+    private final CustomMetricDailyService customMetricDailyService;
     private final ModelScoreQueryService modelScoreQueryService;
+    private final StockValuationQueryService valuationQueryService;
 
     /**
      * 검색 필터를 실행해 통과 종목을 반환한다.
@@ -82,6 +95,15 @@ public class FilterExecutionService {
             throw new ResponseStatusException(HttpStatus.UNPROCESSABLE_ENTITY, "NO_DATA_FOR_DATE");
         }
 
+        // 파이프라인(순서 단계)이 지정되면 전 단계를 단일 거래일 인메모리로 순차 실행한다.
+        List<PipelineStage> pipelineStages = SearchPipeline.parse(filter.getPipeline());
+        if (!pipelineStages.isEmpty()) {
+            return executePipeline(filter, markets, priceType, exchanges, model, applyStatus, evalDate, pipelineStages);
+        }
+
+        // 리스트 정렬(시총)용 티커별 시가총액 — 단일 거래일 슬라이스라 항상 로드해도 저렴
+        Map<String, Long> marketCaps = valuationQueryService.findMarketCapByDate(evalDate);
+
         Optional<List<FeatureMatch>> dbMatched = model != null
                 ? featureFilterQueryService.findMatchingByExpression(exchanges, priceType, evalDate, model)
                 : Optional.empty();
@@ -100,7 +122,7 @@ public class FilterExecutionService {
                 if (stock == null || !markets.contains(stock.getMarket())) continue; // 시장 유니버스 제한
                 matches.add(new MatchedStock(r.ticker(), names.getOrDefault(r.ticker(), r.ticker()),
                         stock.getMarket().name(), r.openPrice(), r.highPrice(), r.lowPrice(),
-                        r.closePrice(), r.volume(), r.prevClose()));
+                        r.closePrice(), r.volume(), r.prevClose(), marketCaps.get(r.ticker())));
             }
             total = (int) featureFilterQueryService.countByExchangesAndDate(exchanges, priceType, evalDate);
         } else {
@@ -113,8 +135,8 @@ public class FilterExecutionService {
             Map<String, Map<IndicatorType, Double>> indicators = loadIndicators(exchanges, priceType, evalDate);
             Map<String, Map<RankType, Double>> ranks = model != null && FilterOperands.usesRank(model)
                     ? loadRanks(exchanges, priceType, evalDate) : Map.of();
-            Map<StockExchange, Double> breadthByExchange = model != null && FilterOperands.usesBreadth(model)
-                    ? loadBreadth(exchanges, priceType, evalDate) : Map.of();
+            Map<Long, Double> customMetrics = model != null
+                    ? loadCustomMetrics(FilterOperands.referencedCustomMetricIds(model), evalDate) : Map.of();
             Map<String, Map<Long, Double>> modelScores = model != null
                     ? loadModelScores(FilterOperands.referencedModelIds(model), evalDate) : Map.of();
             Map<String, StockStatusFlags> statusByTicker = applyStatus
@@ -127,16 +149,16 @@ public class FilterExecutionService {
                 StockPrice price = entry.getValue();
                 Stock stock = stockByTicker.get(ticker);
                 if (stock == null || !markets.contains(stock.getMarket())) continue; // 시장 유니버스 제한
-                Double breadth = breadthByExchange.get(StockExchange.fromMarket(stock.getMarket()));
                 StockStatusFlags f = statusByTicker.getOrDefault(ticker, new StockStatusFlags(false, false));
                 EvalContext ctx = new EvalContext(stock.getMarket(), indicators.get(ticker), price,
-                        ranks.get(ticker), modelScores.get(ticker), breadth, f.tradingHalted(), f.adminItem());
+                        ranks.get(ticker), modelScores.get(ticker), customMetrics,
+                        f.tradingHalted(), f.adminItem());
                 if (model != null && FilterEvaluator.evaluate(model, ctx)) {
                     StockPrice prev = prevPrices.get(ticker);
                     matches.add(new MatchedStock(ticker, nameByTicker.getOrDefault(ticker, ticker),
                             stock.getMarket().name(), price.getOpenPrice(), price.getHighPrice(),
                             price.getLowPrice(), price.getClosePrice(), price.getVolume(),
-                            prev != null ? prev.getClosePrice() : null));
+                            prev != null ? prev.getClosePrice() : null, marketCaps.get(ticker)));
                 }
             }
             total = prices.size();
@@ -149,6 +171,147 @@ public class FilterExecutionService {
         }
 
         return new FilterExecutionResult(evalDate, total, matches);
+    }
+
+    /**
+     * EXPRESSION(첫 단계) + PIPELINE 단계를 단일 거래일 인메모리로 순차 실행한다.
+     */
+    private FilterExecutionResult executePipeline(SearchFilter filter, List<MarketType> markets, PriceType priceType,
+                                                  List<StockExchange> exchanges, FilterNode expressionModel,
+                                                  boolean applyStatus, LocalDate evalDate,
+                                                  List<PipelineStage> pipelineStages) {
+        // 실제 실행 단계 = [FILTER(EXPRESSION)] + PIPELINE (EXPRESSION이 있으면 항상 첫 단계)
+        List<PipelineStage> stages = new ArrayList<>();
+        if (expressionModel != null) stages.add(new FilterStage(expressionModel));
+        stages.addAll(pipelineStages);
+
+        // 유니버스: 평가일 전 종목 + 전일 종가(등락률용)
+        Map<String, StockPrice> prices = priceQueryService.findByExchangesAndDate(exchanges, priceType, evalDate);
+        LocalDate prevDate = priceQueryService.findNthRecentTradeDateByExchanges(exchanges, priceType, evalDate, 1);
+        Map<String, StockPrice> prevPrices = prevDate == null
+                ? Map.of() : priceQueryService.findByExchangesAndDate(exchanges, priceType, prevDate);
+        Map<String, Map<IndicatorType, Double>> indicators = loadIndicators(exchanges, priceType, evalDate);
+
+        // 전 FILTER 단계 트리 합집합으로 필요한 부가 데이터만 로드
+        List<FilterNode> filterNodes = stages.stream()
+                .filter(s -> s instanceof FilterStage)
+                .map(s -> ((FilterStage) s).filter())
+                .toList();
+        boolean usesRank = filterNodes.stream().anyMatch(FilterOperands::usesRank);
+        Map<String, Map<RankType, Double>> ranks = usesRank ? loadRanks(exchanges, priceType, evalDate) : Map.of();
+        Set<Long> customMetricIds = new LinkedHashSet<>();
+        Set<Long> modelIds = new LinkedHashSet<>();
+        for (FilterNode n : filterNodes) {
+            customMetricIds.addAll(FilterOperands.referencedCustomMetricIds(n));
+            modelIds.addAll(FilterOperands.referencedModelIds(n));
+        }
+        Map<Long, Double> customMetrics = loadCustomMetrics(customMetricIds, evalDate);
+        Map<String, Map<Long, Double>> modelScores = loadModelScores(modelIds, evalDate);
+        boolean needStatus = applyStatus && filterNodes.stream().anyMatch(FilterOperands::usesStockStatus);
+        Map<String, StockStatusFlags> statusByTicker = needStatus
+                ? stockDetailQueryService.findStatusByTickers(prices.keySet()) : Map.of();
+
+        // RANK 단계에서 시가총액을 쓰면 시총 로드
+        boolean usesMarketCap = pipelineStages.stream().anyMatch(s -> s instanceof RankStage r
+                && r.sortKeys().stream().anyMatch(k -> k.field() == SortField.MARKET_CAP));
+        Map<String, Long> marketCaps = usesMarketCap ? valuationQueryService.findMarketCapByDate(evalDate) : Map.of();
+
+        Map<String, Stock> stockByTicker = stockQueryService.findByTickers(prices.keySet());
+        Map<String, String> nameByTicker = stockQueryService.findNamesByTickers(prices.keySet());
+        Set<String> allowedByStockFilter = filter.getStockFilterId() != null
+                ? stockFilterQueryService.resolveTickers(filter.getStockFilterId(), markets) : null;
+
+        // 후보 + 컨텍스트 조립 (시장 유니버스 + 종목필터 교집합)
+        Map<String, EvalContext> contexts = new HashMap<>();
+        List<String> candidates = new ArrayList<>();
+        for (Map.Entry<String, StockPrice> entry : prices.entrySet()) {
+            String ticker = entry.getKey();
+            Stock stock = stockByTicker.get(ticker);
+            if (stock == null || !markets.contains(stock.getMarket())) continue;
+            if (allowedByStockFilter != null && !allowedByStockFilter.contains(ticker)) continue;
+            StockStatusFlags f = statusByTicker.getOrDefault(ticker, new StockStatusFlags(false, false));
+            contexts.put(ticker, new EvalContext(stock.getMarket(), indicators.get(ticker), entry.getValue(),
+                    ranks.get(ticker), modelScores.get(ticker), customMetrics, f.tradingHalted(), f.adminItem()));
+            candidates.add(ticker);
+        }
+
+        // 단계 순차 실행: FILTER=축소, RANK=정렬 후 상위 N
+        for (PipelineStage stage : stages) {
+            if (stage instanceof FilterStage fs) {
+                candidates = candidates.stream()
+                        .filter(t -> FilterEvaluator.evaluate(fs.filter(), contexts.get(t)))
+                        .collect(Collectors.toCollection(ArrayList::new));
+            } else if (stage instanceof RankStage rs) {
+                candidates = applyRank(candidates, rs, prices, prevPrices, marketCaps);
+            }
+        }
+
+        int total = prices.size();
+        List<MatchedStock> matches = new ArrayList<>();
+        for (String ticker : candidates) {
+            StockPrice price = prices.get(ticker);
+            StockPrice prev = prevPrices.get(ticker);
+            matches.add(new MatchedStock(ticker, nameByTicker.getOrDefault(ticker, ticker),
+                    stockByTicker.get(ticker).getMarket().name(), price.getOpenPrice(), price.getHighPrice(),
+                    price.getLowPrice(), price.getClosePrice(), price.getVolume(),
+                    prev != null ? prev.getClosePrice() : null, marketCaps.get(ticker)));
+        }
+        return new FilterExecutionResult(evalDate, total, matches);
+    }
+
+    /**
+     * RANK 단계를 적용한다 — 정렬 키로 정렬 후 limit이 있으면 상위 N개만 남긴다.
+     */
+    private List<String> applyRank(List<String> candidates, RankStage stage, Map<String, StockPrice> prices,
+                                   Map<String, StockPrice> prevPrices, Map<String, Long> marketCaps) {
+        List<String> sorted = new ArrayList<>(candidates);
+        Comparator<String> comparator = null;
+        for (SortKey key : stage.sortKeys()) {
+            Comparator<String> next = comparatorFor(key, prices, prevPrices, marketCaps);
+            comparator = comparator == null ? next : comparator.thenComparing(next);
+        }
+        if (comparator != null) sorted.sort(comparator);
+        if (stage.limit() != null) {
+            int n = Math.max(0, Math.min(sorted.size(), stage.limit()));
+            return new ArrayList<>(sorted.subList(0, n));
+        }
+        return sorted;
+    }
+
+    /**
+     * 정렬 키 하나에 대한 비교자를 만든다 — 방향 반영, null 값은 방향 무관 항상 마지막.
+     */
+    private Comparator<String> comparatorFor(SortKey key, Map<String, StockPrice> prices,
+                                             Map<String, StockPrice> prevPrices, Map<String, Long> marketCaps) {
+        Function<String, Double> value = t -> sortValue(key.field(), t, prices, prevPrices, marketCaps);
+        Comparator<Double> order = key.direction() == SortDirection.DESC
+                ? Comparator.reverseOrder() : Comparator.naturalOrder();
+        return Comparator.comparing(value, Comparator.nullsLast(order));
+    }
+
+    /**
+     * 정렬 필드의 종목 값을 반환한다(없으면 null).
+     */
+    private Double sortValue(SortField field, String ticker, Map<String, StockPrice> prices,
+                            Map<String, StockPrice> prevPrices, Map<String, Long> marketCaps) {
+        return switch (field) {
+            case CHANGE_RATE -> {
+                StockPrice p = prices.get(ticker);
+                StockPrice prev = prevPrices.get(ticker);
+                Long close = p != null ? p.getClosePrice() : null;
+                Long prevClose = prev != null ? prev.getClosePrice() : null;
+                yield close != null && prevClose != null && prevClose > 0
+                        ? (close - prevClose) / (double) prevClose : null;
+            }
+            case MARKET_CAP -> {
+                Long cap = marketCaps.get(ticker);
+                yield cap != null ? cap.doubleValue() : null;
+            }
+            case VOLUME -> {
+                StockPrice p = prices.get(ticker);
+                yield p != null && p.getVolume() != null ? p.getVolume().doubleValue() : null;
+            }
+        };
     }
 
     /**
@@ -174,15 +337,14 @@ public class FilterExecutionService {
     }
 
     /**
-     * 거래소별 당일 상승비율을 모아 거래소→상승비율 맵으로 반환한다.
+     * 참조 커스텀 지표별 계산값을 모아 metricId→값 맵으로 반환한다(거래일당 시장 단일 스칼라).
      */
-    private Map<StockExchange, Double> loadBreadth(List<StockExchange> exchanges, PriceType priceType, LocalDate date) {
-        Map<StockExchange, Double> byExchange = new HashMap<>();
-        for (StockExchange exchange : exchanges) {
-            breadthDailyService.findAdvanceRatio(exchange, priceType, date)
-                    .ifPresent(ratio -> byExchange.put(exchange, ratio));
+    private Map<Long, Double> loadCustomMetrics(Set<Long> metricIds, LocalDate date) {
+        Map<Long, Double> byId = new HashMap<>();
+        for (Long metricId : metricIds) {
+            customMetricDailyService.findValue(metricId, date).ifPresent(v -> byId.put(metricId, v));
         }
-        return byExchange;
+        return byId;
     }
 
     /**

@@ -24,6 +24,8 @@ dependencies {
     implementation project(":stock")
     implementation project(":indicator")
     implementation project(":model-serving")
+    implementation project(":custom-metric")
+    implementation project(":screening")
     implementation project(":krx")
     implementation project(":kis")
     implementation project(":stock-collection")

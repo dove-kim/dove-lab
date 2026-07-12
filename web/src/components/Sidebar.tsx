@@ -183,6 +183,24 @@ const ROOT_MODELS_ITEM: NavItem = {
   ),
 };
 
+const ROOT_CUSTOM_METRICS_ITEM: NavItem = {
+  href: "/root/custom-metrics",
+  label: "커스텀 지표",
+  icon: (
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="4" y="2" width="16" height="20" rx="2" />
+      <line x1="8" y1="6" x2="16" y2="6" />
+      <line x1="8" y1="10" x2="8" y2="10" />
+      <line x1="12" y1="10" x2="12" y2="10" />
+      <line x1="16" y1="10" x2="16" y2="10" />
+      <line x1="8" y1="14" x2="8" y2="14" />
+      <line x1="12" y1="14" x2="12" y2="14" />
+      <line x1="16" y1="14" x2="16" y2="18" />
+      <line x1="8" y1="18" x2="12" y2="18" />
+    </svg>
+  ),
+};
+
 const STORAGE_KEY = "sidebar-collapsed";
 
 export default function Sidebar({ role, capabilities, mobileOpen, onMobileClose }: Props) {
@@ -294,6 +312,7 @@ export default function Sidebar({ role, capabilities, mobileOpen, onMobileClose 
               <NavLink item={ROOT_BACKFILL_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
               <NavLink item={ROOT_STOCK_TAGS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
               <NavLink item={ROOT_MODELS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+              <NavLink item={ROOT_CUSTOM_METRICS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
               <NavLink item={ROOT_SYSTEM_EVENTS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
             </>
           )}

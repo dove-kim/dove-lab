@@ -7,6 +7,7 @@ import {
   ConditionType,
   LogicOperator,
   DateRule,
+  ConditionNames,
 } from "@/types/filter";
 import {
   summarizeCondition,
@@ -27,6 +28,7 @@ interface Props {
   pendingAddType: ConditionType | null;
   onPendingAddConsumed: () => void;
   dateRule?: DateRule;
+  names?: ConditionNames;
 }
 
 export default function ExpressionTree({
@@ -37,6 +39,7 @@ export default function ExpressionTree({
   pendingAddType,
   onPendingAddConsumed,
   dateRule = "LATEST",
+  names,
 }: Props) {
   const [editingCondition, setEditingCondition] = useState<{ node: ConditionNode } | null>(null);
   const [addingToGroup, setAddingToGroup] = useState<{ groupId: string; type: ConditionType } | null>(null);
@@ -146,6 +149,7 @@ export default function ExpressionTree({
                 onEditCondition={(n) => setEditingCondition({ node: n })}
                 onAddCondition={(groupId, type) => setAddingToGroup({ groupId, type })}
                 dateRule={dateRule}
+                names={names}
               />
             ) : (
               <ConditionNodeView
@@ -154,6 +158,7 @@ export default function ExpressionTree({
                 onEdit={(n) => setEditingCondition({ node: n })}
                 onToggleNegated={handleToggleNegated}
                 dateRule={dateRule}
+                names={names}
               />
             )}
           </div>
@@ -216,6 +221,7 @@ function GroupNodeView({
   onEditCondition,
   onAddCondition,
   dateRule,
+  names,
 }: {
   node: GroupNode;
   selectedGroupId: string | null;
@@ -227,6 +233,7 @@ function GroupNodeView({
   onEditCondition: (n: ConditionNode) => void;
   onAddCondition: (groupId: string, type: ConditionType) => void;
   dateRule: DateRule;
+  names?: ConditionNames;
 }) {
   const isSelected = selectedGroupId === node.id;
 
@@ -297,6 +304,7 @@ function GroupNodeView({
                 onEditCondition={onEditCondition}
                 onAddCondition={onAddCondition}
                 dateRule={dateRule}
+                names={names}
               />
             ) : (
               <ConditionNodeView
@@ -305,6 +313,7 @@ function GroupNodeView({
                 onEdit={onEditCondition}
                 onToggleNegated={onToggleNegated}
                 dateRule={dateRule}
+                names={names}
               />
             )}
           </div>
@@ -357,13 +366,15 @@ const CONDITION_TYPE_ICONS: Record<ConditionType, string> = {
   PRICE_VS_INDICATOR: "📐",
   VOLUME_VALUE: "📈",
   VOLUME_RANGE: "📉",
+  TURNOVER_VALUE: "💵",
+  TURNOVER_RANGE: "💵",
   MARKET_FILTER: "🏢",
   MODEL_SCORE_VALUE: "🤖",
   MODEL_SCORE_RANGE: "🎯",
+  CUSTOM_METRIC_VALUE: "🧮",
+  CUSTOM_METRIC_RANGE: "🧮",
   RANK_VALUE: "🏆",
   RANK_RANGE: "📊",
-  BREADTH_VALUE: "📶",
-  BREADTH_RANGE: "📊",
   STOCK_STATUS: "🚫",
 };
 
@@ -373,12 +384,14 @@ function ConditionNodeView({
   onEdit,
   onToggleNegated,
   dateRule,
+  names,
 }: {
   node: ConditionNode;
   onRemove: (id: string) => void;
   onEdit: (n: ConditionNode) => void;
   onToggleNegated: (id: string) => void;
   dateRule: DateRule;
+  names?: ConditionNames;
 }) {
   // 종목상태는 현재값이라 최신일자에서만 유효 — 과거일자 기준이면 무시됨을 반투명으로 표시.
   const inactive = node.conditionType === "STOCK_STATUS" && dateRule !== "LATEST";
@@ -395,7 +408,7 @@ function ConditionNodeView({
       />
       <span className="text-sm leading-none flex-shrink-0">{CONDITION_TYPE_ICONS[node.conditionType]}</span>
       <span className="flex-1 text-sm text-slate-200 font-mono truncate">
-        {summarizeCondition(node)}
+        {summarizeCondition(node, names)}
         {inactive && <span className="ml-2 not-italic text-xs text-amber-400/80 font-sans">(최신일자에서만 적용)</span>}
       </span>
       <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100 transition">

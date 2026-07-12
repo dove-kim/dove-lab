@@ -9,7 +9,7 @@
 
 ![system](./doc/system.svg)
 
-1. **scheduler**: 잡마다 독립 스레드로 — KRX 당일 종목 동기화(08:05), KIS 종목 상세·투자자동향 수집(12:00), 일일 파이프라인(21:00: 당일 주가 → 지표·순위·상승비율 ∥ DART 재무폴링·상장주식수·밸류에이션 → 모델 채점), DART 고유번호 주간 동기화(일 06:00). 역사적 수집은 ROOT 전용 백필 API(비동기, 재조회 ≤어제) + 대량 과거 데이터는 별도 스크립트. 진행률은 ROOT 대시보드로 조회.
+1. **scheduler**: 잡마다 독립 스레드로 — KRX 당일 종목 동기화(08:05), KIS 종목 상세·투자자동향 수집(12:00), 일일 파이프라인(21:00: 당일 주가 → 지표·순위·커스텀 지표 ∥ DART 재무폴링·상장주식수·밸류에이션 → 모델 채점), DART 고유번호 주간 동기화(일 06:00). 역사적 수집은 ROOT 전용 백필 API(비동기, 재조회 ≤어제) + 대량 과거 데이터는 별도 스크립트. 진행률은 ROOT 대시보드로 조회.
 2. **api**: REST API 서버 — 회원 인증 + 주식 데이터 조회 + 사용자 기능 권한 관리 + 운영(수집·스케줄러) 관리
 3. **web**: Next.js 기반 UI
 
@@ -25,15 +25,16 @@ application/                Driver adapter — Spring Boot 실행 단위
 domain/                     Aggregate 단위 모듈 (entity + repository + CQRS service)
   auth                      Credential, InviteCode
   user                      MemberProfile, MemberRole
-  user-feature              UserFeatureGrant, UserModuleDisplay, UserFeatureDisplay
+  user-feature              Capability(권한 enum), MemberCapabilityGrant, MemberCustomIndicatorGrant(지표별 접근)
   market                    Exchange, ExchangeTradingDate, MarketListingSync
   stock                     Stock, StockDetail, StockEvent(권리이벤트), StockPrice(RAW·ADJUSTED), StockTagValue
   stock-collection          KIS 주가·권리이벤트(KSD)·투자자동향 수집 + KRX 종목 동기화 + 백필 런처(CollectionLauncher)
-  indicator                 StockFeatureDaily(지표 wide) + 지표 계산기 + 횡단면 순위(rank)·상승비율(breadth) + 각 커서(CAS)
+  indicator                 StockFeatureDaily(지표 wide) + 지표 계산기 + 횡단면 순위(rank) + 각 커서(CAS)
   fundamental               DART 재무제표(StockFundamental) + PIT 일별 밸류에이션(StockValuationDaily) + 상장주식수 이력(StockShareCount)
-  screening                 사용자 정의 종목 필터 + 종목 세트 + 지표 프리셋
+  screening                 사용자 정의 종목 필터(불리언 트리 + 순서 파이프라인 FILTER·RANK) + 종목 세트 + 지표 프리셋
   investor-flow             종목별 투자자 매매동향 (기관·외국인·개인)
   model-serving             ML 모델 레지스트리(ML_MODEL) + 일일 채점 점수(STOCK_MODEL_SCORE)
+  custom-metric             ROOT 정의 커스텀 지표(DSL) — SERIES 시장지표(레짐·상승비율) 야간 계산·저장
   system-event              수집·계산 운영 이벤트 기록 (ROOT 모니터링)
 
 infrastructure/             Driven adapter
@@ -192,16 +193,6 @@ docker compose -f docker-compose.prod.yml up -d
 > 운영 DB에는 `init_data.sql`, `init_stock_data.sql`을 **실행하지 않는다.**
 > 스키마(`init.sql`)만 적용하고 데이터는 수집 파이프라인이 채운다.
 
-### 데이터 마이그레이션 (1회성)
-
-기존 운영 스키마에 손으로 적용하는 마이그레이션. 멱등(재실행 안전)이며 도커 기동 시 자동 실행되지 않는다.
-
-`EXCHANGE_TRADING_DATE`(거래소 개장일)를 거래일 목록 조회의 출처로 전환 — 과거 거래일을 `STOCK_PRICE`에서 역추출해 채운다.
-
-```bash
-mysql -u <user> -p <DB명> < scripts/migration/backfill_exchange_trading_date.sql
-```
-
 > 백필 이후의 거래일은 일일 파이프라인(`DailyPipelineOrchestrator`)이 매 거래일 자동 등록한다.
 > 백필은 `STOCK_PRICE`가 EXCHANGE/PRICE_TYPE를 enum ordinal(TINYINT)로 저장하는 것을 전제로 한다 — PriceType.RAW=0, StockExchange KOSPI=0/KOSDAQ=1/KONEX=2.
 
@@ -212,7 +203,6 @@ mysql -u <user> -p <DB명> < scripts/migration/backfill_exchange_trading_date.sq
 | `init.sql` | 스키마 DDL (단일 진실 원천) |
 | `init_data.sql` | 로컬 개발용 사용자 시드 |
 | `init_stock_data.sql` | 로컬 개발용 종목·주가·기술지표 mock |
-| `migration/*.sql` | 운영용 1회성 수동 마이그레이션 (멱등, 자동 실행 X) |
 
 ### 신규 지표 추가 절차
 

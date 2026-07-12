@@ -17,6 +17,7 @@ import java.util.List;
  * @param priceType     주가 유형 (RAW=비수정/ADJUSTED=수정)
  * @param exchange      지표 데이터 거래소 (KRX/NXT/INTEGRATED)
  * @param expression    검색식(원본 JSON)
+ * @param pipeline      순서 단계 목록(원본 JSON 배열, null=단순 필터)
  * @param stockFilterId 종목 필터 ID
  * @param createdAt     생성 일시
  * @param updatedAt     수정 일시
@@ -29,6 +30,7 @@ public record SearchFilterResponse(
         String priceType,
         String exchange,
         @JsonRawValue String expression,
+        @JsonRawValue String pipeline,
         Long stockFilterId,
         LocalDateTime createdAt,
         LocalDateTime updatedAt
@@ -42,6 +44,7 @@ public record SearchFilterResponse(
                 f.getPriceType().name(),
                 f.getExchange().name(),
                 root != null ? root.toString() : "{}",
+                f.getPipeline(),
                 f.getStockFilterId(),
                 f.getCreatedAt(), f.getUpdatedAt()
         );

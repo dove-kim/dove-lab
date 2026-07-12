@@ -20,6 +20,7 @@ import java.util.List;
  * @param priceType     주가 유형 (RAW=비수정/ADJUSTED=수정, 미지정 시 RAW)
  * @param exchange      지표 데이터 거래소 (KRX/NXT/INTEGRATED, 미지정 시 KRX)
  * @param expression    검색식
+ * @param pipeline      순서 단계 목록(원본 JSON 배열, null=단순 필터)
  * @param stockFilterId 종목 필터 ID
  */
 public record CreateSearchFilterRequest(
@@ -29,5 +30,6 @@ public record CreateSearchFilterRequest(
         PriceType priceType,
         FilterVenue exchange,
         @NotBlank String expression,
+        String pipeline,
         Long stockFilterId
 ) {}

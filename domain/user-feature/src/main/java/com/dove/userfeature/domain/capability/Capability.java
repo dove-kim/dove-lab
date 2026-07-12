@@ -16,5 +16,7 @@ public enum Capability {
     /** ML 예측 지표 데이터(민감 — 권한 없으면 응답에서 제거). */
     INDICATOR_ML,
     /** ML 모델 채점 점수 조회·차트(민감 — 권한 없으면 403). */
-    MODEL_SCORE
+    MODEL_SCORE,
+    /** 커스텀 지표 사용(전역 게이트 — 지표별 접근은 MEMBER_CUSTOM_INDICATOR_GRANT). */
+    CUSTOM_INDICATOR
 }

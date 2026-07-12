@@ -50,9 +50,11 @@ public final class FilterEvaluator {
             case IndicatorOperand i -> ctx.indicators() == null ? null : ctx.indicators().get(i.type());
             case PriceOperand p -> price(p.field(), ctx);
             case VolumeOperand v -> ctx.price() == null ? null : ctx.price().getVolume().doubleValue();
+            case TurnoverOperand t -> ctx.price() == null || ctx.price().getTurnover() == null
+                    ? null : ctx.price().getTurnover().doubleValue();
             case ModelScoreOperand m -> ctx.modelScores() == null ? null : ctx.modelScores().get(m.modelId());
             case RankOperand r -> ctx.ranks() == null ? null : ctx.ranks().get(r.type());
-            case BreadthOperand b -> ctx.breadth();
+            case CustomMetricOperand cm -> ctx.customMetrics() == null ? null : ctx.customMetrics().get(cm.metricId());
         };
     }
 
