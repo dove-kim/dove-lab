@@ -46,6 +46,8 @@ public final class FilterModel {
             case PRICE_RANGE -> range(priceOperand(n.path("priceField").asText(), offset(n)), n);
             case VOLUME_VALUE -> threshold(new VolumeOperand(offset(n)), n);
             case VOLUME_RANGE -> range(new VolumeOperand(offset(n)), n);
+            case TURNOVER_VALUE -> threshold(new TurnoverOperand(offset(n)), n);
+            case TURNOVER_RANGE -> range(new TurnoverOperand(offset(n)), n);
             case PRICE_VS_INDICATOR -> comparison(priceOperand(n.path("priceField").asText(), leftOffset(n)),
                     indicatorOperand(n.path("indicator").asText(), rightOffset(n)), n);
             case MARKET_FILTER -> marketFilter(n);
@@ -53,8 +55,8 @@ public final class FilterModel {
             case MODEL_SCORE_RANGE -> range(new ModelScoreOperand(n.path("modelId").asLong(), offset(n)), n);
             case RANK_VALUE -> threshold(rankOperand(n.path("rank").asText(), offset(n)), n);
             case RANK_RANGE -> range(rankOperand(n.path("rank").asText(), offset(n)), n);
-            case BREADTH_VALUE -> threshold(new BreadthOperand(offset(n)), n);
-            case BREADTH_RANGE -> range(new BreadthOperand(offset(n)), n);
+            case CUSTOM_METRIC_VALUE -> threshold(new CustomMetricOperand(n.path("metricId").asLong(), offset(n)), n);
+            case CUSTOM_METRIC_RANGE -> range(new CustomMetricOperand(n.path("metricId").asLong(), offset(n)), n);
             case STOCK_STATUS -> stockStatus(n);
         };
     }

@@ -11,10 +11,13 @@ import {
   PRICE_TYPE_LABELS,
   VenueFilter,
   VENUE_LABELS,
+  PipelineStageState,
 } from "@/types/filter";
-import { createEmptyRoot, parseExpression } from "@/utils/filter";
+import { createEmptyRoot, parseExpression, parsePipeline, serializePipeline } from "@/utils/filter";
+import { useConditionNames } from "@/hooks/useConditionNames";
 import ExpressionTree from "./ExpressionTree";
 import ConditionPalette from "./ConditionPalette";
+import PipelineEditor from "./PipelineEditor";
 import Select from "@/components/Select";
 
 const ALL_MARKETS: MarketTypeFilter[] = ["KOSPI", "KOSDAQ", "KONEX"];
@@ -70,10 +73,12 @@ function FilterEditorContent({
   const [priceType, setPriceType] = useState<PriceTypeFilter>(initial?.priceType ?? "RAW");
   const [exchange, setExchange] = useState<VenueFilter>(initial?.exchange ?? "KRX");
   const [root, setRoot] = useState<GroupNode>(initialData.root);
+  const [pipeline, setPipeline] = useState<PipelineStageState[]>(() => parsePipeline(initial?.pipeline));
   const [selectedGroupId, setSelectedGroupId] = useState<string | null>(initialData.id);
   const [pendingAddType, setPendingAddType] = useState<ConditionType | null>(null);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const names = useConditionNames();
 
   const handlePaletteAdd = useCallback((type: ConditionType) => {
     setPendingAddType(type);
@@ -119,6 +124,7 @@ function FilterEditorContent({
       priceType,
       exchange,
       expression: JSON.stringify(root),
+      pipeline: serializePipeline(pipeline),
       stockFilterId,
     };
     const url = initial ? `/api/filters/${initial.id}` : "/api/filters";
@@ -267,7 +273,9 @@ function FilterEditorContent({
               onSelectGroup={setSelectedGroupId}
               pendingAddType={pendingAddType}
               onPendingAddConsumed={() => setPendingAddType(null)}
+              names={names}
             />
+            <PipelineEditor stages={pipeline} onChange={setPipeline} names={names} />
           </div>
         </div>
 

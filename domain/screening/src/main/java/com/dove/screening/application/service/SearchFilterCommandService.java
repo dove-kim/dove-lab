@@ -32,7 +32,7 @@ public class SearchFilterCommandService {
     public SearchFilter create(Long memberId, String name, DateRule dateRule,
                                 List<MarketType> markets, PriceType priceType, FilterExpression expression,
                                 Long stockFilterId) {
-        return create(memberId, name, dateRule, markets, priceType, FilterVenue.KRX, expression, stockFilterId);
+        return create(memberId, name, dateRule, markets, priceType, FilterVenue.KRX, expression, stockFilterId, null);
     }
 
     /**
@@ -40,9 +40,9 @@ public class SearchFilterCommandService {
      */
     public SearchFilter create(Long memberId, String name, DateRule dateRule,
                                 List<MarketType> markets, PriceType priceType, FilterVenue exchange,
-                                FilterExpression expression, Long stockFilterId) {
-        return searchFilterRepository.save(
-                SearchFilter.create(memberId, name, dateRule, markets, priceType, exchange, expression, stockFilterId));
+                                FilterExpression expression, Long stockFilterId, String pipeline) {
+        return searchFilterRepository.save(SearchFilter.create(
+                memberId, name, dateRule, markets, priceType, exchange, expression, stockFilterId, pipeline));
     }
 
     /**
@@ -53,7 +53,7 @@ public class SearchFilterCommandService {
     public SearchFilter update(Long memberId, Long id, String name, DateRule dateRule,
                                 List<MarketType> markets, PriceType priceType, FilterExpression expression,
                                 Long stockFilterId) {
-        return update(memberId, id, name, dateRule, markets, priceType, FilterVenue.KRX, expression, stockFilterId);
+        return update(memberId, id, name, dateRule, markets, priceType, FilterVenue.KRX, expression, stockFilterId, null);
     }
 
     /**
@@ -63,10 +63,10 @@ public class SearchFilterCommandService {
      */
     public SearchFilter update(Long memberId, Long id, String name, DateRule dateRule,
                                 List<MarketType> markets, PriceType priceType, FilterVenue exchange,
-                                FilterExpression expression, Long stockFilterId) {
+                                FilterExpression expression, Long stockFilterId, String pipeline) {
         SearchFilter filter = searchFilterRepository.findByIdAndMemberId(id, memberId)
                 .orElseThrow(() -> new NoSuchElementException("FILTER_NOT_FOUND"));
-        filter.update(name, dateRule, markets, priceType, exchange, expression, stockFilterId);
+        filter.update(name, dateRule, markets, priceType, exchange, expression, stockFilterId, pipeline);
         return filter;
     }
 

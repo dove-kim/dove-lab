@@ -7,8 +7,8 @@ import com.dove.scheduler.fundamental.ShareCountCollectionService;
 import com.dove.scheduler.job.DailyPipelineOrchestrator;
 import com.dove.scheduler.job.StockDetailJob;
 import com.dove.scheduler.job.StockSyncJob;
-import com.dove.scheduler.service.BreadthComputeService;
 import com.dove.scheduler.service.IndicatorComputeService;
+import com.dove.scheduler.service.CustomMetricComputeService;
 import com.dove.scheduler.service.ModelScoringService;
 import com.dove.scheduler.service.RankComputeService;
 import lombok.extern.slf4j.Slf4j;
@@ -26,8 +26,8 @@ import java.util.List;
 
 /**
  * 로컬 개발용 Job 실행기 (local 프로파일에서만 활성화).
- * JOB=pipeline | derived | indicator | rank | breadth | model-score | stock-sync | stock-detail
- * (pipeline = 전체 일일 파이프라인, derived = 지표→rank→breadth 무-KIS 연쇄). 날짜는 JOB_DATE(yyyy-MM-dd)로 고정.
+ * JOB=pipeline | derived | indicator | rank | custom-metric | model-score | stock-sync | stock-detail
+ * (pipeline = 전체 일일 파이프라인, derived = 지표→rank→custom-metric 무-KIS 연쇄). 날짜는 JOB_DATE(yyyy-MM-dd)로 고정.
  */
 @Slf4j
 @Component
@@ -37,7 +37,7 @@ public class LocalJobRunner implements ApplicationRunner {
     private final DailyPipelineOrchestrator pipelineOrchestrator;
     private final IndicatorComputeService indicatorComputeService;
     private final RankComputeService rankComputeService;
-    private final BreadthComputeService breadthComputeService;
+    private final CustomMetricComputeService customMetricComputeService;
     private final ModelScoringService modelScoringService;
     private final StockSyncJob stockSyncJob;
     private final StockDetailJob stockDetailJob;
@@ -52,7 +52,8 @@ public class LocalJobRunner implements ApplicationRunner {
 
     public LocalJobRunner(DailyPipelineOrchestrator pipelineOrchestrator,
                           IndicatorComputeService indicatorComputeService, RankComputeService rankComputeService,
-                          BreadthComputeService breadthComputeService, ModelScoringService modelScoringService,
+                          CustomMetricComputeService customMetricComputeService,
+                          ModelScoringService modelScoringService,
                           StockSyncJob stockSyncJob, StockDetailJob stockDetailJob,
                           FundamentalCollectionService fundamentalCollectionService,
                           ShareCountCollectionService shareCountCollectionService,
@@ -63,7 +64,7 @@ public class LocalJobRunner implements ApplicationRunner {
         this.pipelineOrchestrator = pipelineOrchestrator;
         this.indicatorComputeService = indicatorComputeService;
         this.rankComputeService = rankComputeService;
-        this.breadthComputeService = breadthComputeService;
+        this.customMetricComputeService = customMetricComputeService;
         this.modelScoringService = modelScoringService;
         this.stockSyncJob = stockSyncJob;
         this.stockDetailJob = stockDetailJob;
@@ -80,7 +81,7 @@ public class LocalJobRunner implements ApplicationRunner {
     @Override
     public void run(ApplicationArguments args) {
         if (job.isBlank()) {
-            log.warn("[로컬] JOB 환경변수 없음. pipeline | derived | indicator | rank | breadth | model-score | stock-sync | stock-detail | fund-corp-sync | fund-backfill | fund-poll | share-count | share-count-range | valuation | valuation-range 중 선택");
+            log.warn("[로컬] JOB 환경변수 없음. pipeline | derived | indicator | rank | custom-metric | model-score | stock-sync | stock-detail | fund-corp-sync | fund-backfill | fund-poll | share-count | share-count-range | valuation | valuation-range 중 선택");
             exit(1); return;
         }
         LocalDate today = LocalDate.now(clock);
@@ -88,12 +89,12 @@ public class LocalJobRunner implements ApplicationRunner {
             case "pipeline"     -> pipelineOrchestrator.run();
             case "indicator"    -> indicatorComputeService.computeAll(today);
             case "rank"         -> rankComputeService.calculateAll(today);
-            case "breadth"      -> breadthComputeService.calculateAll(today);
+            case "custom-metric" -> customMetricComputeService.calculateAll(today);
             case "model-score"  -> modelScoringService.scoreAll(today);
             case "derived"      -> {
                 indicatorComputeService.computeAll(today);
                 rankComputeService.calculateAll(today);
-                breadthComputeService.calculateAll(today);
+                customMetricComputeService.calculateAll(today);
             }
             case "stock-sync"   -> stockSyncJob.run();
             case "stock-detail" -> stockDetailJob.run();

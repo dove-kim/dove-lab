@@ -10,6 +10,7 @@ import com.dove.api.search.stock.dto.StockEventResponse;
 import com.dove.api.search.stock.dto.StockResponse;
 import com.dove.api.search.stock.dto.ValuationResponse;
 import com.dove.fundamental.application.FundamentalQueryService;
+import com.dove.fundamental.application.StockValuationQueryService;
 import com.dove.indicator.application.service.StockFeatureDailyService;
 import com.dove.indicator.domain.enums.IndicatorType;
 import com.dove.investorflow.application.service.InvestorDailyService;
@@ -53,6 +54,7 @@ public class StockController {
     private final StockEventService stockEventQueryService;
     private final InvestorDailyService investorDailyService;
     private final FundamentalQueryService fundamentalQueryService;
+    private final StockValuationQueryService valuationQueryService;
 
     /**
      * 전체 종목 목록을 반환한다.
@@ -76,12 +78,17 @@ public class StockController {
         Map<String, com.dove.stock.domain.entity.StockPrice> prevBars = prev == null
                 ? Map.of() : priceQueryService.findByExchangesAndDate(homeExchanges, PriceType.RAW, prev);
 
+        // 최근 거래일 기준 티커별 시가총액(밸류에이션 있는 종목만) — 정렬용
+        Map<String, Long> marketCaps = latest == null ? Map.of()
+                : valuationQueryService.findMarketCapByDate(latest);
+
         return stocks.stream()
                 .map(s -> StockResponse.from(s,
                         names.getOrDefault(s.getTicker(), s.getTicker()),
                         details.get(s.getTicker()),
                         curBars.get(s.getTicker()),
-                        prevBars.get(s.getTicker())))
+                        prevBars.get(s.getTicker()),
+                        marketCaps.get(s.getTicker())))
                 .toList();
     }
 

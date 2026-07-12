@@ -24,7 +24,7 @@ public class RankSourceRepositorySupport {
 
     /**
      * universe member 거래소들의 STOCK_FEATURE_DAILY 최신 거래일을 반환한다(피처 없으면 null).
-     * 지표가 계산된 가장 최근 거래일이므로 rank/breadth/채점의 상한(프런티어)이 된다.
+     * 지표가 계산된 가장 최근 거래일이므로 rank/채점의 상한(프런티어)이 된다.
      * 상장폐지·거래정지 종목은 최근 거래일에 행이 없어 이 값을 끌어내리지 못한다(전 종목 커서 min 방식과 달리 영향 없음).
      * 파이프라인이 지표→rank 순서라 이 거래일의 횡단면은 완전하다(지표 완료 후 rank 실행).
      */

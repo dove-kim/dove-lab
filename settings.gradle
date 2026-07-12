@@ -56,6 +56,9 @@ project(':stock-collection').projectDir = file('domain/stock-collection')
 include 'model-serving'
 project(':model-serving').projectDir = file('domain/model-serving')
 
+include 'custom-metric'
+project(':custom-metric').projectDir = file('domain/custom-metric')
+
 include 'fundamental'
 project(':fundamental').projectDir = file('domain/fundamental')
 

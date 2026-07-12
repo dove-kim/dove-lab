@@ -12,6 +12,7 @@ import {
   MarketTypeFilter,
   RankType,
   ModelSummary,
+  MetricSummary,
   StockStatusExclude,
   INDICATOR_LABELS,
   INDICATOR_GROUPS,
@@ -201,6 +202,26 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
     initial?.conditionType === "VOLUME_RANGE" ? initial.maxInclusive : true
   );
 
+  const [turnoverVal_op, setTurnoverVal_op] = useState<CompareOp>(
+    initial?.conditionType === "TURNOVER_VALUE" ? initial.operator : "GTE"
+  );
+  const [turnoverVal_val, setTurnoverVal_val] = useState<number>(
+    initial?.conditionType === "TURNOVER_VALUE" ? initial.value : 0
+  );
+
+  const [turnoverRange_min, setTurnoverRange_min] = useState<number>(
+    initial?.conditionType === "TURNOVER_RANGE" ? initial.minValue : 0
+  );
+  const [turnoverRange_minInc, setTurnoverRange_minInc] = useState(
+    initial?.conditionType === "TURNOVER_RANGE" ? initial.minInclusive : true
+  );
+  const [turnoverRange_max, setTurnoverRange_max] = useState<number>(
+    initial?.conditionType === "TURNOVER_RANGE" ? initial.maxValue : 0
+  );
+  const [turnoverRange_maxInc, setTurnoverRange_maxInc] = useState(
+    initial?.conditionType === "TURNOVER_RANGE" ? initial.maxInclusive : true
+  );
+
   const [priceVsInd_field, setPriceVsInd_field] = useState<PriceField>(
     initial?.conditionType === "PRICE_VS_INDICATOR" ? initial.priceField : "CLOSE"
   );
@@ -240,6 +261,10 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
     initial?.conditionType === "PRICE_RANGE" ? (initial.offset ?? 0) : 0);
   const [volRange_offset, setVolRange_offset] = useState<number>(
     initial?.conditionType === "VOLUME_RANGE" ? (initial.offset ?? 0) : 0);
+  const [turnoverVal_offset, setTurnoverVal_offset] = useState<number>(
+    initial?.conditionType === "TURNOVER_VALUE" ? (initial.offset ?? 0) : 0);
+  const [turnoverRange_offset, setTurnoverRange_offset] = useState<number>(
+    initial?.conditionType === "TURNOVER_RANGE" ? (initial.offset ?? 0) : 0);
 
   // ── 종목상태 제외 ───────────────────────────────────────────────────────────────
   const initStatusExclude =
@@ -275,6 +300,32 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
   const [modelScoreRange_maxInc, setModelScoreRange_maxInc] = useState(
     initial?.conditionType === "MODEL_SCORE_RANGE" ? initial.maxInclusive : true);
 
+  // ── 커스텀 지표 ──────────────────────────────────────────────────────────────
+  const [metrics, setMetrics] = useState<MetricSummary[]>([]);
+  const isMetricCondition = conditionType === "CUSTOM_METRIC_VALUE" || conditionType === "CUSTOM_METRIC_RANGE";
+
+  const [metricVal_metricId, setMetricVal_metricId] = useState<number | null>(
+    initial?.conditionType === "CUSTOM_METRIC_VALUE" ? initial.metricId : null);
+  const [metricVal_offset, setMetricVal_offset] = useState<number>(
+    initial?.conditionType === "CUSTOM_METRIC_VALUE" ? (initial.offset ?? 0) : 0);
+  const [metricVal_op, setMetricVal_op] = useState<CompareOp>(
+    initial?.conditionType === "CUSTOM_METRIC_VALUE" ? initial.operator : "GTE");
+  const [metricVal_val, setMetricVal_val] = useState<number>(
+    initial?.conditionType === "CUSTOM_METRIC_VALUE" ? initial.value : 0);
+
+  const [metricRange_metricId, setMetricRange_metricId] = useState<number | null>(
+    initial?.conditionType === "CUSTOM_METRIC_RANGE" ? initial.metricId : null);
+  const [metricRange_offset, setMetricRange_offset] = useState<number>(
+    initial?.conditionType === "CUSTOM_METRIC_RANGE" ? (initial.offset ?? 0) : 0);
+  const [metricRange_min, setMetricRange_min] = useState<number>(
+    initial?.conditionType === "CUSTOM_METRIC_RANGE" ? initial.minValue : 0);
+  const [metricRange_minInc, setMetricRange_minInc] = useState(
+    initial?.conditionType === "CUSTOM_METRIC_RANGE" ? initial.minInclusive : true);
+  const [metricRange_max, setMetricRange_max] = useState<number>(
+    initial?.conditionType === "CUSTOM_METRIC_RANGE" ? initial.maxValue : 1);
+  const [metricRange_maxInc, setMetricRange_maxInc] = useState(
+    initial?.conditionType === "CUSTOM_METRIC_RANGE" ? initial.maxInclusive : true);
+
   // ── 순위 ──────────────────────────────────────────────────────────────────────
   const [rankVal_rank, setRankVal_rank] = useState<RankType>(
     initial?.conditionType === "RANK_VALUE" ? initial.rank : "RANK_TURNOVER");
@@ -298,25 +349,6 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
   const [rankRange_maxInc, setRankRange_maxInc] = useState(
     initial?.conditionType === "RANK_RANGE" ? initial.maxInclusive : true);
 
-  // ── 당일 상승비율(시장 폭) ──────────────────────────────────────────────────────
-  const [breadthVal_offset, setBreadthVal_offset] = useState<number>(
-    initial?.conditionType === "BREADTH_VALUE" ? (initial.offset ?? 0) : 0);
-  const [breadthVal_op, setBreadthVal_op] = useState<CompareOp>(
-    initial?.conditionType === "BREADTH_VALUE" ? initial.operator : "GTE");
-  const [breadthVal_val, setBreadthVal_val] = useState<number>(
-    initial?.conditionType === "BREADTH_VALUE" ? initial.value : 0.45);
-
-  const [breadthRange_offset, setBreadthRange_offset] = useState<number>(
-    initial?.conditionType === "BREADTH_RANGE" ? (initial.offset ?? 0) : 0);
-  const [breadthRange_min, setBreadthRange_min] = useState<number>(
-    initial?.conditionType === "BREADTH_RANGE" ? initial.minValue : 0);
-  const [breadthRange_minInc, setBreadthRange_minInc] = useState(
-    initial?.conditionType === "BREADTH_RANGE" ? initial.minInclusive : true);
-  const [breadthRange_max, setBreadthRange_max] = useState<number>(
-    initial?.conditionType === "BREADTH_RANGE" ? initial.maxValue : 1);
-  const [breadthRange_maxInc, setBreadthRange_maxInc] = useState(
-    initial?.conditionType === "BREADTH_RANGE" ? initial.maxInclusive : true);
-
   useEffect(() => {
     if (!isModelCondition) return;
     fetch("/api/stocks/models")
@@ -337,6 +369,26 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
     label: `${m.name} (v${m.version})`,
   }));
 
+  useEffect(() => {
+    if (!isMetricCondition) return;
+    fetch("/api/stocks/custom-metrics")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: MetricSummary[]) => {
+        setMetrics(data);
+        // 신규 조건이면 첫 지표를 기본 선택
+        if (data.length > 0) {
+          setMetricVal_metricId((cur) => cur ?? data[0].id);
+          setMetricRange_metricId((cur) => cur ?? data[0].id);
+        }
+      })
+      .catch(() => setMetrics([]));
+  }, [isMetricCondition]);
+
+  const METRIC_ITEMS = metrics.map((m) => ({
+    value: String(m.id),
+    label: m.name,
+  }));
+
   function buildNode(): ConditionNode {
     const id = initial?.id ?? generateId();
     const negated = initial?.negated ?? false;
@@ -355,6 +407,10 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
         return { id, nodeType: "CONDITION", negated, conditionType, offset: volVal_offset, operator: volVal_op, value: volVal_val };
       case "VOLUME_RANGE":
         return { id, nodeType: "CONDITION", negated, conditionType, offset: volRange_offset, minValue: volRange_min, minInclusive: volRange_minInc, maxValue: volRange_max, maxInclusive: volRange_maxInc };
+      case "TURNOVER_VALUE":
+        return { id, nodeType: "CONDITION", negated, conditionType, offset: turnoverVal_offset, operator: turnoverVal_op, value: turnoverVal_val };
+      case "TURNOVER_RANGE":
+        return { id, nodeType: "CONDITION", negated, conditionType, offset: turnoverRange_offset, minValue: turnoverRange_min, minInclusive: turnoverRange_minInc, maxValue: turnoverRange_max, maxInclusive: turnoverRange_maxInc };
       case "PRICE_VS_INDICATOR":
         return { id, nodeType: "CONDITION", negated, conditionType, priceField: priceVsInd_field, leftOffset: pvi_leftOffset, operator: priceVsInd_op, indicator: priceVsInd_ind, rightOffset: pvi_rightOffset } as PriceVsIndicatorCondition;
       case "MARKET_FILTER":
@@ -363,14 +419,14 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
         return { id, nodeType: "CONDITION", negated, conditionType, modelId: modelScoreVal_modelId ?? 0, offset: modelScoreVal_offset, operator: modelScoreVal_op, value: modelScoreVal_val };
       case "MODEL_SCORE_RANGE":
         return { id, nodeType: "CONDITION", negated, conditionType, modelId: modelScoreRange_modelId ?? 0, offset: modelScoreRange_offset, minValue: modelScoreRange_min, minInclusive: modelScoreRange_minInc, maxValue: modelScoreRange_max, maxInclusive: modelScoreRange_maxInc };
+      case "CUSTOM_METRIC_VALUE":
+        return { id, nodeType: "CONDITION", negated, conditionType, metricId: metricVal_metricId ?? 0, offset: metricVal_offset, operator: metricVal_op, value: metricVal_val };
+      case "CUSTOM_METRIC_RANGE":
+        return { id, nodeType: "CONDITION", negated, conditionType, metricId: metricRange_metricId ?? 0, offset: metricRange_offset, minValue: metricRange_min, minInclusive: metricRange_minInc, maxValue: metricRange_max, maxInclusive: metricRange_maxInc };
       case "RANK_VALUE":
         return { id, nodeType: "CONDITION", negated, conditionType, rank: rankVal_rank, offset: rankVal_offset, operator: rankVal_op, value: rankVal_val };
       case "RANK_RANGE":
         return { id, nodeType: "CONDITION", negated, conditionType, rank: rankRange_rank, offset: rankRange_offset, minValue: rankRange_min, minInclusive: rankRange_minInc, maxValue: rankRange_max, maxInclusive: rankRange_maxInc };
-      case "BREADTH_VALUE":
-        return { id, nodeType: "CONDITION", negated, conditionType, offset: breadthVal_offset, operator: breadthVal_op, value: breadthVal_val };
-      case "BREADTH_RANGE":
-        return { id, nodeType: "CONDITION", negated, conditionType, offset: breadthRange_offset, minValue: breadthRange_min, minInclusive: breadthRange_minInc, maxValue: breadthRange_max, maxInclusive: breadthRange_maxInc };
       case "STOCK_STATUS": {
         const exclude: StockStatusExclude[] = [];
         if (excludeHalt) exclude.push("TRADING_HALT");
@@ -389,17 +445,20 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
     PRICE_RANGE: "가격 범위",
     VOLUME_VALUE: "거래량 비교",
     VOLUME_RANGE: "거래량 범위",
+    TURNOVER_VALUE: "거래대금 비교",
+    TURNOVER_RANGE: "거래대금 범위",
     MARKET_FILTER: "시장 필터",
     MODEL_SCORE_VALUE: "모델 점수 비교",
     MODEL_SCORE_RANGE: "모델 점수 범위",
+    CUSTOM_METRIC_VALUE: "커스텀 지표 비교",
+    CUSTOM_METRIC_RANGE: "커스텀 지표 범위",
     RANK_VALUE: "순위 비교",
     RANK_RANGE: "순위 범위",
-    BREADTH_VALUE: "당일 상승비율 비교",
-    BREADTH_RANGE: "당일 상승비율 범위",
     STOCK_STATUS: "종목상태 (거래정지·관리종목 제외)",
   };
 
   const noModelAvailable = isModelCondition && models.length === 0;
+  const noMetricAvailable = isMetricCondition && metrics.length === 0;
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
@@ -584,6 +643,42 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
             </>
           )}
 
+          {conditionType === "TURNOVER_VALUE" && (
+            <>
+              <OffsetInput value={turnoverVal_offset} onChange={setTurnoverVal_offset} />
+              <div className="flex gap-2">
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">비교 연산자</label>
+                  <OpSelect value={turnoverVal_op} onChange={setTurnoverVal_op} />
+                </div>
+                <div className="flex-1">
+                  <label className="text-xs text-slate-400 mb-1 block">거래대금(원)</label>
+                  <NumberInput value={turnoverVal_val} onChange={setTurnoverVal_val} placeholder="예: 1000000000 (10억)" />
+                </div>
+              </div>
+            </>
+          )}
+
+          {conditionType === "TURNOVER_RANGE" && (
+            <>
+              <OffsetInput value={turnoverRange_offset} onChange={setTurnoverRange_offset} />
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">최솟값(원)</label>
+                  <NumberInput value={turnoverRange_min} onChange={setTurnoverRange_min} placeholder="예: 1000000000" />
+                </div>
+                <div>
+                  <label className="text-xs text-slate-400 mb-1 block">최댓값(원)</label>
+                  <NumberInput value={turnoverRange_max} onChange={setTurnoverRange_max} placeholder="예: 5000000000" />
+                </div>
+              </div>
+              <div className="flex gap-4">
+                <InclusiveToggle label="최솟값 포함" value={turnoverRange_minInc} onChange={setTurnoverRange_minInc} />
+                <InclusiveToggle label="최댓값 포함" value={turnoverRange_maxInc} onChange={setTurnoverRange_maxInc} />
+              </div>
+            </>
+          )}
+
           {conditionType === "MARKET_FILTER" && (
             <div>
               <label className="text-xs text-slate-400 mb-2 block">시장 선택</label>
@@ -666,6 +761,64 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
             </>
           )}
 
+          {conditionType === "CUSTOM_METRIC_VALUE" && (
+            <>
+              {noMetricAvailable ? (
+                <p className="text-sm text-amber-400">활성화된 커스텀 지표가 없습니다. 관리자에게 지표 등록을 요청하세요.</p>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">커스텀 지표</label>
+                    <Select value={metricVal_metricId != null ? String(metricVal_metricId) : null}
+                      items={METRIC_ITEMS} onChange={v => setMetricVal_metricId(Number(v))} className="w-full" />
+                  </div>
+                  <OffsetInput value={metricVal_offset} onChange={setMetricVal_offset} />
+                  <div className="flex gap-2">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">비교 연산자</label>
+                      <OpSelect value={metricVal_op} onChange={setMetricVal_op} />
+                    </div>
+                    <div className="flex-1">
+                      <label className="text-xs text-slate-400 mb-1 block">값</label>
+                      <NumberInput value={metricVal_val} onChange={setMetricVal_val} placeholder="예: 1" />
+                    </div>
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
+          {conditionType === "CUSTOM_METRIC_RANGE" && (
+            <>
+              {noMetricAvailable ? (
+                <p className="text-sm text-amber-400">활성화된 커스텀 지표가 없습니다. 관리자에게 지표 등록을 요청하세요.</p>
+              ) : (
+                <>
+                  <div>
+                    <label className="text-xs text-slate-400 mb-1 block">커스텀 지표</label>
+                    <Select value={metricRange_metricId != null ? String(metricRange_metricId) : null}
+                      items={METRIC_ITEMS} onChange={v => setMetricRange_metricId(Number(v))} className="w-full" />
+                  </div>
+                  <OffsetInput value={metricRange_offset} onChange={setMetricRange_offset} />
+                  <div className="grid grid-cols-2 gap-3">
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">최솟값</label>
+                      <NumberInput value={metricRange_min} onChange={setMetricRange_min} placeholder="예: 0" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-slate-400 mb-1 block">최댓값</label>
+                      <NumberInput value={metricRange_max} onChange={setMetricRange_max} placeholder="예: 1" />
+                    </div>
+                  </div>
+                  <div className="flex gap-4">
+                    <InclusiveToggle label="최솟값 포함" value={metricRange_minInc} onChange={setMetricRange_minInc} />
+                    <InclusiveToggle label="최댓값 포함" value={metricRange_maxInc} onChange={setMetricRange_maxInc} />
+                  </div>
+                </>
+              )}
+            </>
+          )}
+
           {conditionType === "RANK_VALUE" && (
             <>
               <div>
@@ -711,43 +864,6 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
             </>
           )}
 
-          {conditionType === "BREADTH_VALUE" && (
-            <>
-              <OffsetInput value={breadthVal_offset} onChange={setBreadthVal_offset} />
-              <div className="flex gap-2">
-                <div>
-                  <label className="text-xs text-slate-400 mb-1 block">비교 연산자</label>
-                  <OpSelect value={breadthVal_op} onChange={setBreadthVal_op} />
-                </div>
-                <div className="flex-1">
-                  <label className="text-xs text-slate-400 mb-1 block">당일 상승비율 (0~1)</label>
-                  <NumberInput value={breadthVal_val} onChange={setBreadthVal_val} placeholder="예: 0.45" />
-                </div>
-              </div>
-              <p className="text-xs text-slate-500">당일 상승비율은 0~1 사이 값(1=전종목 상승)입니다.</p>
-            </>
-          )}
-
-          {conditionType === "BREADTH_RANGE" && (
-            <>
-              <OffsetInput value={breadthRange_offset} onChange={setBreadthRange_offset} />
-              <div className="grid grid-cols-2 gap-3">
-                <div>
-                  <label className="text-xs text-slate-400 mb-1 block">최솟값 (0~1)</label>
-                  <NumberInput value={breadthRange_min} onChange={setBreadthRange_min} placeholder="예: 0.45" />
-                </div>
-                <div>
-                  <label className="text-xs text-slate-400 mb-1 block">최댓값 (0~1)</label>
-                  <NumberInput value={breadthRange_max} onChange={setBreadthRange_max} placeholder="예: 1" />
-                </div>
-              </div>
-              <div className="flex gap-4">
-                <InclusiveToggle label="최솟값 포함" value={breadthRange_minInc} onChange={setBreadthRange_minInc} />
-                <InclusiveToggle label="최댓값 포함" value={breadthRange_maxInc} onChange={setBreadthRange_maxInc} />
-              </div>
-            </>
-          )}
-
           {conditionType === "STOCK_STATUS" && (
             <>
               <label className="text-xs text-slate-400 mb-1 block">결과에서 제외할 종목상태</label>
@@ -783,8 +899,8 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
           </button>
           <button
             onClick={() => onConfirm(buildNode())}
-            disabled={noModelAvailable}
-            className={`flex-1 ${cx.btnPrimary}${noModelAvailable ? " opacity-40 cursor-not-allowed" : ""}`}
+            disabled={noModelAvailable || noMetricAvailable}
+            className={`flex-1 ${cx.btnPrimary}${noModelAvailable || noMetricAvailable ? " opacity-40 cursor-not-allowed" : ""}`}
           >
             {initial ? "수정" : "추가"}
           </button>

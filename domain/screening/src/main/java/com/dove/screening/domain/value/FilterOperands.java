@@ -23,17 +23,6 @@ public final class FilterOperands {
     }
 
     /**
-     * 트리에 상승비율(BreadthOperand) 조건이 하나라도 있으면 true.
-     */
-    public static boolean usesBreadth(FilterNode node) {
-        boolean[] found = {false};
-        walk(node, o -> {
-            if (o instanceof BreadthOperand) found[0] = true;
-        });
-        return found[0];
-    }
-
-    /**
      * 트리에 종목 상태(StockStatusCondition) 조건이 하나라도 있으면 true. 그룹·부정 내부도 재귀 탐색한다.
      */
     public static boolean usesStockStatus(FilterNode node) {
@@ -52,6 +41,17 @@ public final class FilterOperands {
         Set<Long> ids = new LinkedHashSet<>();
         walk(node, o -> {
             if (o instanceof ModelScoreOperand m) ids.add(m.modelId());
+        });
+        return ids;
+    }
+
+    /**
+     * 트리가 참조하는 커스텀 지표 식별자 집합을 반환한다.
+     */
+    public static Set<Long> referencedCustomMetricIds(FilterNode node) {
+        Set<Long> ids = new LinkedHashSet<>();
+        walk(node, o -> {
+            if (o instanceof CustomMetricOperand c) ids.add(c.metricId());
         });
         return ids;
     }

@@ -83,16 +83,17 @@ application/           Driver adapter — Spring Boot 실행 단위
 domain/                Aggregate 단위 모듈 (entity + repo + JPA/QueryDSL + CQRS service)
   auth                 Credential, InviteCode
   user                 MemberProfile, MemberRole
-  user-feature         UserFeatureGrant, UserModuleDisplay, UserFeatureDisplay
+  user-feature         Capability(권한 enum), MemberCapabilityGrant(사용자 권한), MemberCustomIndicatorGrant(지표별 접근)
   market               MarketType, Exchange, ExchangeTradingDate, MarketListingSync
   stock                Stock, StockDetail, StockEvent(권리이벤트), StockPrice, StockTagValue
   stock-collection     KIS 주가/KSD 권리이벤트 수집 코어 + KRX 종목 동기화(StockSyncService) + TradingDayPort/ShareCountFetcher(KRX 포트) + 수집 태스크(CollectionLauncher, CollectionTask)
-  indicator            StockFeatureDaily(지표 wide) + 지표 계산기 + 횡단면 순위(rank)·상승비율(breadth) 계산 + 각 커서(IndicatorCursor·RankCursor·BreadthCursor, CAS)
+  indicator            StockFeatureDaily(지표 wide) + 지표 계산기 + 횡단면 순위(rank) 계산 + 각 커서(IndicatorCursor·RankCursor, CAS)
   fundamental          StockFundamental(DART 재무) + StockValuationDaily(PIT 일별 밸류에이션) + StockShareCount(상장주식수 변경이력)
   investor-flow        InvestorDaily (기관·외국인·개인 매매동향)
   model-serving        ML 모델 레지스트리(ML_MODEL) + 채점 점수(STOCK_MODEL_SCORE) + 아티팩트 실행(score.py)
+  custom-metric        ROOT 정의 커스텀 지표(DSL 계산식 JSON) — CustomMetricDef/Daily + 순수 평가기 + SERIES 시장지표(레짐·상승비율 등, 야간 증분 계산·저장). 전략을 코드 아닌 데이터로 은닉
   system-event         수집·계산 운영 이벤트(KRX/KIS 실패 등) — ROOT 모니터링
-  screening            사용자 정의 종목 필터 + 종목 세트 + 지표 프리셋
+  screening            사용자 정의 종목 필터(불리언 트리 + 순서 파이프라인: FILTER·RANK 단계, 등락/시총/거래량 정렬·top-N) + 종목 세트 + 지표 프리셋
 
 infrastructure/        Driven adapter — 외부 시스템 연결
   krx                  KRX API 어댑터 (Feign) — 종목·일별시세(상장주식수)

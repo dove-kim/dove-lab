@@ -26,6 +26,7 @@ dependencies {
     implementation project(":user")
     implementation project(":screening")
     implementation project(":model-serving")
+    implementation project(":custom-metric")
     implementation project(":user-feature")
     implementation project(":system-event")
     implementation project(":api-quota")

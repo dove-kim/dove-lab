@@ -40,13 +40,15 @@ export type ConditionType =
   | "PRICE_VS_INDICATOR"
   | "VOLUME_VALUE"
   | "VOLUME_RANGE"
+  | "TURNOVER_VALUE"
+  | "TURNOVER_RANGE"
   | "MARKET_FILTER"
   | "MODEL_SCORE_VALUE"
   | "MODEL_SCORE_RANGE"
+  | "CUSTOM_METRIC_VALUE"
+  | "CUSTOM_METRIC_RANGE"
   | "RANK_VALUE"
   | "RANK_RANGE"
-  | "BREADTH_VALUE"
-  | "BREADTH_RANGE"
   | "STOCK_STATUS";
 
 export type StockStatusExclude = "TRADING_HALT" | "ADMIN_ITEM";
@@ -74,6 +76,30 @@ export interface ModelSummary {
   name: string;
   version: string;
   outputType: string;
+}
+
+/**
+ * 활성 커스텀 지표 요약(필터 조건에서 지표 선택용).
+ *
+ * @param id    지표 식별자
+ * @param name  지표 이름
+ * @param shape 출력 형태
+ */
+export interface MetricSummary {
+  id: number;
+  name: string;
+  shape: string;
+}
+
+/**
+ * 조건 요약에서 커스텀 지표·모델을 이름으로 표시하기 위한 id→이름 맵.
+ *
+ * @param metrics 커스텀 지표 id→이름
+ * @param models  모델 id→이름
+ */
+export interface ConditionNames {
+  metrics?: Record<number, string>;
+  models?: Record<number, string>;
 }
 
 export interface GroupNode {
@@ -152,6 +178,22 @@ export interface VolumeRangeCondition extends BaseCondition {
   maxInclusive: boolean;
 }
 
+export interface TurnoverValueCondition extends BaseCondition {
+  conditionType: "TURNOVER_VALUE";
+  offset?: number;
+  operator: CompareOp;
+  value: number;
+}
+
+export interface TurnoverRangeCondition extends BaseCondition {
+  conditionType: "TURNOVER_RANGE";
+  offset?: number;
+  minValue: number;
+  minInclusive: boolean;
+  maxValue: number;
+  maxInclusive: boolean;
+}
+
 export interface PriceVsIndicatorCondition extends BaseCondition {
   conditionType: "PRICE_VS_INDICATOR";
   priceField: PriceField;
@@ -184,6 +226,24 @@ export interface ModelScoreRangeCondition extends BaseCondition {
   maxInclusive: boolean;
 }
 
+export interface CustomMetricValueCondition extends BaseCondition {
+  conditionType: "CUSTOM_METRIC_VALUE";
+  metricId: number;
+  offset?: number;
+  operator: CompareOp;
+  value: number;
+}
+
+export interface CustomMetricRangeCondition extends BaseCondition {
+  conditionType: "CUSTOM_METRIC_RANGE";
+  metricId: number;
+  offset?: number;
+  minValue: number;
+  minInclusive: boolean;
+  maxValue: number;
+  maxInclusive: boolean;
+}
+
 export interface RankValueCondition extends BaseCondition {
   conditionType: "RANK_VALUE";
   rank: RankType;
@@ -195,22 +255,6 @@ export interface RankValueCondition extends BaseCondition {
 export interface RankRangeCondition extends BaseCondition {
   conditionType: "RANK_RANGE";
   rank: RankType;
-  offset?: number;
-  minValue: number;
-  minInclusive: boolean;
-  maxValue: number;
-  maxInclusive: boolean;
-}
-
-export interface BreadthValueCondition extends BaseCondition {
-  conditionType: "BREADTH_VALUE";
-  offset?: number;
-  operator: CompareOp;
-  value: number;
-}
-
-export interface BreadthRangeCondition extends BaseCondition {
-  conditionType: "BREADTH_RANGE";
   offset?: number;
   minValue: number;
   minInclusive: boolean;
@@ -236,16 +280,71 @@ export type ConditionNode =
   | PriceVsIndicatorCondition
   | VolumeValueCondition
   | VolumeRangeCondition
+  | TurnoverValueCondition
+  | TurnoverRangeCondition
   | MarketFilterCondition
   | ModelScoreValueCondition
   | ModelScoreRangeCondition
+  | CustomMetricValueCondition
+  | CustomMetricRangeCondition
   | RankValueCondition
   | RankRangeCondition
-  | BreadthValueCondition
-  | BreadthRangeCondition
   | StockStatusCondition;
 
 export type ExpressionNode = GroupNode | ConditionNode;
+
+// ─── 순서 파이프라인(정렬·순위 단계) ──────────────────────────────────────────
+
+export type SortField = "CHANGE_RATE" | "MARKET_CAP" | "VOLUME";
+export type SortDirection = "ASC" | "DESC";
+
+export const SORT_FIELDS: SortField[] = ["CHANGE_RATE", "MARKET_CAP", "VOLUME"];
+
+export const SORT_FIELD_LABELS: Record<SortField, string> = {
+  CHANGE_RATE: "등락률",
+  MARKET_CAP: "시가총액",
+  VOLUME: "거래량",
+};
+
+export const SORT_DIRECTION_LABELS: Record<SortDirection, string> = {
+  ASC: "오름",
+  DESC: "내림",
+};
+
+/**
+ * 정렬 키. 위에서부터 우선순위.
+ *
+ * @param field     정렬 기준 필드
+ * @param direction 정렬 방향
+ */
+export interface SortKey {
+  field: SortField;
+  direction: SortDirection;
+}
+
+/**
+ * RANK 단계. 지정한 정렬 키로 정렬 후 상위 N개만 남긴다(limit 비우면 정렬만).
+ */
+export interface RankStage {
+  type: "RANK";
+  sort: SortKey[];
+  limit?: number | null;
+}
+
+/**
+ * FILTER 단계. 추가 조건 그룹(기존 검색식과 같은 트리)으로 결과를 좁힌다.
+ */
+export interface FilterStage {
+  type: "FILTER";
+  expression: GroupNode;
+}
+
+export type PipelineStage = RankStage | FilterStage;
+
+/**
+ * 편집기 내부 파이프라인 단계 상태. 렌더 키 안정화를 위해 id를 부여하며, 저장 시 제거한다.
+ */
+export type PipelineStageState = PipelineStage & { id: string };
 
 export type DateRule = "LATEST" | "SPECIFIC_DATE" | "PREV_1D" | "PREV_3D" | "PREV_5D" | "PREV_10D";
 
@@ -266,6 +365,7 @@ export interface SearchFilter {
   priceType: PriceTypeFilter;
   exchange: VenueFilter;
   expression: string;
+  pipeline?: string | null;
   stockFilterId: number | null;
   createdAt: string;
   updatedAt: string;
@@ -281,6 +381,7 @@ export interface StockMatchResult {
   closePrice: number | null;
   volume: number | null;
   prevClose?: number | null;
+  marketCap?: number | null;
   tradingHalt?: boolean;
   adminItem?: boolean;
 }

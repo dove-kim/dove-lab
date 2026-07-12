@@ -33,8 +33,9 @@
 
 /market/trading-days     GET   거래일 목록
 
-/filters                 CRUD  종목 검색 필터 (저장·조회·실행)
-/filters/{id}/execute    POST  필터 실행
+/filters                 CRUD  종목 검색 필터 (저장·조회·실행, 불리언 트리 + 순서 파이프라인)
+/filters/{id}/execute    POST  필터 실행 (FILTER·RANK 단계 순차, 등락/시총/거래량 정렬·top-N)
+/custom-metrics          GET   접근 허용된 커스텀 지표 요약 (필터 빌더용, CUSTOM_INDICATOR)
 
 /stock-tags              GET   종목 분류(태그) 차원·값 목록 + 수치 필드 (검색·필터 UI 공통)
 /admin/stock-tags/{id}/label  PATCH  분류 값 표시명 편집 (ROOT)
@@ -45,8 +46,9 @@
 
 /me/menu                 GET / PATCH  내 메뉴 조회·설정
 
-/admin/users/{id}/features  PATCH  기능 권한 부여·회수 (ADMIN↑)
-/admin/users/{id}/menu      GET    사용자 메뉴 미리보기 (ADMIN↑)
+/admin/users/{id}/capabilities  GET / PATCH  capability 권한 조회·부여·회수 (ADMIN↑)
+/admin/users/{id}/menu          GET          사용자 메뉴 미리보기 (ADMIN↑)
+/admin/custom-metric-grants     GET / PATCH  사용자별 커스텀 지표 접근 부여·회수 (ADMIN↑)
 
 /root/invite-codes       GET / POST  초대 코드 관리 (ROOT)
 /root/users              GET / PATCH 사용자 관리 (ROOT)
@@ -59,6 +61,7 @@
 /admin/ops/collection/valuation   POST  일별 밸류에이션 재계산 시작 → 작업ID (외부 API 없이 DB 재계산)
 /admin/ops/collection/tasks   GET   수집 작업 목록·상태 폴링
 /admin/ops/models             CRUD  ML 모델 등록·조회·활성/비활성·커서리셋·점수삭제
+/admin/ops/custom-metrics     CRUD  커스텀 지표 정의(DSL) 등록·활성/비활성·재계산·삭제·미리보기 (ROOT)
 /admin/ops/scheduler/status   GET   스케줄러/백필 진행률 (대시보드)
 /admin/ops/system-events      GET   수집·계산 운영 이벤트 (KRX/KIS 실패 등)
 /admin/ops/api-quota          GET   API 호출 할당량 현황

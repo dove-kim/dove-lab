@@ -10,7 +10,7 @@ KRX/KIS/DART에서 종목·주가·투자자동향·재무를 수집하고 지�
 |---|---|---|
 | 08:05 | `StockSyncJob` | KRX 당일 종목 스냅샷을 최신 상태로 upsert (신규 종목 포함) |
 | 12:00 | `StockDetailJob` | 전 종목 KIS 상세정보(`STOCK_DETAIL`) + 투자자매매동향(`INVESTOR_DAILY`) + 당일 권리이벤트(`STOCK_EVENT`, KSD) 수집 |
-| 21:00 | `DailyPipelineOrchestrator` | 당일 주가 수집(하드 게이트) → **병렬** {① 지표 → 순위(rank) → 상승비율(breadth) ∥ ② DART 공시 폴링 → 상장주식수 → 밸류에이션} → 모델 채점. 각 단계 실패는 시스템 이벤트로 격리(다음 단계 계속). |
+| 21:00 | `DailyPipelineOrchestrator` | 당일 주가 수집(하드 게이트) → **병렬** {① 지표 → 순위(rank) → 커스텀 지표(custom-metric) ∥ ② DART 공시 폴링 → 상장주식수 → 밸류에이션} → 모델 채점. 각 단계 실패는 시스템 이벤트로 격리(다음 단계 계속). |
 | 일 06:00 | `FundamentalScheduledJobs` | DART 고유번호(corp_code) 주간 동기화 (신규 상장 반영) |
 
 > **KIS 데이터 가용 시각**: 장 마감(15:30) 후 약 20:00 KST부터 당일 주가 조회 가능 → 파이프라인은 21:00.
@@ -48,7 +48,7 @@ KRX/KIS/DART에서 종목·주가·투자자동향·재무를 수집하고 지�
 | 환경변수 | 값 |
 |---|---|
 | `SPRING_PROFILES_ACTIVE` | `local` (필수 — 없으면 잡 안 돎, 웹서버만 대기) |
-| `JOB` | `pipeline`(전체) \| `derived`(지표→rank→breadth) \| `indicator` \| `rank` \| `breadth` \| `model-score` \| `stock-sync` \| `stock-detail` \| `fund-corp-sync` \| `fund-backfill` \| `fund-poll` \| `share-count` \| `share-count-range` \| `valuation` \| `valuation-range` |
+| `JOB` | `pipeline`(전체) \| `derived`(지표→rank→custom-metric) \| `indicator` \| `rank` \| `custom-metric` \| `model-score` \| `stock-sync` \| `stock-detail` \| `fund-corp-sync` \| `fund-backfill` \| `fund-poll` \| `share-count` \| `share-count-range` \| `valuation` \| `valuation-range` |
 | `FUND_FROM_YEAR` / `FUND_TO_YEAR` | `fund-backfill`·`valuation-range`·`share-count-range` 의 연도 범위 (기본 2015~2024) |
 
 > DART 잡(`fund-*`)은 `DART_API_KEY`, 상장주식수 잡(`share-count*`)은 `KRX_API_AUTH_KEY` 필요.

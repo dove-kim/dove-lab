@@ -10,7 +10,7 @@ import com.dove.market.domain.enums.Exchange;
 import com.dove.scheduler.fundamental.DailyValuationService;
 import com.dove.scheduler.fundamental.FundamentalCollectionService;
 import com.dove.scheduler.fundamental.ShareCountCollectionService;
-import com.dove.scheduler.service.BreadthComputeService;
+import com.dove.scheduler.service.CustomMetricComputeService;
 import com.dove.scheduler.service.IndicatorComputeService;
 import com.dove.scheduler.service.ModelScoringService;
 import com.dove.scheduler.service.RankComputeService;
@@ -43,7 +43,7 @@ public class DailyPipelineOrchestrator {
     private final PriceCollectionService priceCollectionService;
     private final IndicatorComputeService indicatorComputeService;
     private final RankComputeService rankComputeService;
-    private final BreadthComputeService breadthComputeService;
+    private final CustomMetricComputeService customMetricComputeService;
     private final ModelScoringService modelScoringService;
     private final FundamentalCollectionService fundamentalCollectionService;
     private final ShareCountCollectionService shareCountCollectionService;
@@ -74,12 +74,12 @@ public class DailyPipelineOrchestrator {
         }
 
         // 두 묶음을 병렬 실행 — 지표계열(①②③)과 재무계열(⑤⑥)은 서로 다른 테이블을 쓰고 결과를 공유하지 않는다.
-        //  A: 지표 → rank → 상승비율   B: 재무 폴링 → 밸류에이션(밸류에이션 전에 오늘 공시 반영)
+        //  A: 지표 → rank → 커스텀 지표   B: 재무 폴링 → 밸류에이션(밸류에이션 전에 오늘 공시 반영)
         // 각 단계는 runStage로 실패 격리되어 브랜치·상대 브랜치를 막지 않는다.
         Runnable derivedBranch = () -> {
             runStage(SchedulerJobName.INDICATOR, () -> indicatorComputeService.computeAll(today));
             runStage(SchedulerJobName.RANK, () -> rankComputeService.calculateAll(today));
-            runStage(SchedulerJobName.BREADTH, () -> breadthComputeService.calculateAll(today));
+            runStage(SchedulerJobName.CUSTOM_METRIC, () -> customMetricComputeService.calculateAll(today));
         };
         Runnable fundamentalBranch = () -> {
             // 14일 창 — 주말·연휴 + 서버 다운/조회 실패로 며칠 걸러도 다음 정상 실행에서 회수(멱등이라 겹침 안전)

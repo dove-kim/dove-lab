@@ -30,11 +30,54 @@ interface StockApiItem {
   closePrice: number | null;
   volume: number | null;
   prevClose: number | null;
+  marketCap: number | null;
 }
 
 type StatusFilter = "all" | "halt" | "admin" | "new";
-type SortOrder = "default" | "name";
+// 리스트 표시 정렬은 단일 키 + 방향으로 충분 — 다중 정렬은 필터 파이프라인 RANK가 담당한다.
+type SortField = "default" | "name" | "change" | "volume" | "marketCap";
+type SortDir = "asc" | "desc";
 type Mode = "all" | "filter";
+
+// 숫자 정렬 필드 라벨(방향 토글 노출 대상). default·name은 방향 고정이라 제외.
+const SORT_FIELD_OPTIONS: { value: SortField; label: string }[] = [
+  { value: "default", label: "기본" },
+  { value: "name", label: "이름" },
+  { value: "change", label: "등락률" },
+  { value: "volume", label: "거래량" },
+  { value: "marketCap", label: "시가총액" },
+];
+const NUMERIC_SORT_FIELDS: SortField[] = ["change", "volume", "marketCap"];
+
+/**
+ * 종목 한 건의 정렬값을 반환한다(없으면 null → 항상 마지막). 등락률=(종가-전일종가)/전일종가.
+ */
+function sortValue(s: StockMatchResult, field: SortField): number | null {
+  if (field === "change") {
+    return s.prevClose != null && s.prevClose > 0 && s.closePrice != null
+      ? (s.closePrice - s.prevClose) / s.prevClose : null;
+  }
+  if (field === "volume") return s.volume ?? null;
+  if (field === "marketCap") return s.marketCap ?? null;
+  return null;
+}
+
+/**
+ * 단일 키 + 방향으로 종목 목록을 정렬한다. null 값은 방향과 무관하게 항상 마지막.
+ */
+function sortStocks(list: StockMatchResult[], field: SortField, dir: SortDir): StockMatchResult[] {
+  if (field === "default") return list;
+  if (field === "name") return [...list].sort((a, b) => a.name.localeCompare(b.name, "ko"));
+  const sign = dir === "asc" ? 1 : -1;
+  return [...list].sort((a, b) => {
+    const av = sortValue(a, field);
+    const bv = sortValue(b, field);
+    if (av == null && bv == null) return 0;
+    if (av == null) return 1;
+    if (bv == null) return -1;
+    return (av - bv) * sign;
+  });
+}
 
 function isNewListing(listingDate: string | null): boolean {
   if (!listingDate) return false;
@@ -77,7 +120,8 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
   const [allLoading, setAllLoading] = useState(true);
   const [allError, setAllError] = useState<string | null>(null);
   const [status, setStatus] = useState<StatusFilter>("all");
-  const [sortOrder, setSortOrder] = useState<SortOrder>("default");
+  const [sortField, setSortField] = useState<SortField>("default");
+  const [sortDir, setSortDir] = useState<SortDir>("desc");
 
   // ── 필터 모드 상태 ─────────────────────────────────────────────────────────────
   const [selectedFilterId, setSelectedFilterId] = useState<number | null>(
@@ -106,6 +150,7 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
           code: s.ticker, name: s.name, marketType: s.market,
           openPrice: s.openPrice, highPrice: s.highPrice, lowPrice: s.lowPrice,
           closePrice: s.closePrice, volume: s.volume, prevClose: s.prevClose,
+          marketCap: s.marketCap ?? null,
           tradingHalt: s.tradingHalt, adminItem: s.adminItem,
         })));
       })
@@ -127,20 +172,21 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
   const displayList = useMemo(() => {
     const q = searchQuery.trim().toLowerCase();
     if (mode === "all") {
-      let r = allStocks.filter((s) => {
+      const r = allStocks.filter((s) => {
         if (status === "halt" && !s.tradingHalt) return false;
         if (status === "admin" && !s.adminItem) return false;
         if (status === "new" && !newListingSet.has(s.code)) return false;
         if (q && !(s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q))) return false;
         return true;
       });
-      if (sortOrder === "name") r = [...r].sort((a, b) => a.name.localeCompare(b.name, "ko"));
-      return r;
+      return sortStocks(r, sortField, sortDir);
     }
     if (!result?.results) return [];
-    if (!q) return result.results;
-    return result.results.filter((s) => s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q));
-  }, [mode, allStocks, status, sortOrder, newListingSet, searchQuery, result]);
+    const filtered = q
+      ? result.results.filter((s) => s.name.toLowerCase().includes(q) || s.code.toLowerCase().includes(q))
+      : result.results;
+    return sortStocks(filtered, sortField, sortDir);
+  }, [mode, allStocks, status, sortField, sortDir, newListingSet, searchQuery, result]);
 
   // ── 키보드 종목 이동 (↑↓) ───────────────────────────────────────────────────────
   const keyNavRef = useRef<(e: KeyboardEvent) => void>(() => {});
@@ -249,6 +295,31 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
   const listError = mode === "all" ? allError : filterError;
   const listEmpty = !listError && displayList.length === 0;
 
+  // 정렬 컨트롤(두 모드 공용) — 단일 키 + 방향. 숫자 필드일 때만 방향 토글 노출.
+  const sortControl = (
+    <div className="flex flex-col gap-1">
+      <label className="text-xs text-slate-400">정렬</label>
+      <div className="flex items-center gap-1.5">
+        <Select
+          value={sortField}
+          items={SORT_FIELD_OPTIONS.map((o) => ({ value: o.value, label: o.label }))}
+          onChange={(v) => setSortField(v as SortField)}
+          className="w-28"
+        />
+        {NUMERIC_SORT_FIELDS.includes(sortField) && (
+          <button type="button" onClick={() => setSortDir((d) => (d === "asc" ? "desc" : "asc"))}
+            title={sortDir === "asc" ? "오름차순" : "내림차순"}
+            className="flex items-center justify-center w-9 h-9 rounded-lg border border-white/15 text-slate-300 hover:text-white hover:bg-white/5 transition">
+            {sortDir === "asc" ? "↑" : "↓"}
+          </button>
+        )}
+      </div>
+      {sortField === "marketCap" && (
+        <span className="text-[10px] text-slate-500">밸류에이션 있는 종목만</span>
+      )}
+    </div>
+  );
+
   return (
     <div className="flex flex-col flex-1 overflow-hidden min-w-0">
       {/* ── 검색/필터 영역 토글 바 (모바일·웹 공통) ───────────────────────────── */}
@@ -311,14 +382,7 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
                 ))}
               </div>
             </div>
-            <div className="flex flex-col gap-1">
-              <label className="text-xs text-slate-400">정렬</label>
-              <button type="button" onClick={() => setSortOrder((v) => v === "name" ? "default" : "name")}
-                className={`flex items-center gap-1 text-xs px-2.5 h-9 rounded-lg border transition ${
-                  sortOrder === "name" ? "bg-indigo-600/30 border-indigo-500/50 text-indigo-300" : "border-white/10 text-slate-400 hover:text-white"}`}>
-                이름순
-              </button>
-            </div>
+            {sortControl}
             <p className="text-xs text-slate-500 ml-auto self-center">
               {allLoading ? "불러오는 중..." : `${displayList.length.toLocaleString()}개 종목`}
             </p>
@@ -372,6 +436,7 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
                 </>
               )}
             </button>
+            {sortControl}
             {result && (
               <div className="ml-auto text-right">
                 <p className="text-xs text-slate-400">기준일: <span className="text-white">{result.evaluationDate}</span></p>

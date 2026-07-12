@@ -1,8 +1,8 @@
 package com.dove.screening.infrastructure.repository;
 
-import com.dove.indicator.domain.breadth.entity.QStockBreadthDaily;
 import com.dove.indicator.domain.entity.QStockFeatureDaily;
 import com.dove.indicator.domain.rank.entity.QStockRankDaily;
+import com.dove.custommetric.domain.entity.QCustomMetricDaily;
 import com.dove.modelserving.domain.entity.QStockModelScore;
 
 import java.util.ArrayList;
@@ -17,7 +17,7 @@ final class TranslationAliases {
 
     private final Map<Integer, QStockFeatureDaily> offsetAliases = new HashMap<>();
     private final List<RankJoinAlias> rankAliases = new ArrayList<>();
-    private final List<BreadthJoinAlias> breadthAliases = new ArrayList<>();
+    private final List<CustomMetricJoinAlias> customMetricAliases = new ArrayList<>();
     private final List<ModelScoreJoinAlias> modelScoreAliases = new ArrayList<>();
 
     TranslationAliases(QStockFeatureDaily base) {
@@ -47,15 +47,15 @@ final class TranslationAliases {
     }
 
     /**
-     * 오프셋별 상승비율 별칭을 찾거나(없으면) 새로 만든다. 오프셋이 있으면 그 거래일을 짚을 피처 별칭도 함께 만든다.
+     * (오프셋, 지표) 조합별 커스텀 지표 별칭을 찾거나(없으면) 새로 만든다. 오프셋이 있으면 그 거래일을 짚을 피처 별칭도 함께 만든다.
      */
-    QStockBreadthDaily breadthAlias(int offset) {
-        featureAlias(offset); // 상승비율 join이 붙을 오프셋 피처 행 별칭 보장
-        for (BreadthJoinAlias b : breadthAliases) {
-            if (b.offset() == offset) return b.alias();
+    QCustomMetricDaily customMetricAlias(int offset, long metricId) {
+        featureAlias(offset); // 커스텀 지표 join이 붙을 오프셋 피처 행 별칭 보장
+        for (CustomMetricJoinAlias c : customMetricAliases) {
+            if (c.offset() == offset && c.metricId() == metricId) return c.alias();
         }
-        QStockBreadthDaily alias = new QStockBreadthDaily("sbd" + suffix(offset));
-        breadthAliases.add(new BreadthJoinAlias(offset, alias));
+        QCustomMetricDaily alias = new QCustomMetricDaily("cmd" + suffix(offset) + "Metric" + metricId);
+        customMetricAliases.add(new CustomMetricJoinAlias(offset, metricId, alias));
         return alias;
     }
 
@@ -80,8 +80,8 @@ final class TranslationAliases {
         return rankAliases;
     }
 
-    List<BreadthJoinAlias> breadthAliases() {
-        return breadthAliases;
+    List<CustomMetricJoinAlias> customMetricAliases() {
+        return customMetricAliases;
     }
 
     List<ModelScoreJoinAlias> modelScoreAliases() {

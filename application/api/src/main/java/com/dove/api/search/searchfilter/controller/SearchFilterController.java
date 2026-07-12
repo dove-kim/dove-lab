@@ -70,7 +70,7 @@ public class SearchFilterController {
                     user.memberId(), request.name(), request.dateRule(),
                     request.markets(), request.priceType(), request.exchange(),
                     FilterExpression.parse(request.expression()),
-                    request.stockFilterId()));
+                    request.stockFilterId(), request.pipeline()));
         } catch (DataIntegrityViolationException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "FILTER_NAME_DUPLICATE");
         }
@@ -88,7 +88,7 @@ public class SearchFilterController {
                     user.memberId(), id, request.name(), request.dateRule(),
                     request.markets(), request.priceType(), request.exchange(),
                     FilterExpression.parse(request.expression()),
-                    request.stockFilterId()));
+                    request.stockFilterId(), request.pipeline()));
         } catch (NoSuchElementException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "FILTER_NOT_FOUND");
         } catch (DataIntegrityViolationException e) {

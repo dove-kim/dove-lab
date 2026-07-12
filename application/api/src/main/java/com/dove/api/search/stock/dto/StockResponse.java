@@ -24,6 +24,7 @@ import java.time.LocalDate;
  * @param closePrice      최근 거래일 종가 (없으면 null)
  * @param volume          최근 거래일 거래량 (없으면 null)
  * @param prevClose       전일 종가 (등락률 계산용, 없으면 null)
+ * @param marketCap       시가총액 (없으면 null)
  */
 public record StockResponse(
         String ticker,
@@ -40,9 +41,11 @@ public record StockResponse(
         Long lowPrice,
         Long closePrice,
         Long volume,
-        Long prevClose
+        Long prevClose,
+        Long marketCap
 ) {
-    public static StockResponse from(Stock s, String name, StockDetail detail, StockPrice cur, StockPrice prev) {
+    public static StockResponse from(Stock s, String name, StockDetail detail, StockPrice cur, StockPrice prev,
+                                     Long marketCap) {
         return new StockResponse(
                 s.getTicker(),
                 name,
@@ -58,7 +61,8 @@ public record StockResponse(
                 cur != null ? cur.getLowPrice() : null,
                 cur != null ? cur.getClosePrice() : null,
                 cur != null ? cur.getVolume() : null,
-                prev != null ? prev.getClosePrice() : null
+                prev != null ? prev.getClosePrice() : null,
+                marketCap
         );
     }
 }

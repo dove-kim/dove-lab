@@ -1,12 +1,12 @@
 package com.dove.screening.infrastructure.repository;
 
-import com.dove.indicator.domain.breadth.entity.QStockBreadthDaily;
 import com.dove.indicator.domain.enums.IndicatorType;
 import com.dove.indicator.domain.entity.QStockFeatureDaily;
 import com.dove.indicator.domain.rank.entity.QStockRankDaily;
 import com.dove.indicator.domain.rank.enums.RankType;
 import com.dove.modelserving.domain.entity.QStockModelScore;
 import com.dove.screening.domain.value.ComparisonCondition;
+import com.dove.screening.domain.value.CustomMetricOperand;
 import com.dove.screening.domain.value.FilterChildOp;
 import com.dove.screening.domain.value.FilterGroup;
 import com.dove.screening.domain.value.FilterNode;
@@ -19,11 +19,11 @@ import com.dove.screening.domain.value.IndicatorOperand;
 import com.dove.screening.domain.value.MarketFilterCondition;
 import com.dove.screening.domain.value.ModelScoreOperand;
 import com.dove.screening.domain.value.PriceOperand;
-import com.dove.screening.domain.value.BreadthOperand;
 import com.dove.screening.domain.value.RangeCondition;
 import com.dove.screening.domain.value.RankOperand;
 import com.dove.screening.domain.value.StockStatusCondition;
 import com.dove.screening.domain.value.ThresholdCondition;
+import com.dove.screening.domain.value.TurnoverOperand;
 import com.dove.screening.domain.value.UnknownCondition;
 import com.dove.screening.domain.value.VolumeOperand;
 import com.dove.stock.domain.enums.StockExchange;
@@ -37,7 +37,7 @@ import java.util.Optional;
 /**
  * 검색식 모델을 STOCK_FEATURE_DAILY 대상 QueryDSL 조건으로 변환한다.
  * 컬럼으로 표현 못 하는 조건이 하나라도 있으면 빈 값을 반환해 호출 측이 인메모리 평가로 폴백하게 한다.
- * 오프셋(N일 전/후) 피연산자는 SEQ 기준 self-join 별칭으로, 순위·상승비율·모델점수는 별도 테이블 left join 별칭으로 변환한다.
+ * 오프셋(N일 전/후) 피연산자는 SEQ 기준 self-join 별칭으로, 순위·커스텀지표·모델점수는 별도 테이블 left join 별칭으로 변환한다.
  */
 final class StockFeatureFilterTranslator {
 
@@ -52,7 +52,8 @@ final class StockFeatureFilterTranslator {
         BooleanExpression predicate = node(root, base, aliases);
         return predicate == null ? Optional.empty()
                 : Optional.of(new TranslatedFilter(predicate, aliases.offsetAliases(),
-                        aliases.rankAliases(), aliases.breadthAliases(), aliases.modelScoreAliases()));
+                        aliases.rankAliases(),
+                        aliases.customMetricAliases(), aliases.modelScoreAliases()));
     }
 
     private static BooleanExpression node(FilterNode n, QStockFeatureDaily base, TranslationAliases aliases) {
@@ -114,9 +115,10 @@ final class StockFeatureFilterTranslator {
             case IndicatorOperand i -> indicatorCol(aliases.featureAlias(i.offset()), i.type());
             case PriceOperand p -> priceCol(aliases.featureAlias(p.offset()), p.field());
             case VolumeOperand v -> aliases.featureAlias(v.offset()).volume.castToNum(Double.class);
+            case TurnoverOperand t -> aliases.featureAlias(t.offset()).turnover.castToNum(Double.class);
             case ModelScoreOperand m -> aliases.modelScoreAlias(m.offset(), m.modelId()).score.castToNum(Double.class);
             case RankOperand r -> rankCol(aliases.rankAlias(r.offset()), r.type());
-            case BreadthOperand b -> aliases.breadthAlias(b.offset()).advanceRatio;
+            case CustomMetricOperand cm -> aliases.customMetricAlias(cm.offset(), cm.metricId()).value;
         };
     }
 
