@@ -28,7 +28,7 @@ export function useIndicatorPresets() {
     const res = await clientFetch("/api/indicator-presets", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, items: preset.items, panelOrder: preset.panelOrder }),
+      body: JSON.stringify({ name, items: preset.items, panelOrder: preset.panelOrder, overlay: preset.overlay }),
     });
     if (!res) throw new Error("PRESET_CREATE_FAILED");
     if (!res.ok) {
@@ -45,7 +45,7 @@ export function useIndicatorPresets() {
     const res = await clientFetch(`/api/indicator-presets/${id}`, {
       method: "PUT",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ name, items: preset.items, panelOrder: preset.panelOrder }),
+      body: JSON.stringify({ name, items: preset.items, panelOrder: preset.panelOrder, overlay: preset.overlay }),
     });
     if (!res) throw new Error("PRESET_UPDATE_FAILED");
     if (!res.ok) {

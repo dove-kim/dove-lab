@@ -13,6 +13,7 @@ import com.dove.screening.application.service.SearchFilterCommandService;
 import com.dove.screening.application.service.SearchFilterQueryService;
 import com.dove.screening.domain.entity.SearchFilter;
 import com.dove.screening.domain.value.FilterExpression;
+import com.dove.userfeature.application.service.MemberModelGrantQueryService;
 import com.dove.userfeature.domain.capability.Capability;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
@@ -34,6 +35,7 @@ import org.springframework.web.server.ResponseStatusException;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Set;
 
 /**
  * 사용자 정의 검색 필터 관리 및 실행 API.
@@ -47,6 +49,7 @@ public class SearchFilterController {
     private final SearchFilterCommandService searchFilterCommandService;
     private final SearchFilterQueryService searchFilterQueryService;
     private final FilterExecutionService filterExecutionService;
+    private final MemberModelGrantQueryService modelGrantQueryService;
 
     /**
      * 현재 회원의 검색 필터 목록을 반환한다.
@@ -129,6 +132,18 @@ public class SearchFilterController {
         SearchFilter filter = searchFilterQueryService.findByIdAndMemberId(id, user.memberId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.NOT_FOUND, "FILTER_NOT_FOUND"));
         LocalDate referenceDate = request != null ? request.referenceDate() : null;
-        return ExecuteFilterResponse.from(filter, filterExecutionService.execute(filter, referenceDate));
+        return ExecuteFilterResponse.from(filter,
+                filterExecutionService.execute(filter, referenceDate, visibleModelIds(user)));
+    }
+
+    /**
+     * 사용자가 결과에서 볼 수 있는 모델 ID 집합을 반환한다. ROOT면 null(전체), MODEL_SCORE 권한이 있으면 부여받은 모델, 그 외엔 빈 집합.
+     */
+    private Set<Long> visibleModelIds(AuthenticatedUser user) {
+        if ("ROOT".equals(user.role())) return null;
+        if (user.capabilities().contains(Capability.MODEL_SCORE.name())) {
+            return modelGrantQueryService.findGrantedModelIds(user.memberId());
+        }
+        return Set.of();
     }
 }

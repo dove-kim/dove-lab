@@ -1,12 +1,15 @@
 "use client";
 
 import { ConditionType } from "@/types/filter";
+import { useCapabilities } from "@/states/capabilities";
 
 interface PaletteItem {
   type: ConditionType;
   label: string;
   description: string;
   icon: string;
+  /** 이 조건을 쓰려면 필요한 기능 권한. 없으면 팔레트에서 숨김(백엔드도 응답에서 게이트). */
+  capability?: string;
 }
 
 interface PaletteSection {
@@ -43,10 +46,10 @@ const PALETTE_SECTIONS: PaletteSection[] = [
   {
     title: "모델·순위",
     items: [
-      { type: "MODEL_SCORE_VALUE", label: "모델 점수 비교", description: "ML 모델 점수 ≥ 0.7 처럼 점수와 숫자 비교", icon: "🤖" },
-      { type: "MODEL_SCORE_RANGE", label: "모델 점수 범위", description: "0.6 ≤ 모델 점수 ≤ 0.9 처럼 점수 범위 지정", icon: "🎯" },
-      { type: "CUSTOM_METRIC_VALUE", label: "커스텀 지표 비교", description: "커스텀 지표 값 ≥ 1 처럼 지표와 숫자 비교", icon: "🧮" },
-      { type: "CUSTOM_METRIC_RANGE", label: "커스텀 지표 범위", description: "0 ≤ 커스텀 지표 ≤ 1 처럼 지표 값의 범위 지정", icon: "🧮" },
+      { type: "MODEL_SCORE_VALUE", label: "모델 점수 비교", description: "ML 모델 점수 ≥ 0.7 처럼 점수와 숫자 비교", icon: "🤖", capability: "MODEL_SCORE" },
+      { type: "MODEL_SCORE_RANGE", label: "모델 점수 범위", description: "0.6 ≤ 모델 점수 ≤ 0.9 처럼 점수 범위 지정", icon: "🎯", capability: "MODEL_SCORE" },
+      { type: "CUSTOM_METRIC_VALUE", label: "커스텀 지표 비교", description: "커스텀 지표 값 ≥ 1 처럼 지표와 숫자 비교", icon: "🧮", capability: "CUSTOM_INDICATOR" },
+      { type: "CUSTOM_METRIC_RANGE", label: "커스텀 지표 범위", description: "0 ≤ 커스텀 지표 ≤ 1 처럼 지표 값의 범위 지정", icon: "🧮", capability: "CUSTOM_INDICATOR" },
       { type: "RANK_VALUE", label: "순위 비교", description: "거래대금/모멘텀 순위 ≥ 0.9(상위 10%) 비교", icon: "🏆" },
       { type: "RANK_RANGE", label: "순위 범위", description: "순위(0~1)의 최솟값~최댓값 범위 지정", icon: "📊" },
     ],
@@ -67,6 +70,15 @@ interface Props {
 }
 
 export default function ConditionPalette({ selectedGroupId, rootId, onAdd }: Props) {
+  const capabilities = useCapabilities();
+  // 기능 권한 없는 조건은 숨기고, 그 결과 빈 섹션도 제거한다. (ROOT는 JWT에 전 capability 보유)
+  const sections = PALETTE_SECTIONS
+    .map((section) => ({
+      ...section,
+      items: section.items.filter((item) => !item.capability || capabilities.includes(item.capability)),
+    }))
+    .filter((section) => section.items.length > 0);
+
   const targetLabel = !selectedGroupId
     ? null
     : selectedGroupId === rootId
@@ -85,7 +97,7 @@ export default function ConditionPalette({ selectedGroupId, rootId, onAdd }: Pro
       </div>
 
       <div className="flex-1 overflow-y-auto p-3 space-y-4">
-        {PALETTE_SECTIONS.map((section) => (
+        {sections.map((section) => (
           <div key={section.title}>
             <p className="text-xs font-semibold text-slate-500 uppercase tracking-wider px-1 mb-2">
               {section.title}

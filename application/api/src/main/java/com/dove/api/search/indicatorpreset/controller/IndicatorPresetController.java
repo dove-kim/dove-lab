@@ -61,7 +61,7 @@ public class IndicatorPresetController {
             @AuthenticationPrincipal AuthenticatedUser user) {
         try {
             return IndicatorPresetResponse.from(
-                    commandService.create(user.memberId(), req.name(), req.items(), req.panelOrder()));
+                    commandService.create(user.memberId(), req.name(), req.items(), req.panelOrder(), req.overlay()));
         } catch (DataIntegrityViolationException e) {
             throw new ResponseStatusException(HttpStatus.CONFLICT, "PRESET_NAME_DUPLICATE");
         }
@@ -77,7 +77,7 @@ public class IndicatorPresetController {
             @AuthenticationPrincipal AuthenticatedUser user) {
         try {
             return IndicatorPresetResponse.from(
-                    commandService.update(user.memberId(), id, req.name(), req.items(), req.panelOrder()));
+                    commandService.update(user.memberId(), id, req.name(), req.items(), req.panelOrder(), req.overlay()));
         } catch (NoSuchElementException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "PRESET_NOT_FOUND");
         } catch (DataIntegrityViolationException e) {

@@ -2,7 +2,9 @@ package com.dove.screening.domain.entity;
 
 import com.dove.jpa.converter.StringListConverter;
 import com.dove.screening.domain.converter.IndicatorPresetItemListConverter;
+import com.dove.screening.domain.converter.PresetOverlayConverter;
 import com.dove.screening.domain.value.IndicatorPresetItem;
+import com.dove.screening.domain.value.PresetOverlay;
 import jakarta.persistence.*;
 import lombok.AccessLevel;
 import lombok.Getter;
@@ -53,6 +55,11 @@ public class IndicatorPreset {
     @Comment("서브패널 노출 순서 (JSON 배열 of PanelId)")
     private List<String> panelOrder;
 
+    @Convert(converter = PresetOverlayConverter.class)
+    @Column(name = "OVERLAY", columnDefinition = "JSON")
+    @Comment("차트 오버레이 설정 (JSON: {signalModelId, signalThreshold, seriesMetricIds})")
+    private PresetOverlay overlay;
+
     @Column(name = "DISPLAY_ORDER", nullable = false)
     @Comment("목록 노출 순서 (낮을수록 위)")
     private int displayOrder;
@@ -66,27 +73,38 @@ public class IndicatorPreset {
     private LocalDateTime updatedAt;
 
     /**
-     * 새 지표 프리셋을 생성한다.
+     * 새 지표 프리셋을 오버레이 없이 생성한다.
      */
     public static IndicatorPreset create(Long memberId, String name, List<IndicatorPresetItem> items,
                                          List<String> panelOrder) {
+        return create(memberId, name, items, panelOrder, null);
+    }
+
+    /**
+     * 새 지표 프리셋을 생성한다.
+     */
+    public static IndicatorPreset create(Long memberId, String name, List<IndicatorPresetItem> items,
+                                         List<String> panelOrder, PresetOverlay overlay) {
         IndicatorPreset p = new IndicatorPreset();
         p.memberId   = memberId;
         p.name       = name;
         p.items      = items;
         p.panelOrder = panelOrder;
+        p.overlay    = overlay;
         p.createdAt  = LocalDateTime.now();
         p.updatedAt  = LocalDateTime.now();
         return p;
     }
 
     /**
-     * 프리셋 이름·지표 항목·패널 순서를 갱신한다.
+     * 프리셋 이름·지표 항목·패널 순서·오버레이를 갱신한다.
      */
-    public void update(String name, List<IndicatorPresetItem> items, List<String> panelOrder) {
+    public void update(String name, List<IndicatorPresetItem> items, List<String> panelOrder,
+                       PresetOverlay overlay) {
         this.name      = name;
         this.items     = items;
         this.panelOrder = panelOrder;
+        this.overlay   = overlay;
         this.updatedAt = LocalDateTime.now();
     }
 

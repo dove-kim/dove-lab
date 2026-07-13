@@ -295,15 +295,16 @@ export type ExpressionNode = GroupNode | ConditionNode;
 
 // ─── 순서 파이프라인(정렬·순위 단계) ──────────────────────────────────────────
 
-export type SortField = "CHANGE_RATE" | "MARKET_CAP" | "VOLUME";
+export type SortField = "CHANGE_RATE" | "MARKET_CAP" | "VOLUME" | "MODEL_SCORE";
 export type SortDirection = "ASC" | "DESC";
 
-export const SORT_FIELDS: SortField[] = ["CHANGE_RATE", "MARKET_CAP", "VOLUME"];
+export const SORT_FIELDS: SortField[] = ["CHANGE_RATE", "MARKET_CAP", "VOLUME", "MODEL_SCORE"];
 
 export const SORT_FIELD_LABELS: Record<SortField, string> = {
   CHANGE_RATE: "등락률",
   MARKET_CAP: "시가총액",
   VOLUME: "거래량",
+  MODEL_SCORE: "모델 점수",
 };
 
 export const SORT_DIRECTION_LABELS: Record<SortDirection, string> = {
@@ -316,10 +317,12 @@ export const SORT_DIRECTION_LABELS: Record<SortDirection, string> = {
  *
  * @param field     정렬 기준 필드
  * @param direction 정렬 방향
+ * @param modelId   MODEL_SCORE 정렬 시 대상 모델 식별자(그 외 필드에선 미사용)
  */
 export interface SortKey {
   field: SortField;
   direction: SortDirection;
+  modelId?: number;
 }
 
 /**
@@ -382,6 +385,7 @@ export interface StockMatchResult {
   volume: number | null;
   prevClose?: number | null;
   marketCap?: number | null;
+  modelScore?: number | null;
   tradingHalt?: boolean;
   adminItem?: boolean;
 }

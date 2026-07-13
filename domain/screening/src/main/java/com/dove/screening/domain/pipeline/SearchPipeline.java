@@ -60,7 +60,13 @@ public final class SearchPipeline {
         for (JsonNode key : node.path("sort")) {
             SortField field = SortField.parseOrNull(key.path("field").asText());
             SortDirection direction = SortDirection.parseOrNull(key.path("direction").asText());
-            if (field != null && direction != null) sortKeys.add(new SortKey(field, direction));
+            if (field == null || direction == null) continue;
+            if (field == SortField.MODEL_SCORE) {
+                if (!key.hasNonNull("modelId")) continue; // 대상 모델 없는 MODEL_SCORE 정렬 키는 건너뛴다
+                sortKeys.add(new SortKey(field, direction, key.path("modelId").asLong()));
+            } else {
+                sortKeys.add(new SortKey(field, direction, null));
+            }
         }
         Integer limit = node.hasNonNull("limit") ? node.path("limit").asInt() : null;
         return new RankStage(sortKeys, limit);

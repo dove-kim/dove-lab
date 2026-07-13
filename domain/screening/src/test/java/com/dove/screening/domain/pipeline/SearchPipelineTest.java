@@ -63,8 +63,8 @@ class SearchPipelineTest {
             RankStage rank = (RankStage) stages.get(0);
             assertThat(rank.limit()).isEqualTo(20);
             assertThat(rank.sortKeys()).containsExactly(
-                    new SortKey(SortField.CHANGE_RATE, SortDirection.DESC),
-                    new SortKey(SortField.VOLUME, SortDirection.ASC));
+                    new SortKey(SortField.CHANGE_RATE, SortDirection.DESC, null),
+                    new SortKey(SortField.VOLUME, SortDirection.ASC, null));
         }
 
         @Test
@@ -75,7 +75,7 @@ class SearchPipelineTest {
             RankStage rank = (RankStage) SearchPipeline.parse(json).get(0);
 
             assertThat(rank.limit()).isNull();
-            assertThat(rank.sortKeys()).containsExactly(new SortKey(SortField.MARKET_CAP, SortDirection.DESC));
+            assertThat(rank.sortKeys()).containsExactly(new SortKey(SortField.MARKET_CAP, SortDirection.DESC, null));
         }
 
         @Test
@@ -88,7 +88,31 @@ class SearchPipelineTest {
 
             RankStage rank = (RankStage) SearchPipeline.parse(json).get(0);
 
-            assertThat(rank.sortKeys()).containsExactly(new SortKey(SortField.VOLUME, SortDirection.ASC));
+            assertThat(rank.sortKeys()).containsExactly(new SortKey(SortField.VOLUME, SortDirection.ASC, null));
+        }
+
+        @Test
+        @DisplayName("MODEL_SCORE 정렬 키를 modelId와 함께 파싱한다")
+        void shouldParseModelScoreSortKeyWithModelId() {
+            String json = "[{\"type\":\"RANK\",\"sort\":["
+                    + "{\"field\":\"MODEL_SCORE\",\"direction\":\"DESC\",\"modelId\":12}],\"limit\":10}]";
+
+            RankStage rank = (RankStage) SearchPipeline.parse(json).get(0);
+
+            assertThat(rank.limit()).isEqualTo(10);
+            assertThat(rank.sortKeys()).containsExactly(new SortKey(SortField.MODEL_SCORE, SortDirection.DESC, 12L));
+        }
+
+        @Test
+        @DisplayName("modelId 없는 MODEL_SCORE 정렬 키는 건너뛴다")
+        void shouldSkipModelScoreSortKeyWithoutModelId() {
+            String json = "[{\"type\":\"RANK\",\"sort\":["
+                    + "{\"field\":\"MODEL_SCORE\",\"direction\":\"DESC\"},"
+                    + "{\"field\":\"VOLUME\",\"direction\":\"ASC\"}]}]";
+
+            RankStage rank = (RankStage) SearchPipeline.parse(json).get(0);
+
+            assertThat(rank.sortKeys()).containsExactly(new SortKey(SortField.VOLUME, SortDirection.ASC, null));
         }
 
         @Test

@@ -13,6 +13,7 @@ package com.dove.api.search.searchfilter.dto;
  * @param volume     거래량
  * @param prevClose  전일 종가 (등락률 계산용, 없으면 null)
  * @param marketCap  시가총액 (없으면 null)
+ * @param modelScore 표시 대상 모델 점수 (정렬/필터에 쓰인 모델, 없으면 null)
  */
 public record StockMatchResult(
         String code,
@@ -24,5 +25,6 @@ public record StockMatchResult(
         Long closePrice,
         Long volume,
         Long prevClose,
-        Long marketCap
+        Long marketCap,
+        Double modelScore
 ) {}

@@ -82,7 +82,7 @@ public class CustomMetricComputeService {
         for (int i = 0; i < dates.size(); i++) {
             LocalDate d = dates.get(i);
             if (last != null && !d.isAfter(last)) continue; // 이미 저장된 과거
-            if (Double.isNaN(out[i])) continue;             // 미확정 구간
+            if (!Double.isFinite(out[i])) continue;         // 미확정(NaN)·발산(±Infinity) 구간은 저장 안 함
             rows.add(new CustomMetricDaily(new CustomMetricDailyId(def.getId(), d), out[i], now));
         }
         dailyService.saveAll(rows);

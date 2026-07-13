@@ -87,6 +87,36 @@ class IndicatorPresetControllerTest {
 
         @Test
         @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_VIEW"})
+        @DisplayName("오버레이를 포함해 생성하면 응답에 오버레이가 담긴다")
+        void shouldCreatePresetWithOverlay() throws Exception {
+            mockMvc.perform(post("/indicator-presets")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name":"오버레이프리셋","items":[],"panelOrder":[],
+                                     "overlay":{"signalModelId":7,"signalThreshold":0.6,"seriesMetricIds":[1,2]}}
+                                    """))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.overlay.signalModelId").value(7))
+                    .andExpect(jsonPath("$.overlay.signalThreshold").value(0.6))
+                    .andExpect(jsonPath("$.overlay.seriesMetricIds[0]").value(1))
+                    .andExpect(jsonPath("$.overlay.seriesMetricIds[1]").value(2));
+        }
+
+        @Test
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_VIEW"})
+        @DisplayName("오버레이 없이 생성하면 응답 오버레이는 null")
+        void shouldCreatePresetWithNullOverlay() throws Exception {
+            mockMvc.perform(post("/indicator-presets")
+                            .contentType(MediaType.APPLICATION_JSON)
+                            .content("""
+                                    {"name":"노오버레이","items":[],"panelOrder":[]}
+                                    """))
+                    .andExpect(status().isCreated())
+                    .andExpect(jsonPath("$.overlay").isEmpty());
+        }
+
+        @Test
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"STOCK_VIEW"})
         @DisplayName("name 누락 시 400")
         void shouldReturn400WhenNameMissing() throws Exception {
             mockMvc.perform(post("/indicator-presets")

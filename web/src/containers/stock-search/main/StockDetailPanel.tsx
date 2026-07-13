@@ -10,11 +10,12 @@ import StockInfoTab from "./StockInfoTab";
 import StockEventsTab from "./StockEventsTab";
 import StockAnalystSection from "./StockAnalystSection";
 import InvestorFlowTab from "./InvestorFlowTab";
-import ModelScoreTab from "./ModelScoreTab";
 import FundamentalsTab from "./FundamentalsTab";
 import ValuationTab from "./ValuationTab";
 import { useHasCapability } from "@/states/capabilities";
 import type { UseIndicatorPresetsReturn } from "@/hooks/useIndicatorPresets";
+import type { ModelSummary, CustomMetricSummary } from "@/types/chart-overlay";
+import { DEFAULT_CHART_OVERLAY } from "@/types/chart-overlay";
 
 interface Props {
   result: StockMatchResult;
@@ -26,9 +27,10 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
   const { presets, activePreset, setActivePreset, loading, create, update, remove, reorder } =
     presetsHook;
 
-  const canModelScore = useHasCapability("MODEL_SCORE");
+  const canModelScore      = useHasCapability("MODEL_SCORE");
+  const canCustomIndicator = useHasCapability("CUSTOM_INDICATOR");
 
-  const [tab, setTab]                       = useState<"chart" | "info" | "fundamentals" | "valuation" | "events" | "research" | "investor-flow" | "model-score">("chart");
+  const [tab, setTab]                       = useState<"chart" | "info" | "fundamentals" | "valuation" | "events" | "research" | "investor-flow">("chart");
   const [managerOpen, setManagerOpen]       = useState(false);
   const [panelOrderOpen, setPanelOrderOpen] = useState(false);
   const [mode, setMode]                     = useState<"candle" | "line">("candle");
@@ -37,6 +39,42 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
   const [adjusted, setAdjusted]             = useState(true);
   const [latestBar, setLatestBar]           = useState<PriceBar | null>(null);
   const [prevClose, setPrevClose]           = useState<number | null>(null);
+
+  // 차트 오버레이(모델 시그널·커스텀 지표) — 저장된 프리셋의 값(activePreset.overlay)에서 파생. 저장해야 반영.
+  const overlay = activePreset?.overlay ?? DEFAULT_CHART_OVERLAY;
+  const [signalModels, setSignalModels]     = useState<ModelSummary[]>([]);
+  const [customMetrics, setCustomMetrics]   = useState<CustomMetricSummary[]>([]);
+
+  // 모델 목록(grant 필터) — MODEL_SCORE 권한 있을 때만. 실패 시 빈 배열 폴백.
+  useEffect(() => {
+    if (!canModelScore) { setSignalModels([]); return; }
+    let cancelled = false;
+    fetch("/api/stocks/models")
+      .then(r => (r.ok ? r.json() : []))
+      .then((rows: ModelSummary[]) => { if (!cancelled) setSignalModels(Array.isArray(rows) ? rows : []); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [canModelScore]);
+
+  // 커스텀 지표 목록(grant 필터) — CUSTOM_INDICATOR 권한 있을 때만. 실패 시 빈 배열 폴백.
+  useEffect(() => {
+    if (!canCustomIndicator) { setCustomMetrics([]); return; }
+    let cancelled = false;
+    fetch("/api/stocks/custom-metrics")
+      .then(r => (r.ok ? r.json() : []))
+      .then((rows: CustomMetricSummary[]) => { if (!cancelled) setCustomMetrics(Array.isArray(rows) ? rows : []); })
+      .catch(() => {});
+    return () => { cancelled = true; };
+  }, [canCustomIndicator]);
+
+  const signalModel = signalModels.find(m => m.id === overlay.signalModelId) ?? null;
+  // 선택된 커스텀 지표들(overlay 순서 유지) — 각각 하단 서브패널로 표시
+  const selectedMetrics = useMemo(
+    () => overlay.seriesMetricIds
+      .map(id => customMetrics.find(m => m.id === id))
+      .filter((m): m is CustomMetricSummary => m != null),
+    [overlay.seriesMetricIds, customMetrics],
+  );
 
   // 종목 전환 시 데이터가 있는 가격 소스만 활성화하고, 기본 소스를 항상 통합 우선(없으면 KRX)으로 리셋한다.
   // 이전 종목에서 KRX/NXT를 골랐어도, 새 종목에선 다시 통합을 우선한다.
@@ -77,6 +115,7 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
     await update(activePreset.id, activePreset.name, {
       items: activePreset.items,
       panelOrder: newOrder,
+      overlay: activePreset.overlay ?? DEFAULT_CHART_OVERLAY,
     });
   }
 
@@ -125,10 +164,9 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
         </div>
       </div>
 
-      {/* 탭 바 — 모바일: 내용 크기 + 가로 스크롤, 데스크톱: 전체 폭 균등 분배. 모델 점수 탭은 MODEL_SCORE 권한 있을 때만 노출(HIDE). */}
-      <div className="flex border-b border-white/10 flex-shrink-0 overflow-x-auto [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
-        {(["chart", "info", "fundamentals", "valuation", "events", "research", "investor-flow", "model-score"] as const)
-          .filter((t) => t !== "model-score" || canModelScore)
+      {/* 탭 바 — 모바일: 내용 크기 + 가로 스크롤, 데스크톱: 전체 폭 균등 분배. 모델 점수는 별도 탭 대신 그래프의 지표 설정(차트 오버레이)에서 시그널로 표시. */}
+      <div className="flex border-b border-white/10 flex-shrink-0 overflow-x-auto overflow-y-hidden [&::-webkit-scrollbar]:hidden [-ms-overflow-style:none] [scrollbar-width:none]">
+        {(["chart", "info", "fundamentals", "valuation", "events", "research", "investor-flow"] as const)
           .map((t) => (
           <button
             key={t}
@@ -143,8 +181,7 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
               : t === "valuation" ? "밸류에이션"
               : t === "events" ? "권리 이벤트"
               : t === "research" ? "리서치"
-              : t === "investor-flow" ? "투자자 동향"
-              : "모델 점수"}
+              : "투자자 동향"}
           </button>
         ))}
       </div>
@@ -178,11 +215,6 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
       {tab === "investor-flow" && (
         <div className="flex-1 overflow-hidden">
           <InvestorFlowTab code={result.code} />
-        </div>
-      )}
-      {tab === "model-score" && canModelScore && (
-        <div className="flex-1 overflow-hidden">
-          <ModelScoreTab code={result.code} />
         </div>
       )}
 
@@ -296,6 +328,10 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
             presetItems={activePreset?.items ?? []}
             panelOrder={activePreset?.panelOrder}
             mode={mode}
+            signalModelId={overlay.signalModelId}
+            signalModelName={signalModel?.name ?? null}
+            signalThreshold={overlay.signalThreshold}
+            seriesMetrics={selectedMetrics}
             onLatestBar={(bar, prev) => { setLatestBar(bar); setPrevClose(prev ?? null); }}
           />
         </div>
@@ -310,6 +346,8 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
           update={update}
           remove={remove}
           reorder={reorder}
+          signalModels={signalModels}
+          customMetrics={customMetrics}
         />
 
         <PanelOrderModal

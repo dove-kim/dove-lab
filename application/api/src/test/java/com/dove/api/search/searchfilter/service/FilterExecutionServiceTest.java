@@ -340,5 +340,98 @@ class FilterExecutionServiceTest {
             assertThat(result.matches().get(0).marketCap()).isEqualTo(500L);
             assertThat(result.matches().get(1).marketCap()).isNull();
         }
+
+        @Test
+        @DisplayName("RANK MODEL_SCORE 내림차순으로 상위 N만 남기고 점수 없는 종목은 제외하며 결과에 점수를 투영한다")
+        void shouldRankByModelScoreDescLimitAndProjectScore() {
+            String pipeline = "[{\"type\":\"RANK\",\"sort\":["
+                    + "{\"field\":\"MODEL_SCORE\",\"direction\":\"DESC\",\"modelId\":7}],\"limit\":2}]";
+            SearchFilter filter = pipelineFilter(PASS_ALL, pipeline);
+            given(priceQueryService.findByExchangesAndDate(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE)))
+                    .willReturn(Map.of(
+                            "AAA", priceClose("AAA", EVAL_DATE, 105L),
+                            "BBB", priceClose("BBB", EVAL_DATE, 105L),
+                            "CCC", priceClose("CCC", EVAL_DATE, 105L),
+                            "DDD", priceClose("DDD", EVAL_DATE, 105L)));
+            given(priceQueryService.findNthRecentTradeDateByExchanges(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE), eq(1)))
+                    .willReturn(null);
+            given(featureDailyService.findAllByExchangeAndDate(StockExchange.KOSPI, PriceType.RAW, EVAL_DATE))
+                    .willReturn(Map.of());
+            given(modelScoreQueryService.findScoresByModelAndDate(7L, EVAL_DATE))
+                    .willReturn(Map.of("AAA", 0.9, "BBB", 0.5, "CCC", 0.1)); // DDD는 점수 없음(sparse) → 마지막/제외
+            given(stockQueryService.findByTickers(any()))
+                    .willReturn(Map.of("AAA", stock("AAA"), "BBB", stock("BBB"),
+                            "CCC", stock("CCC"), "DDD", stock("DDD")));
+            given(stockQueryService.findNamesByTickers(any()))
+                    .willReturn(Map.of("AAA", "에이", "BBB", "비", "CCC", "씨", "DDD", "디"));
+
+            FilterExecutionResult result = service.execute(filter, EVAL_DATE);
+
+            assertThat(result.matches()).extracting("ticker").containsExactly("AAA", "BBB");
+            assertThat(result.matches().get(0).modelScore()).isEqualTo(0.9);
+            assertThat(result.matches().get(1).modelScore()).isEqualTo(0.5);
+        }
+    }
+
+    @Nested
+    @DisplayName("모델 점수 가시성 게이트")
+    class ModelScoreVisibilityGate {
+
+        /** 모든 종목 통과 검색식. */
+        private static final String PASS_ALL =
+                "{\"conditionType\":\"VOLUME_VALUE\",\"operator\":\"GT\",\"value\":0}";
+
+        /** MODEL_SCORE(modelId=7) 내림차순 RANK 파이프라인. */
+        private static final String RANK_BY_MODEL_7 = "[{\"type\":\"RANK\",\"sort\":["
+                + "{\"field\":\"MODEL_SCORE\",\"direction\":\"DESC\",\"modelId\":7}]}]";
+
+        private SearchFilter modelPipelineFilter() {
+            return SearchFilter.create(1L, "필터", DateRule.SPECIFIC_DATE, KOSPI, PriceType.RAW,
+                    FilterVenue.KRX, FilterExpression.parse(PASS_ALL), null, RANK_BY_MODEL_7);
+        }
+
+        private StockPrice priceClose(String ticker, long close) {
+            return new StockPrice(ticker, StockExchange.KOSPI, PriceType.RAW, EVAL_DATE, 100L, 110L, 90L, close, 5000L, 0L);
+        }
+
+        private void givenTwoStocksWithModelScores() {
+            given(priceQueryService.findByExchangesAndDate(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE)))
+                    .willReturn(Map.of("AAA", priceClose("AAA", 105L), "BBB", priceClose("BBB", 105L)));
+            given(priceQueryService.findNthRecentTradeDateByExchanges(anyCollection(), eq(PriceType.RAW), eq(EVAL_DATE), eq(1)))
+                    .willReturn(null);
+            given(featureDailyService.findAllByExchangeAndDate(StockExchange.KOSPI, PriceType.RAW, EVAL_DATE))
+                    .willReturn(Map.of());
+            given(modelScoreQueryService.findScoresByModelAndDate(7L, EVAL_DATE))
+                    .willReturn(Map.of("AAA", 0.9, "BBB", 0.5));
+            given(stockQueryService.findByTickers(any()))
+                    .willReturn(Map.of("AAA", stock("AAA"), "BBB", stock("BBB")));
+            given(stockQueryService.findNamesByTickers(any()))
+                    .willReturn(Map.of("AAA", "에이", "BBB", "비"));
+        }
+
+        @Test
+        @DisplayName("가시 집합이 비어 미부여면 점수를 숨기되 정렬은 유지한다")
+        void shouldHideScoreButKeepOrderWhenModelNotVisible() {
+            givenTwoStocksWithModelScores();
+
+            FilterExecutionResult result = service.execute(modelPipelineFilter(), EVAL_DATE, Set.of());
+
+            // 정렬(점수 내림차순)은 유지되어 순서는 그대로, 값만 숨김
+            assertThat(result.matches()).extracting("ticker").containsExactly("AAA", "BBB");
+            assertThat(result.matches().get(0).modelScore()).isNull();
+            assertThat(result.matches().get(1).modelScore()).isNull();
+        }
+
+        @Test
+        @DisplayName("가시 집합에 모델이 있으면 점수를 노출한다")
+        void shouldExposeScoreWhenModelVisible() {
+            givenTwoStocksWithModelScores();
+
+            FilterExecutionResult result = service.execute(modelPipelineFilter(), EVAL_DATE, Set.of(7L));
+
+            assertThat(result.matches()).extracting("ticker").containsExactly("AAA", "BBB");
+            assertThat(result.matches().get(0).modelScore()).isEqualTo(0.9);
+            assertThat(result.matches().get(1).modelScore()).isEqualTo(0.5);
+        }
     }
 }

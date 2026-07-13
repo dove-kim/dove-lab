@@ -74,11 +74,21 @@ public class FilterExecutionService {
     private final StockValuationQueryService valuationQueryService;
 
     /**
-     * 검색 필터를 실행해 통과 종목을 반환한다.
+     * 검색 필터를 실행해 통과 종목을 반환한다(모델 점수 게이트 없음 = 전체 노출).
      *
      * @throws ResponseStatusException 기준일에 해당하는 거래일 데이터가 없는 경우 (422)
      */
     public FilterExecutionResult execute(SearchFilter filter, LocalDate referenceDate) {
+        return execute(filter, referenceDate, null);
+    }
+
+    /**
+     * 검색 필터를 실행해 통과 종목을 반환한다. 표시 대상 모델이 가시 집합에 없으면 그 종목의 모델 점수를 숨긴다(정렬은 유지).
+     *
+     * @param visibleModelIds 사용자가 볼 수 있는 모델 ID 집합. null = 전체 허용(ROOT), 빈 집합 = 아무 모델도 못 봄
+     * @throws ResponseStatusException 기준일에 해당하는 거래일 데이터가 없는 경우 (422)
+     */
+    public FilterExecutionResult execute(SearchFilter filter, LocalDate referenceDate, Set<Long> visibleModelIds) {
         List<MarketType> markets = filter.getMarkets();
         PriceType priceType = filter.getPriceType();
         List<StockExchange> exchanges = filter.getExchange().resolveExchanges(markets);
@@ -98,8 +108,12 @@ public class FilterExecutionService {
         // 파이프라인(순서 단계)이 지정되면 전 단계를 단일 거래일 인메모리로 순차 실행한다.
         List<PipelineStage> pipelineStages = SearchPipeline.parse(filter.getPipeline());
         if (!pipelineStages.isEmpty()) {
-            return executePipeline(filter, markets, priceType, exchanges, model, applyStatus, evalDate, pipelineStages);
+            return executePipeline(filter, markets, priceType, exchanges, model, applyStatus, evalDate,
+                    pipelineStages, visibleModelIds);
         }
+
+        // 표시 대상 모델 = 필터가 참조하는 첫 모델(파이프라인 없는 경로라 RANK 정렬키는 없음). 미가시 모델이면 점수 숨김.
+        Long displayModelId = visibleDisplayModelId(model != null ? firstReferencedModelId(model) : null, visibleModelIds);
 
         // 리스트 정렬(시총)용 티커별 시가총액 — 단일 거래일 슬라이스라 항상 로드해도 저렴
         Map<String, Long> marketCaps = valuationQueryService.findMarketCapByDate(evalDate);
@@ -116,13 +130,17 @@ public class FilterExecutionService {
             List<String> tickers = rows.stream().map(FeatureMatch::ticker).toList();
             Map<String, Stock> stockByTicker = stockQueryService.findByTickers(tickers);
             Map<String, String> names = stockQueryService.findNamesByTickers(tickers);
+            // 이 경로는 모델점수를 안 불러오므로 표시 대상 모델이 있으면 그 점수만 1회 로드
+            Map<String, Map<Long, Double>> modelScores = displayModelId != null
+                    ? loadModelScores(Set.of(displayModelId), evalDate) : Map.of();
             matches = new ArrayList<>();
             for (FeatureMatch r : rows) {
                 Stock stock = stockByTicker.get(r.ticker());
                 if (stock == null || !markets.contains(stock.getMarket())) continue; // 시장 유니버스 제한
                 matches.add(new MatchedStock(r.ticker(), names.getOrDefault(r.ticker(), r.ticker()),
                         stock.getMarket().name(), r.openPrice(), r.highPrice(), r.lowPrice(),
-                        r.closePrice(), r.volume(), r.prevClose(), marketCaps.get(r.ticker())));
+                        r.closePrice(), r.volume(), r.prevClose(), marketCaps.get(r.ticker()),
+                        scoreOf(modelScores, r.ticker(), displayModelId)));
             }
             total = (int) featureFilterQueryService.countByExchangesAndDate(exchanges, priceType, evalDate);
         } else {
@@ -158,7 +176,8 @@ public class FilterExecutionService {
                     matches.add(new MatchedStock(ticker, nameByTicker.getOrDefault(ticker, ticker),
                             stock.getMarket().name(), price.getOpenPrice(), price.getHighPrice(),
                             price.getLowPrice(), price.getClosePrice(), price.getVolume(),
-                            prev != null ? prev.getClosePrice() : null, marketCaps.get(ticker)));
+                            prev != null ? prev.getClosePrice() : null, marketCaps.get(ticker),
+                            scoreOf(modelScores, ticker, displayModelId)));
                 }
             }
             total = prices.size();
@@ -179,7 +198,7 @@ public class FilterExecutionService {
     private FilterExecutionResult executePipeline(SearchFilter filter, List<MarketType> markets, PriceType priceType,
                                                   List<StockExchange> exchanges, FilterNode expressionModel,
                                                   boolean applyStatus, LocalDate evalDate,
-                                                  List<PipelineStage> pipelineStages) {
+                                                  List<PipelineStage> pipelineStages, Set<Long> visibleModelIds) {
         // 실제 실행 단계 = [FILTER(EXPRESSION)] + PIPELINE (EXPRESSION이 있으면 항상 첫 단계)
         List<PipelineStage> stages = new ArrayList<>();
         if (expressionModel != null) stages.add(new FilterStage(expressionModel));
@@ -205,8 +224,12 @@ public class FilterExecutionService {
             customMetricIds.addAll(FilterOperands.referencedCustomMetricIds(n));
             modelIds.addAll(FilterOperands.referencedModelIds(n));
         }
+        // RANK 단계 MODEL_SCORE 정렬키가 참조하는 모델점수도 로드 대상에 합친다
+        modelIds.addAll(rankModelIds(pipelineStages));
         Map<Long, Double> customMetrics = loadCustomMetrics(customMetricIds, evalDate);
         Map<String, Map<Long, Double>> modelScores = loadModelScores(modelIds, evalDate);
+        // 표시 대상 모델 = RANK MODEL_SCORE 정렬키의 첫 모델, 없으면 필터 참조 첫 모델. 미가시 모델이면 점수 숨김(정렬은 유지).
+        Long displayModelId = visibleDisplayModelId(resolveDisplayModelId(filterNodes, pipelineStages), visibleModelIds);
         boolean needStatus = applyStatus && filterNodes.stream().anyMatch(FilterOperands::usesStockStatus);
         Map<String, StockStatusFlags> statusByTicker = needStatus
                 ? stockDetailQueryService.findStatusByTickers(prices.keySet()) : Map.of();
@@ -242,7 +265,7 @@ public class FilterExecutionService {
                         .filter(t -> FilterEvaluator.evaluate(fs.filter(), contexts.get(t)))
                         .collect(Collectors.toCollection(ArrayList::new));
             } else if (stage instanceof RankStage rs) {
-                candidates = applyRank(candidates, rs, prices, prevPrices, marketCaps);
+                candidates = applyRank(candidates, rs, prices, prevPrices, marketCaps, modelScores);
             }
         }
 
@@ -254,7 +277,8 @@ public class FilterExecutionService {
             matches.add(new MatchedStock(ticker, nameByTicker.getOrDefault(ticker, ticker),
                     stockByTicker.get(ticker).getMarket().name(), price.getOpenPrice(), price.getHighPrice(),
                     price.getLowPrice(), price.getClosePrice(), price.getVolume(),
-                    prev != null ? prev.getClosePrice() : null, marketCaps.get(ticker)));
+                    prev != null ? prev.getClosePrice() : null, marketCaps.get(ticker),
+                    scoreOf(modelScores, ticker, displayModelId)));
         }
         return new FilterExecutionResult(evalDate, total, matches);
     }
@@ -263,11 +287,12 @@ public class FilterExecutionService {
      * RANK 단계를 적용한다 — 정렬 키로 정렬 후 limit이 있으면 상위 N개만 남긴다.
      */
     private List<String> applyRank(List<String> candidates, RankStage stage, Map<String, StockPrice> prices,
-                                   Map<String, StockPrice> prevPrices, Map<String, Long> marketCaps) {
+                                   Map<String, StockPrice> prevPrices, Map<String, Long> marketCaps,
+                                   Map<String, Map<Long, Double>> modelScores) {
         List<String> sorted = new ArrayList<>(candidates);
         Comparator<String> comparator = null;
         for (SortKey key : stage.sortKeys()) {
-            Comparator<String> next = comparatorFor(key, prices, prevPrices, marketCaps);
+            Comparator<String> next = comparatorFor(key, prices, prevPrices, marketCaps, modelScores);
             comparator = comparator == null ? next : comparator.thenComparing(next);
         }
         if (comparator != null) sorted.sort(comparator);
@@ -282,19 +307,21 @@ public class FilterExecutionService {
      * 정렬 키 하나에 대한 비교자를 만든다 — 방향 반영, null 값은 방향 무관 항상 마지막.
      */
     private Comparator<String> comparatorFor(SortKey key, Map<String, StockPrice> prices,
-                                             Map<String, StockPrice> prevPrices, Map<String, Long> marketCaps) {
-        Function<String, Double> value = t -> sortValue(key.field(), t, prices, prevPrices, marketCaps);
+                                             Map<String, StockPrice> prevPrices, Map<String, Long> marketCaps,
+                                             Map<String, Map<Long, Double>> modelScores) {
+        Function<String, Double> value = t -> sortValue(key, t, prices, prevPrices, marketCaps, modelScores);
         Comparator<Double> order = key.direction() == SortDirection.DESC
                 ? Comparator.reverseOrder() : Comparator.naturalOrder();
         return Comparator.comparing(value, Comparator.nullsLast(order));
     }
 
     /**
-     * 정렬 필드의 종목 값을 반환한다(없으면 null).
+     * 정렬 키의 종목 값을 반환한다(없으면 null).
      */
-    private Double sortValue(SortField field, String ticker, Map<String, StockPrice> prices,
-                            Map<String, StockPrice> prevPrices, Map<String, Long> marketCaps) {
-        return switch (field) {
+    private Double sortValue(SortKey key, String ticker, Map<String, StockPrice> prices,
+                            Map<String, StockPrice> prevPrices, Map<String, Long> marketCaps,
+                            Map<String, Map<Long, Double>> modelScores) {
+        return switch (key.field()) {
             case CHANGE_RATE -> {
                 StockPrice p = prices.get(ticker);
                 StockPrice prev = prevPrices.get(ticker);
@@ -311,6 +338,7 @@ public class FilterExecutionService {
                 StockPrice p = prices.get(ticker);
                 yield p != null && p.getVolume() != null ? p.getVolume().doubleValue() : null;
             }
+            case MODEL_SCORE -> scoreOf(modelScores, ticker, key.modelId());
         };
     }
 
@@ -359,6 +387,59 @@ public class FilterExecutionService {
             }
         }
         return byTicker;
+    }
+
+    /**
+     * 결과에 표시할 모델 ID를 정한다 — RANK 단계 MODEL_SCORE 정렬키의 첫 모델, 없으면 필터 참조 첫 모델, 그것도 없으면 null.
+     */
+    private Long resolveDisplayModelId(List<FilterNode> filterNodes, List<PipelineStage> pipelineStages) {
+        Set<Long> rankIds = rankModelIds(pipelineStages);
+        if (!rankIds.isEmpty()) return rankIds.iterator().next();
+        for (FilterNode n : filterNodes) {
+            Long id = firstReferencedModelId(n);
+            if (id != null) return id;
+        }
+        return null;
+    }
+
+    /**
+     * 필터 트리가 참조하는 첫 모델 ID를 반환한다(없으면 null).
+     */
+    private Long firstReferencedModelId(FilterNode node) {
+        Set<Long> ids = FilterOperands.referencedModelIds(node);
+        return ids.isEmpty() ? null : ids.iterator().next();
+    }
+
+    /**
+     * RANK 단계의 MODEL_SCORE 정렬키가 참조하는 모델 ID 집합을 순서대로 반환한다.
+     */
+    private Set<Long> rankModelIds(List<PipelineStage> pipelineStages) {
+        Set<Long> ids = new LinkedHashSet<>();
+        for (PipelineStage stage : pipelineStages) {
+            if (stage instanceof RankStage rs) {
+                for (SortKey key : rs.sortKeys()) {
+                    if (key.field() == SortField.MODEL_SCORE && key.modelId() != null) ids.add(key.modelId());
+                }
+            }
+        }
+        return ids;
+    }
+
+    /**
+     * 표시 대상 모델 ID를 가시성으로 게이트한다 — 가시 집합이 있고 그 안에 없으면 null(점수 투영 안 함).
+     */
+    private Long visibleDisplayModelId(Long displayModelId, Set<Long> visibleModelIds) {
+        boolean canSee = visibleModelIds == null || (displayModelId != null && visibleModelIds.contains(displayModelId));
+        return canSee ? displayModelId : null;
+    }
+
+    /**
+     * 티커의 표시 대상 모델 점수를 반환한다 — 대상 모델이 없거나 점수 없는 종목이면 null.
+     */
+    private Double scoreOf(Map<String, Map<Long, Double>> modelScores, String ticker, Long modelId) {
+        if (modelId == null) return null;
+        Map<Long, Double> byModel = modelScores.get(ticker);
+        return byModel != null ? byModel.get(modelId) : null;
     }
 
     private LocalDate resolveDate(DateRule rule, List<StockExchange> exchanges, PriceType priceType, LocalDate reference) {

@@ -10,6 +10,7 @@ import { useChartInteraction } from "./useChartInteraction";
 import { INDICATOR_META, PANEL_LABELS, type PanelId } from "./indicatorMeta";
 import type { IndicatorType } from "@/types/filter";
 import type { IndicatorPresetItem } from "@/types/indicator-preset";
+import type { ModelScorePoint, CustomMetricPoint, CustomMetricSummary } from "@/types/chart-overlay";
 
 // ── 클라이언트 캐시 (모듈 레벨 — 페이지 생존 주기 동안 유지) ────────────────────
 // 같은 종목 재방문 시 네트워크 없이 즉시 표시한다.
@@ -114,6 +115,14 @@ interface Props {
   presetItems: IndicatorPresetItem[];
   panelOrder?: PanelId[];
   mode: Mode;
+  /** 시그널 레인으로 표시할 모델 ID. 없으면 미표시. */
+  signalModelId?: number | null;
+  /** 시그널 레인 툴팁·마커에 표시할 모델 이름. */
+  signalModelName?: string | null;
+  /** 시그널 마커를 찍을 점수 임계값 (0~1). */
+  signalThreshold?: number;
+  /** 하단 서브패널로 표시할 커스텀 지표(SERIES) 목록. 빈 배열이면 미표시. */
+  seriesMetrics?: CustomMetricSummary[];
   /** 최신 일봉(가장 최근 봉)과 그 직전 봉 종가(등락률용)를 부모로 올려준다. 데이터 없으면 null. */
   onLatestBar?: (bar: PriceBar | null, prevClose?: number | null) => void;
 }
@@ -124,6 +133,14 @@ const RISING     = "#ef4444";
 const FALLING    = "#3b82f6";
 const LINE_COLOR = "#a78bfa";
 const MONO_FONT  = "11px ui-monospace, monospace";
+
+// ── 오버레이(모델 시그널 / 커스텀 지표) ──────────────────────────────────────
+const SIGNAL_LANE_H = 15;         // 시그널 레인(▲ 마커 띠) 높이
+const SIGNAL_COLOR  = "#34d399";  // 시그널 마커 기준색(강도에 따라 alpha 가변)
+// 커스텀 지표 연속값 선 색 — 지표별로 순환 배정
+const SERIES_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#fbbf24", "#4ade80", "#f97316", "#60a5fa"];
+const SERIES_ON_COLOR  = "rgba(52,211,153,0.55)";  // 불리언 ON 색 띠
+const SERIES_OFF_COLOR = "rgba(100,116,139,0.28)"; // 불리언 OFF 색 띠
 
 // ── 포맷 헬퍼 ────────────────────────────────────────────────────────────────
 
@@ -294,7 +311,20 @@ function computeLayout(
 
 // ── 메인 컴포넌트 ─────────────────────────────────────────────────────────────
 
-function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onLatestBar }: Props) {
+function StockChart({
+  code, source, adjusted, presetItems, panelOrder, mode,
+  signalModelId = null, signalModelName = null, signalThreshold = 0.5,
+  seriesMetrics = [],
+  onLatestBar,
+}: Props) {
+  // 선택 지표 목록을 문자열 키로 안정화 (부모가 매 렌더 새 배열을 넘겨도 effect·memo 재실행 방지)
+  const seriesMetricsKey = seriesMetrics.map(m => m.id).join(",");
+  const seriesNamesKey   = seriesMetrics.map(m => `${m.id}:${m.name}`).join("|");
+  const seriesNameById = useMemo(() => {
+    const m = new Map<number, string>();
+    for (const s of seriesMetrics) m.set(s.id, s.name);
+    return m;
+  }, [seriesNamesKey]); // eslint-disable-line react-hooks/exhaustive-deps
   // 콜백 식별자 변화로 fetch effect가 재실행되지 않도록 ref로 미러링
   const onLatestBarRef = useRef(onLatestBar);
   onLatestBarRef.current = onLatestBar;
@@ -319,6 +349,8 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
   const [expandedBars, setExpandedBars]         = useState<(PriceBar | null)[]>([]);
   const [indicatorData, setIndicatorData]       = useState<IndicatorBar[]>([]);
   const [indicatorLoading, setIndicatorLoading] = useState(false);
+  const [scoreData, setScoreData]               = useState<ModelScorePoint[]>([]);
+  const [seriesByMetric, setSeriesByMetric]     = useState<{ id: number; points: CustomMetricPoint[] }[]>([]);
   const [loading, setLoading]                   = useState(true);
   const [error, setError]                       = useState<string | null>(null);
   const [width, setWidth]                       = useState(0);
@@ -460,6 +492,37 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
     return () => controller.abort();
   }, [code, source, adjusted, selectedIndicatorsKey]);
 
+  // 로드된 봉 범위(가장 오래된 ~ 가장 최근) — 오버레이 시계열 조회 구간
+  const loadedFrom = bars.length ? bars[0].date : null;
+  const loadedTo   = bars.length ? bars[bars.length - 1].date : null;
+
+  // 모델 점수 시계열 — 표시 종목·모델의 로드된 구간만. 실패/미부여(403)면 조용히 빈 처리.
+  useEffect(() => {
+    if (signalModelId == null || !loadedFrom || !loadedTo) { setScoreData([]); return; }
+    const controller = new AbortController();
+    fetch(`/api/stocks/${code}/scores?modelId=${signalModelId}&from=${loadedFrom}&to=${loadedTo}`, { signal: controller.signal })
+      .then(r => (r.ok ? r.json() : []))
+      .then((rows: ModelScorePoint[]) => setScoreData(Array.isArray(rows) ? rows : []))
+      .catch(() => {});
+    return () => controller.abort();
+  }, [code, signalModelId, loadedFrom, loadedTo]);
+
+  // 커스텀 지표(SERIES) 시계열 — 시장 공통(종목 무관). 선택 지표별로 각각 조회.
+  // 특정 지표 실패/미부여(403)면 그 지표만 조용히 빈 처리(다른 지표에 영향 없음).
+  useEffect(() => {
+    if (!seriesMetricsKey || !loadedFrom || !loadedTo) { setSeriesByMetric([]); return; }
+    const ids = seriesMetricsKey.split(",").map(Number);
+    const controller = new AbortController();
+    let cancelled = false;
+    Promise.all(ids.map(id =>
+      fetch(`/api/stocks/custom-metrics/${id}/series?from=${loadedFrom}&to=${loadedTo}`, { signal: controller.signal })
+        .then(r => (r.ok ? r.json() : []))
+        .then((rows: CustomMetricPoint[]) => ({ id, points: Array.isArray(rows) ? rows : [] }))
+        .catch(() => ({ id, points: [] as CustomMetricPoint[] })),
+    )).then(results => { if (!cancelled) setSeriesByMetric(results); });
+    return () => { cancelled = true; controller.abort(); };
+  }, [seriesMetricsKey, loadedFrom, loadedTo]);
+
   // ── 과거 페이지네이션 (좌측 스크롤 시 프리버퍼 lazy-load) ─────────────────────
 
   // 항상 최신 상태/props를 읽도록 매 렌더 ref 갱신 (interaction effect 재구성 회피)
@@ -560,6 +623,28 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
     return m;
   }, [indicatorData]);
 
+  const scoreMap = useMemo(() => {
+    const m = new Map<string, number>();
+    for (const s of scoreData) if (s.score != null) m.set(s.date, s.score);
+    return m;
+  }, [scoreData]);
+
+  // 선택된 커스텀 지표 각각을 하나의 서브패널로. 빈(실패·미부여) 지표는 스킵.
+  // 값이 {0,1}만이면 불리언(레짐) → ON/OFF 색 띠, 아니면 연속값 → 선.
+  const seriesPanels = useMemo(
+    () => seriesByMetric
+      .filter(m => m.points.length > 0)
+      .map(m => {
+        const isBoolean   = m.points.every(p => p.value === 0 || p.value === 1);
+        const valueByDate = new Map<string, number>();
+        for (const p of m.points) valueByDate.set(p.date, p.value);
+        return { id: m.id, name: seriesNameById.get(m.id) ?? "커스텀 지표", isBoolean, valueByDate };
+      }),
+    [seriesByMetric, seriesNameById],
+  );
+
+  const showSignalLane = signalModelId != null && scoreData.length > 0;
+
   // 등락률용 — 각 거래일의 직전 봉 종가 (호버 툴팁)
   const prevCloseByDate = useMemo(() => {
     const m = new Map<string, number>();
@@ -586,7 +671,10 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
       : list;
   }, [activePanels, panelOrder]);
 
-  const svgH = totalSvgH(subPanels.length);
+  // 선택된 커스텀 지표는 지표 서브패널 뒤에 지표당 서브패널 한 줄씩 더 붙인다.
+  const extraPanels    = seriesPanels.length;
+  const totalSubPanels = subPanels.length + extraPanels;
+  const svgH = totalSvgH(totalSubPanels);
 
   // ── Canvas draw: 정적 레이어 ─────────────────────────────────────────────────
 
@@ -622,7 +710,7 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
         const vc = vcRef.current;
         const visibleSlots = expandedBars.slice(Math.max(0, ri - vc + 1), ri + 1);
 
-        const L = computeLayout(width, visibleSlots, bars, subPanels.length, svgH);
+        const L = computeLayout(width, visibleSlots, bars, totalSubPanels, svgH);
       const { plotL, plotR, plotW, cTop, cBot, vTop, vBot, n, slot, bw, xAt, toY, toVH, pBotVal, pRange, maxVol, chartBot } = L;
 
       ctx.clearRect(0, 0, width, svgH);
@@ -811,6 +899,37 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
 
       ctx.restore(); // 클립 해제
 
+      // ── 모델 시그널 레인 (▲ 마커) — 가격 패널 상단 고정 띠 ─────────────────
+      if (showSignalLane) {
+        const laneTop = cTop;
+        const laneMid = laneTop + SIGNAL_LANE_H / 2;
+        // 레인 배경 띠 (캔들 위, 반투명)
+        ctx.fillStyle = "rgba(15,23,42,0.55)";
+        ctx.fillRect(plotL, laneTop, plotW, SIGNAL_LANE_H);
+        ctx.font = "9px sans-serif";
+        ctx.fillStyle = "#64748b";
+        ctx.textAlign = "left"; ctx.textBaseline = "middle";
+        ctx.fillText("시그널", plotL + 3, laneMid);
+        // 임계값 이상인 거래일에 고정 y로 ▲ (점수 강도로 색 농도)
+        const denom = signalThreshold < 1 ? 1 - signalThreshold : 1;
+        visibleSlots.forEach((s, i) => {
+          if (!s) return;
+          const sc = scoreMap.get(s.date);
+          if (sc == null || sc < signalThreshold) return;
+          const strength = Math.max(0, Math.min(1, (sc - signalThreshold) / denom));
+          const mx = xAt(i);
+          ctx.fillStyle = SIGNAL_COLOR;
+          ctx.globalAlpha = 0.4 + 0.6 * strength;
+          ctx.beginPath();
+          ctx.moveTo(mx, laneMid - 4);
+          ctx.lineTo(mx - 4, laneMid + 4);
+          ctx.lineTo(mx + 4, laneMid + 4);
+          ctx.closePath();
+          ctx.fill();
+          ctx.globalAlpha = 1;
+        });
+      }
+
       // ── 보조지표 패널 ────────────────────────────────────────────────────────
       subPanels.forEach((panelId, pi) => {
         const panelTop  = vBot + SCROLL_H + PANEL_GAP + pi * (PANEL_H + PANEL_GAP);
@@ -928,6 +1047,99 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
         ctx.restore(); // 패널 클립 해제
       });
 
+      // ── 커스텀 지표 전용 서브패널 (지표 패널 뒤에 지표당 한 줄) ────────────
+      seriesPanels.forEach((sp, si) => {
+        const pi        = subPanels.length + si;
+        const panelTop  = vBot + SCROLL_H + PANEL_GAP + pi * (PANEL_H + PANEL_GAP);
+        const panelBot  = panelTop + PANEL_H;
+
+        // 패널 배경 + 구분선
+        ctx.fillStyle = "rgba(255,255,255,0.02)";
+        ctx.beginPath(); ctx.roundRect(plotL, panelTop, plotW, PANEL_H, 2); ctx.fill();
+        ctx.strokeStyle = "rgba(255,255,255,0.08)"; ctx.lineWidth = 1;
+        ctx.beginPath(); ctx.moveTo(plotL, panelTop); ctx.lineTo(plotR, panelTop); ctx.stroke();
+
+        // 라벨
+        ctx.font = "10px sans-serif";
+        ctx.fillStyle = "#64748b";
+        ctx.textAlign = "left"; ctx.textBaseline = "top";
+        ctx.fillText(sp.name, plotL + 4, panelTop + 2);
+
+        if (sp.isBoolean) {
+          // 불리언 → ON/OFF 색 띠(패널 중앙, 캔들 x정렬)
+          const bandH   = 18;
+          const bandTop = panelTop + (PANEL_H - bandH) / 2;
+          ctx.save();
+          ctx.beginPath(); ctx.rect(plotL, panelTop, plotW, PANEL_H); ctx.clip();
+          visibleSlots.forEach((s, i) => {
+            if (!s) return;
+            const v = sp.valueByDate.get(s.date);
+            if (v == null) return;
+            ctx.fillStyle = v === 1 ? SERIES_ON_COLOR : SERIES_OFF_COLOR;
+            ctx.fillRect(xAt(i) - slot / 2, bandTop, slot, bandH);
+          });
+          ctx.restore();
+          // ON/OFF 범례(우측 여백)
+          ctx.font = MONO_FONT;
+          ctx.textAlign = "right"; ctx.textBaseline = "middle";
+          ctx.fillStyle = "#34d399"; ctx.fillText("ON",  plotL - 4, bandTop + 5);
+          ctx.fillStyle = "#64748b"; ctx.fillText("OFF", plotL - 4, bandTop + bandH - 5);
+          return;
+        }
+
+        // 연속값 → 자체 y스케일 선
+        const color = SERIES_COLORS[si % SERIES_COLORS.length];
+        const vals: number[] = [];
+        visibleSlots.forEach(s => { if (!s) return; const v = sp.valueByDate.get(s.date); if (v != null) vals.push(v); });
+
+        let pMin = vals.length ? Math.min(...vals) : 0;
+        let pMax = vals.length ? Math.max(...vals) : 1;
+        if (pMin === pMax) { pMin -= 1; pMax += 1; }
+        const pad2   = (pMax - pMin) * 0.08;
+        const yMin   = pMin - pad2;
+        const yRange = pMax - pMin + pad2 * 2;
+        const toYS   = (v: number) => panelBot - ((v - yMin) / yRange) * PANEL_H;
+
+        if (vals.length > 0) {
+          ctx.font = MONO_FONT;
+          ctx.fillStyle = "#94a3b8";
+          ctx.textAlign = "right"; ctx.textBaseline = "top";
+          ctx.fillText(fmtVal(pMax), plotL - 4, panelTop);
+          ctx.textBaseline = "bottom";
+          ctx.fillText(fmtVal(pMin), plotL - 4, panelBot);
+        }
+
+        // 제로선
+        if (yMin < 0 && yMin + yRange > 0 && vals.length > 0) {
+          ctx.strokeStyle = "rgba(255,255,255,0.12)"; ctx.lineWidth = 1;
+          ctx.setLineDash([2, 2]);
+          const y0 = toYS(0);
+          ctx.beginPath(); ctx.moveTo(plotL, y0); ctx.lineTo(plotR, y0); ctx.stroke();
+          ctx.setLineDash([]);
+        }
+
+        // 선
+        ctx.save();
+        ctx.beginPath(); ctx.rect(plotL, panelTop, plotW, PANEL_H); ctx.clip();
+        let sPath: [number, number][] = []; let snm = true;
+        visibleSlots.forEach((s, i) => {
+          if (!s) { snm = true; return; }
+          const v = sp.valueByDate.get(s.date);
+          if (v == null) return;
+          if (snm) { sPath = [[xAt(i), toYS(v)]]; snm = false; }
+          else { sPath.push([xAt(i), toYS(v)]); }
+        });
+        if (sPath.length >= 2) {
+          ctx.strokeStyle = color; ctx.lineWidth = 1.5;
+          ctx.lineJoin = "round"; ctx.lineCap = "round";
+          ctx.beginPath();
+          ctx.moveTo(sPath[0][0], sPath[0][1]);
+          for (let i = 1; i < sPath.length; i++) ctx.lineTo(sPath[i][0], sPath[i][1]);
+          ctx.stroke();
+        }
+        ctx.restore();
+      });
+
         perf.end("Render", `StockChart[${code}] static draw`, _t0);
         perf.pipe.end("⑨ canvas draw 완료 → 화면에 표시됨");
       });
@@ -938,7 +1150,8 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
     return () => cancelAnimationFrame(staticRafRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
   // rightIndex / visibleCount 제거 — refs(riRef/vcRef)로 직접 읽으므로 불필요
-  }, [width, expandedBars, indicatorData, mode, presetItems, subPanels, loading]);
+  }, [width, expandedBars, indicatorData, mode, presetItems, subPanels, loading,
+      scoreData, seriesPanels, signalModelId, signalThreshold, totalSubPanels]);
 
 
   // ── Canvas draw: 오버레이 (크로스헤어만) ─────────────────────────────────────
@@ -963,7 +1176,7 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
       ctx.clearRect(0, 0, width, svgH);
 
       if (hoverIdx === null || hoverIdx < 0) return;
-      const L = computeLayout(width, visibleSlots, bars, subPanels.length, svgH);
+      const L = computeLayout(width, visibleSlots, bars, totalSubPanels, svgH);
       const { plotL, plotR, cTop, xAt, toY, chartBot } = L;
 
       const bar = visibleSlots[hoverIdx];
@@ -1052,7 +1265,7 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
     });
     return () => cancelAnimationFrame(overlayRafRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hoverIdx, width, expandedBars, visibleCount, rightIndex, indicatorData, subPanels]);
+  }, [hoverIdx, width, expandedBars, visibleCount, rightIndex, indicatorData, subPanels, seriesPanels, totalSubPanels]);
 
   // ── 인터랙션 ──────────────────────────────────────────────────────────────────
 
@@ -1072,7 +1285,8 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
       <div
         ref={containerRef}
         className="w-full relative"
-        style={{ height: svgH, touchAction: "none" }}
+        // pan-y: 세로 드래그는 브라우저 스크롤(하단 지표 패널 보기), 가로 드래그·핀치는 차트가 처리
+        style={{ height: svgH, touchAction: "pan-y" }}
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
@@ -1139,6 +1353,11 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
           const rising = (hoveredBar.close ?? 0) >= (hoveredBar.open ?? hoveredBar.close ?? 0);
           const vals   = indicatorMap.get(hoveredBar.date);
           const overlayActive = selectedIndicators.filter(t => INDICATOR_META[t]?.panel === "OVERLAY");
+          // 오버레이 크로스헤어 리드아웃 — 그 날 모델 점수·커스텀 지표 값
+          const hoverScore  = signalModelId != null ? scoreMap.get(hoveredBar.date) : undefined;
+          const hoverSeries = seriesPanels
+            .map(sp => ({ id: sp.id, name: sp.name, isBoolean: sp.isBoolean, v: sp.valueByDate.get(hoveredBar.date) }))
+            .filter((x): x is { id: number; name: string; isBoolean: boolean; v: number } => x.v != null);
           const priceColor = rising ? "text-red-400" : "text-blue-400";
           // 전일대비 등락률 — 직전 봉 종가 기준
           const prevC = prevCloseByDate.get(hoveredBar.date) ?? null;
@@ -1169,6 +1388,16 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
                     </span>
                   </p>
                 )}
+                {hoverScore != null && (
+                  <p className="text-center leading-tight text-emerald-400">
+                    {signalModelName ?? "모델"} {fmtVal(hoverScore)}
+                  </p>
+                )}
+                {hoverSeries.map(s => (
+                  <p key={s.id} className="text-center leading-tight text-cyan-300">
+                    {s.name} {s.isBoolean ? (s.v === 1 ? "ON" : "OFF") : fmtVal(s.v)}
+                  </p>
+                ))}
               </div>
 
               {/* ── 태블릿 이상: 전체 OHLCV + 지표 (sm 이상) ─────────────────── */}
@@ -1209,6 +1438,18 @@ function StockChart({ code, source, adjusted, presetItems, panelOrder, mode, onL
                         <span key={`${t}-v`} className="text-right text-slate-200">{fmtVal(v)}</span>,
                       ];
                     })}
+                    {hoverScore != null && (
+                      <>
+                        <span className="text-emerald-400/80">{signalModelName ?? "모델"}</span>
+                        <span className="text-right text-emerald-400">{fmtVal(hoverScore)}</span>
+                      </>
+                    )}
+                    {hoverSeries.map(s => [
+                      <span key={`${s.id}-l`} className="text-cyan-300/80">{s.name}</span>,
+                      <span key={`${s.id}-v`} className="text-right text-cyan-300">
+                        {s.isBoolean ? (s.v === 1 ? "ON" : "OFF") : fmtVal(s.v)}
+                      </span>,
+                    ])}
                   </div>
                 )}
               </div>

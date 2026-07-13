@@ -44,10 +44,22 @@ public class CustomMetricSourceSupport {
 
     /**
      * universe(tickers)에 대해 거래일별 횡단 집계값을 반환한다. MEAN=colA 평균, RATIO_GT=colA&gt;colB 비율.
+     * 집계는 거래일별로 독립이므로 전 구간을 연 단위 청크로 나눠 실행·병합한다(단일 대형 스캔의 타임아웃 회피).
      */
     public Map<LocalDate, Double> aggregate(MetricAgg agg, String colA, String colB,
                                             Collection<String> tickers, PriceType priceType,
                                             LocalDate fromInclusive, LocalDate toInclusive) {
+        Map<LocalDate, Double> result = new LinkedHashMap<>();
+        for (DateWindow w : DateWindows.yearly(fromInclusive, toInclusive)) {
+            result.putAll(aggregateWindow(agg, colA, colB, tickers, priceType, w.fromInclusive(), w.toInclusive()));
+        }
+        return result;
+    }
+
+    /** 단일 거래일 구간의 횡단 집계(그룹 by 거래일). aggregate가 청크별로 호출한다. */
+    private Map<LocalDate, Double> aggregateWindow(MetricAgg agg, String colA, String colB,
+                                                   Collection<String> tickers, PriceType priceType,
+                                                   LocalDate fromInclusive, LocalDate toInclusive) {
         QStockFeatureDaily f = QStockFeatureDaily.stockFeatureDaily;
         NumberExpression<Double> a = col(f, colA);
         BooleanExpression where = f.id.ticker.in(tickers).and(f.id.priceType.eq(priceType))

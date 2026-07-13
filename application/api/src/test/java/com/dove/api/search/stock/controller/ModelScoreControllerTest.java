@@ -13,6 +13,7 @@ import com.dove.stock.application.service.StockCommandService;
 import com.dove.stock.domain.entity.Stock;
 import com.dove.stock.domain.enums.PriceType;
 import com.dove.stock.domain.enums.StockExchange;
+import com.dove.userfeature.application.service.MemberModelGrantCommandService;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -44,6 +45,7 @@ class ModelScoreControllerTest {
     @Autowired StockCommandService stockCommandService;
     @Autowired MlModelRepository mlModelRepository;
     @Autowired StockModelScoreRepository scoreRepository;
+    @Autowired MemberModelGrantCommandService modelGrantCommandService;
 
     private Long modelId;
 
@@ -57,6 +59,8 @@ class ModelScoreControllerTest {
                 Set.of(StockExchange.KOSPI, StockExchange.KOSDAQ), PriceType.ADJUSTED, "tester"));
         model.activate();
         modelId = mlModelRepository.save(model).getId();
+        // 기본 테스트 사용자(memberId=1)에게 모델 접근을 부여 — 가시성 게이트 통과용
+        modelGrantCommandService.grant(1L, modelId, null);
     }
 
     private void seedScore(LocalDate date, float score) {

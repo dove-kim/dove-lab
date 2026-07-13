@@ -3,10 +3,12 @@ package com.dove.screening.application.service;
 import com.dove.screening.domain.entity.IndicatorPreset;
 import com.dove.screening.domain.repository.IndicatorPresetRepository;
 import com.dove.screening.domain.value.IndicatorPresetItem;
+import com.dove.screening.domain.value.PresetOverlay;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.ArgumentCaptor;
 import org.mockito.InjectMocks;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
@@ -51,6 +53,20 @@ class IndicatorPresetCommandServiceTest {
             assertThat(result).isSameAs(preset);
             verify(indicatorPresetRepository).save(any(IndicatorPreset.class));
         }
+
+        @Test
+        @DisplayName("오버레이를 함께 저장한다")
+        void shouldSaveOverlayWhenProvided() {
+            PresetOverlay overlay = new PresetOverlay(7L, 0.6, List.of(1L, 2L));
+            given(indicatorPresetRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
+
+            IndicatorPreset result = service.create(MEMBER_ID, "기본", List.of(), List.of(), overlay);
+
+            ArgumentCaptor<IndicatorPreset> captor = ArgumentCaptor.forClass(IndicatorPreset.class);
+            verify(indicatorPresetRepository).save(captor.capture());
+            assertThat(captor.getValue().getOverlay()).isEqualTo(overlay);
+            assertThat(result.getOverlay()).isEqualTo(overlay);
+        }
     }
 
     @Nested
@@ -77,6 +93,19 @@ class IndicatorPresetCommandServiceTest {
 
             assertThatThrownBy(() -> service.update(MEMBER_ID, PRESET_ID, "이름", List.of(), List.of()))
                     .isInstanceOf(NoSuchElementException.class);
+        }
+
+        @Test
+        @DisplayName("오버레이를 갱신한다")
+        void shouldUpdateOverlayWhenFound() {
+            IndicatorPreset preset = makePreset("기본");
+            PresetOverlay overlay = new PresetOverlay(3L, 0.75, List.of(9L));
+            given(indicatorPresetRepository.findByIdAndMemberId(PRESET_ID, MEMBER_ID))
+                    .willReturn(Optional.of(preset));
+
+            IndicatorPreset result = service.update(MEMBER_ID, PRESET_ID, "수정됨", List.of(), List.of(), overlay);
+
+            assertThat(result.getOverlay()).isEqualTo(overlay);
         }
     }
 

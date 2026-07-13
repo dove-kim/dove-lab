@@ -13,8 +13,6 @@ public enum Capability {
     STOCK_VIEW,
     /** 조건 검색 + 검색필터·종목필터 관리(필터가 있어야 검색하므로 한 권한). */
     STOCK_SEARCH,
-    /** ML 예측 지표 데이터(민감 — 권한 없으면 응답에서 제거). */
-    INDICATOR_ML,
     /** ML 모델 채점 점수 조회·차트(민감 — 권한 없으면 403). */
     MODEL_SCORE,
     /** 커스텀 지표 사용(전역 게이트 — 지표별 접근은 MEMBER_CUSTOM_INDICATOR_GRANT). */

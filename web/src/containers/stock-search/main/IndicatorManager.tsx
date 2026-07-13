@@ -13,6 +13,9 @@ import { INDICATOR_META, PANEL_LABELS, SELECTOR_GROUPS, type PanelId } from "@/c
 import type { IndicatorType } from "@/types/filter";
 import type { IndicatorPreset, IndicatorPresetItem } from "@/types/indicator-preset";
 import { COLOR_PALETTE, LINE_WIDTHS } from "@/types/indicator-preset";
+import type { ModelSummary, CustomMetricSummary, ChartOverlayConfig } from "@/types/chart-overlay";
+import { DEFAULT_CHART_OVERLAY } from "@/types/chart-overlay";
+import { cx } from "@/utils/cx";
 
 const DEFAULT_PANEL_ORDER: PanelId[] = [
   "RSI", "MACD", "STOCH", "ADX", "OSCILLATOR", "VOLUME_IND", "OBV", "VOLATILITY", "BB_MISC",
@@ -37,10 +40,12 @@ interface Props {
   presets: IndicatorPreset[];
   activePreset: IndicatorPreset | null;
   loading: boolean;
-  create: (name: string, preset: { items: IndicatorPresetItem[]; panelOrder: PanelId[] }) => Promise<IndicatorPreset>;
-  update: (id: number, name: string, preset: { items: IndicatorPresetItem[]; panelOrder: PanelId[] }) => Promise<IndicatorPreset>;
+  create: (name: string, preset: { items: IndicatorPresetItem[]; panelOrder: PanelId[]; overlay: ChartOverlayConfig }) => Promise<IndicatorPreset>;
+  update: (id: number, name: string, preset: { items: IndicatorPresetItem[]; panelOrder: PanelId[]; overlay: ChartOverlayConfig }) => Promise<IndicatorPreset>;
   remove: (id: number) => Promise<void>;
   reorder: (orderedIds: number[]) => Promise<void>;
+  signalModels: ModelSummary[];
+  customMetrics: CustomMetricSummary[];
 }
 
 function SortablePresetRow({ preset, isActive }: { preset: IndicatorPreset; isActive: boolean }) {
@@ -215,8 +220,10 @@ function PanelRow({
 
 export default function IndicatorManager({
   open, onClose, presets, activePreset, loading, create, update, remove, reorder,
+  signalModels, customMetrics,
 }: Props) {
   const [items, setItems]           = useState<IndicatorPresetItem[]>(buildDefaultItems());
+  const [overlay, setOverlay]       = useState<ChartOverlayConfig>(DEFAULT_CHART_OVERLAY);
   const [presetName, setPresetName] = useState("");
   const [newName, setNewName]       = useState("");
   const [creating, setCreating]     = useState(false);
@@ -235,10 +242,12 @@ export default function IndicatorManager({
     setError("");
     if (!activePreset) {
       setItems(buildDefaultItems());
+      setOverlay(DEFAULT_CHART_OVERLAY);
       setPresetName("");
       return;
     }
     setItems(buildMergedItems(activePreset.items));
+    setOverlay(activePreset.overlay ?? DEFAULT_CHART_OVERLAY);
     setPresetName(activePreset.name);
   }, [activePreset]);
 
@@ -250,8 +259,13 @@ export default function IndicatorManager({
       const base = baseline.find(b => b.type === item.type)!;
       if (item.enabled !== base.enabled || item.color !== base.color || item.lineWidth !== base.lineWidth) return true;
     }
+    const baseOverlay = activePreset.overlay ?? DEFAULT_CHART_OVERLAY;
+    if (overlay.signalModelId !== baseOverlay.signalModelId) return true;
+    if (overlay.signalThreshold !== baseOverlay.signalThreshold) return true;
+    if (overlay.seriesMetricIds.length !== baseOverlay.seriesMetricIds.length
+      || overlay.seriesMetricIds.some((id, i) => id !== baseOverlay.seriesMetricIds[i])) return true;
     return false;
-  }, [activePreset, presetName, items]);
+  }, [activePreset, presetName, items, overlay]);
 
   function updateItem(type: IndicatorType, patch: Partial<IndicatorPresetItem>) {
     setItems(prev => prev.map(it => it.type === type ? { ...it, ...patch } : it));
@@ -278,6 +292,7 @@ export default function IndicatorManager({
       await update(activePreset.id, presetName, {
         items,
         panelOrder: activePreset.panelOrder as PanelId[],
+        overlay,
       });
       setSavedOk(true);
       setTimeout(() => setSavedOk(false), 2000);
@@ -294,7 +309,7 @@ export default function IndicatorManager({
     setSaving(true);
     setError("");
     try {
-      await create(newName.trim(), { items: buildDefaultItems(), panelOrder: DEFAULT_PANEL_ORDER });
+      await create(newName.trim(), { items: buildDefaultItems(), panelOrder: DEFAULT_PANEL_ORDER, overlay: DEFAULT_CHART_OVERLAY });
       setNewName("");
       setCreating(false);
     } catch (e: unknown) {
@@ -528,6 +543,82 @@ export default function IndicatorManager({
                   }))}
                 />
               ))}
+            </>
+          )}
+
+          {/* 차트 오버레이 — 프리셋 드래프트의 일부(지표와 동일하게 저장 시 반영). 권한/등록된 항목 없으면 목록이 비어 숨김. */}
+          {activePreset && (signalModels.length > 0 || customMetrics.length > 0) && (
+            <>
+              <p className="text-xs text-slate-500 uppercase tracking-wider px-1 mt-3 mb-1">차트 오버레이</p>
+              <p className="text-xs text-slate-600 px-1 mb-2">지표와 동일하게 저장 시 차트에 반영됩니다 (아래 저장 버튼)</p>
+
+              {signalModels.length > 0 && (
+                <div className="border border-white/8 rounded-lg mb-1.5 bg-slate-800/40 p-3 space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 flex-shrink-0" />
+                    <span className="text-sm text-slate-300 font-medium">모델 시그널 (▲)</span>
+                  </div>
+                  <select
+                    value={overlay.signalModelId ?? ""}
+                    onChange={e => setOverlay(prev => ({ ...prev, signalModelId: e.target.value ? Number(e.target.value) : null }))}
+                    className={cx.select + " w-full"}
+                  >
+                    <option value="">표시 안 함</option>
+                    {signalModels.map(m => (
+                      <option key={m.id} value={m.id}>{m.name} v{m.version}</option>
+                    ))}
+                  </select>
+                  {overlay.signalModelId != null && (
+                    <div className="flex items-center gap-2">
+                      <span className="text-xs text-slate-500 flex-shrink-0">임계값</span>
+                      <div className="w-24">
+                        <input
+                          type="number"
+                          min={0}
+                          max={100}
+                          step={1}
+                          value={Math.round(overlay.signalThreshold * 100)}
+                          onChange={e => {
+                            const pct = Math.max(0, Math.min(100, Number(e.target.value)));
+                            setOverlay(prev => ({ ...prev, signalThreshold: pct / 100 }));
+                          }}
+                          className={cx.inputNumber}
+                        />
+                      </div>
+                      <span className="text-xs text-slate-500">% 이상에 마커</span>
+                    </div>
+                  )}
+                </div>
+              )}
+
+              {customMetrics.length > 0 && (
+                <div className="border border-white/8 rounded-lg mb-1.5 bg-slate-800/40 p-3 space-y-2.5">
+                  <div className="flex items-center gap-2">
+                    <span className="w-2.5 h-2.5 rounded-sm bg-cyan-400 flex-shrink-0" />
+                    <span className="text-sm text-slate-300 font-medium">커스텀 지표</span>
+                  </div>
+                  <p className="text-xs text-slate-600">선택한 지표를 하단 서브패널에 한 줄씩 표시 (불리언 0/1은 ON/OFF 색 띠, 연속값은 선)</p>
+                  <div className="flex flex-wrap gap-2">
+                    {customMetrics.map(m => {
+                      const selected = overlay.seriesMetricIds.includes(m.id);
+                      return (
+                        <button
+                          key={m.id}
+                          onClick={() => setOverlay(prev => ({
+                            ...prev,
+                            seriesMetricIds: selected
+                              ? prev.seriesMetricIds.filter(id => id !== m.id)
+                              : [...prev.seriesMetricIds, m.id],
+                          }))}
+                          className={selected ? cx.btnToggleOn : cx.btnToggleOff}
+                        >
+                          {m.name}
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
             </>
           )}
         </div>
