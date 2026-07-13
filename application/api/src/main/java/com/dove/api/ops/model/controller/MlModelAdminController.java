@@ -17,6 +17,7 @@ import com.dove.modelserving.application.service.ModelRegistrationService;
 import com.dove.modelserving.application.service.ModelScoreCommandService;
 import com.dove.stock.domain.enums.PriceType;
 import com.dove.stock.domain.enums.StockExchange;
+import com.dove.userfeature.application.service.MemberModelGrantCommandService;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
@@ -52,6 +53,7 @@ public class MlModelAdminController {
     private final ModelLifecycleService lifecycleService;
     private final ModelQueryService queryService;
     private final ModelScoreCommandService scoreCommandService;
+    private final MemberModelGrantCommandService modelGrantCommandService;
 
     /**
      * 모델 아티팩트(.pkl)와 meta.json을 검증해 INACTIVE로 등록한다.
@@ -159,6 +161,7 @@ public class MlModelAdminController {
     public void delete(@PathVariable Long id) {
         try {
             lifecycleService.delete(id);
+            modelGrantCommandService.revokeAllForModel(id);
         } catch (ModelNotFoundException e) {
             throw new ResponseStatusException(HttpStatus.NOT_FOUND, "MODEL_NOT_FOUND");
         }

@@ -1,5 +1,6 @@
 import type { IndicatorType } from "./filter";
 import type { PanelId } from "@/components/chart/indicatorMeta";
+import type { ChartOverlayConfig } from "./chart-overlay";
 
 export interface IndicatorPresetItem {
   type: IndicatorType;
@@ -13,6 +14,7 @@ export interface IndicatorPreset {
   name: string;
   items: IndicatorPresetItem[];
   panelOrder: PanelId[];
+  overlay: ChartOverlayConfig | null;
   createdAt: string;
   updatedAt: string;
 }

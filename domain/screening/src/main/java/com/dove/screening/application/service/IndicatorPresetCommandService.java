@@ -3,6 +3,7 @@ package com.dove.screening.application.service;
 import com.dove.screening.domain.entity.IndicatorPreset;
 import com.dove.screening.domain.repository.IndicatorPresetRepository;
 import com.dove.screening.domain.value.IndicatorPresetItem;
+import com.dove.screening.domain.value.PresetOverlay;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -23,12 +24,20 @@ public class IndicatorPresetCommandService {
     private final IndicatorPresetRepository indicatorPresetRepository;
 
     /**
-     * 새 지표 프리셋을 생성한다.
+     * 새 지표 프리셋을 오버레이 없이 생성한다.
      */
     public IndicatorPreset create(Long memberId, String name, List<IndicatorPresetItem> items,
                                    List<String> panelOrder) {
+        return create(memberId, name, items, panelOrder, null);
+    }
+
+    /**
+     * 새 지표 프리셋을 생성한다.
+     */
+    public IndicatorPreset create(Long memberId, String name, List<IndicatorPresetItem> items,
+                                   List<String> panelOrder, PresetOverlay overlay) {
         return indicatorPresetRepository.save(
-                IndicatorPreset.create(memberId, name, items, panelOrder));
+                IndicatorPreset.create(memberId, name, items, panelOrder, overlay));
     }
 
     /**
@@ -38,9 +47,19 @@ public class IndicatorPresetCommandService {
      */
     public IndicatorPreset update(Long memberId, Long id, String name, List<IndicatorPresetItem> items,
                                    List<String> panelOrder) {
+        return update(memberId, id, name, items, panelOrder, null);
+    }
+
+    /**
+     * 회원이 소유한 지표 프리셋을 오버레이와 함께 수정한다.
+     *
+     * @throws NoSuchElementException 해당 프리셋이 없을 때
+     */
+    public IndicatorPreset update(Long memberId, Long id, String name, List<IndicatorPresetItem> items,
+                                   List<String> panelOrder, PresetOverlay overlay) {
         IndicatorPreset preset = indicatorPresetRepository.findByIdAndMemberId(id, memberId)
                 .orElseThrow(() -> new NoSuchElementException("PRESET_NOT_FOUND"));
-        preset.update(name, items, panelOrder);
+        preset.update(name, items, panelOrder, overlay);
         return preset;
     }
 

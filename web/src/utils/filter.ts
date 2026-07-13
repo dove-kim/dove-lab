@@ -206,7 +206,9 @@ function parseSortKey(raw: unknown): SortKey | null {
   if (!raw || typeof raw !== "object") return null;
   const r = raw as Record<string, unknown>;
   if (!isSortField(r.field) || !isSortDirection(r.direction)) return null;
-  return { field: r.field, direction: r.direction };
+  const key: SortKey = { field: r.field, direction: r.direction };
+  if (r.field === "MODEL_SCORE" && typeof r.modelId === "number") key.modelId = r.modelId;
+  return key;
 }
 
 /**
@@ -242,24 +244,53 @@ export function parsePipeline(pipeline: unknown): PipelineStageState[] {
 }
 
 /**
+ * 정렬 키를 백엔드 계약 형태로 정리한다. MODEL_SCORE는 modelId를 실어 보내고, modelId 없는 MODEL_SCORE 키는 무효로 보아 제거한다.
+ */
+function cleanSortKeys(sort: SortKey[]): SortKey[] {
+  const clean: SortKey[] = [];
+  for (const k of sort) {
+    if (k.field === "MODEL_SCORE") {
+      if (k.modelId == null) continue;
+      clean.push({ field: k.field, direction: k.direction, modelId: k.modelId });
+    } else {
+      clean.push({ field: k.field, direction: k.direction });
+    }
+  }
+  return clean;
+}
+
+/**
  * 편집기 단계 상태 목록을 백엔드 계약 JSON 문자열로 직렬화한다. 비어 있으면 null(단순 필터).
  */
 export function serializePipeline(stages: PipelineStageState[]): string | null {
   if (stages.length === 0) return null;
   const clean: PipelineStage[] = stages.map((s) =>
     s.type === "RANK"
-      ? { type: "RANK", sort: s.sort, limit: s.limit ?? null }
+      ? { type: "RANK", sort: cleanSortKeys(s.sort), limit: s.limit ?? null }
       : { type: "FILTER", expression: s.expression }
   );
   return JSON.stringify(clean);
 }
 
 /**
- * RANK 단계를 "시총 내림 · 상위 100" 식 한 줄로 요약한다.
+ * 정렬 키 하나의 라벨. MODEL_SCORE는 "모델 점수(모델명)"으로, 이름을 못 찾으면 "모델#id"로 표시한다.
  */
-export function summarizeRankStage(sort: SortKey[], limit?: number | null): string {
+function sortKeyLabel(key: SortKey, names?: ConditionNames): string {
+  if (key.field === "MODEL_SCORE") {
+    const model = key.modelId != null
+      ? (names?.models?.[key.modelId] ?? `모델#${key.modelId}`)
+      : "모델 미선택";
+    return `${SORT_FIELD_LABELS.MODEL_SCORE}(${model})`;
+  }
+  return SORT_FIELD_LABELS[key.field];
+}
+
+/**
+ * RANK 단계를 "시총 내림 · 상위 100" 식 한 줄로 요약한다. names가 있으면 모델 점수 키를 모델명으로 표시한다.
+ */
+export function summarizeRankStage(sort: SortKey[], limit?: number | null, names?: ConditionNames): string {
   const keys = sort.length > 0
-    ? sort.map((k) => `${SORT_FIELD_LABELS[k.field]} ${SORT_DIRECTION_LABELS[k.direction]}`).join(", ")
+    ? sort.map((k) => `${sortKeyLabel(k, names)} ${SORT_DIRECTION_LABELS[k.direction]}`).join(", ")
     : "정렬 없음";
   return limit != null ? `${keys} · 상위 ${limit}` : keys;
 }

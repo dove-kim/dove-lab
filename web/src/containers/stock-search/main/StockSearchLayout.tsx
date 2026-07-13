@@ -35,7 +35,7 @@ interface StockApiItem {
 
 type StatusFilter = "all" | "halt" | "admin" | "new";
 // 리스트 표시 정렬은 단일 키 + 방향으로 충분 — 다중 정렬은 필터 파이프라인 RANK가 담당한다.
-type SortField = "default" | "name" | "change" | "volume" | "marketCap";
+type SortField = "default" | "name" | "change" | "volume" | "marketCap" | "modelScore";
 type SortDir = "asc" | "desc";
 type Mode = "all" | "filter";
 
@@ -46,8 +46,9 @@ const SORT_FIELD_OPTIONS: { value: SortField; label: string }[] = [
   { value: "change", label: "등락률" },
   { value: "volume", label: "거래량" },
   { value: "marketCap", label: "시가총액" },
+  { value: "modelScore", label: "모델 점수" },
 ];
-const NUMERIC_SORT_FIELDS: SortField[] = ["change", "volume", "marketCap"];
+const NUMERIC_SORT_FIELDS: SortField[] = ["change", "volume", "marketCap", "modelScore"];
 
 /**
  * 종목 한 건의 정렬값을 반환한다(없으면 null → 항상 마지막). 등락률=(종가-전일종가)/전일종가.
@@ -59,6 +60,7 @@ function sortValue(s: StockMatchResult, field: SortField): number | null {
   }
   if (field === "volume") return s.volume ?? null;
   if (field === "marketCap") return s.marketCap ?? null;
+  if (field === "modelScore") return s.modelScore ?? null;
   return null;
 }
 
@@ -498,7 +500,9 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
                   const top = (startIdx + i) * ROW_HEIGHT;
                   const isSelected = selected?.code === s.code && selected?.marketType === s.marketType;
                   const isNew = newListingSet.has(s.code);
-                  const chgPct = s.prevClose != null && s.prevClose > 0 && s.closePrice != null
+                  // 최신 봉이 실제 거래됐을 때(거래량>0)만 등락률·거래량 표시 — 정지·무거래 봉의 "0 / 0.00%" 노이즈 제거
+                  const traded = s.volume != null && s.volume > 0;
+                  const chgPct = traded && s.prevClose != null && s.prevClose > 0 && s.closePrice != null
                     ? ((s.closePrice - s.prevClose) / s.prevClose) * 100 : null;
                   const chgColor = chgPct == null ? "text-slate-500"
                     : chgPct > 0 ? "text-red-400" : chgPct < 0 ? "text-blue-400" : "text-slate-400";
@@ -523,6 +527,12 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
                           {mode === "all" && s.adminItem && (
                             <span className="flex-shrink-0 text-[10px] px-1 py-0.5 rounded bg-amber-900/40 text-amber-300 border border-amber-700/40">관리</span>
                           )}
+                          {s.modelScore != null && (
+                            <span title="모델 점수"
+                              className="flex-shrink-0 text-[10px] px-1 py-0.5 rounded bg-indigo-900/50 text-indigo-300 border border-indigo-700/50 font-mono">
+                              {s.modelScore.toLocaleString("ko-KR", { maximumFractionDigits: 3 })}
+                            </span>
+                          )}
                         </div>
                         <p className="text-xs text-slate-500 font-mono">{s.code} · {s.marketType}</p>
                       </div>
@@ -538,7 +548,7 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
                               )}
                             </p>
                             <p className="leading-tight text-[11px] text-slate-500 font-mono">
-                              {s.volume != null ? s.volume.toLocaleString() : ""}
+                              {traded ? s.volume!.toLocaleString() : ""}
                             </p>
                           </div>
                           {hasCandle && (

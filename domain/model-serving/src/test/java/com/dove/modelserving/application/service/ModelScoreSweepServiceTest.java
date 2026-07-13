@@ -86,7 +86,7 @@ class ModelScoreSweepServiceTest {
                 new EntryZoneParser(new com.dove.modelserving.domain.feature.FeatureResolver()),
                 sourceSupport,
                 rankSourceSupport,
-                new FeatureRowMapper(),
+                new EntryZoneRowAssembler(sourceSupport, new FeatureRowMapper()),
                 modelScorer,
                 artifactMaterializer,
                 commitService,

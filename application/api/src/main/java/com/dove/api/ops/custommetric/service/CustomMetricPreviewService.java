@@ -51,7 +51,7 @@ public class CustomMetricPreviewService {
         List<MetricPoint> points = new ArrayList<>(n - start);
         for (int i = start; i < n; i++) {
             points.add(new MetricPoint(dates.get(i).toString(),
-                    Double.isNaN(values[i]) ? null : values[i]));
+                    Double.isFinite(values[i]) ? values[i] : null));
         }
         return points;
     }

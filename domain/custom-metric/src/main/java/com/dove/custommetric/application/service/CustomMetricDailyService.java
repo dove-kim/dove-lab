@@ -3,6 +3,7 @@ package com.dove.custommetric.application.service;
 import com.dove.custommetric.domain.entity.CustomMetricDaily;
 import com.dove.custommetric.domain.entity.CustomMetricDailyId;
 import com.dove.custommetric.domain.repository.CustomMetricDailyRepository;
+import com.dove.custommetric.infrastructure.repository.CustomMetricDailyQuerySupport;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -20,6 +21,7 @@ import java.util.Optional;
 public class CustomMetricDailyService {
 
     private final CustomMetricDailyRepository repository;
+    private final CustomMetricDailyQuerySupport querySupport;
 
     /**
      * 계산값 행들을 저장(upsert)한다. 비어있으면 아무 것도 하지 않는다.
@@ -41,5 +43,13 @@ public class CustomMetricDailyService {
     @Transactional(readOnly = true)
     public Optional<Double> findValue(Long metricId, LocalDate date) {
         return repository.findById(new CustomMetricDailyId(metricId, date)).map(CustomMetricDaily::getValue);
+    }
+
+    /**
+     * 지표의 저장값을 거래일 범위(양끝 포함, 오름차순)로 조회한다. from/to가 null이면 그 방향은 무제한.
+     */
+    @Transactional(readOnly = true)
+    public List<CustomMetricDaily> findByMetricAndDateRange(Long metricId, LocalDate from, LocalDate to) {
+        return querySupport.findRange(metricId, from, to);
     }
 }

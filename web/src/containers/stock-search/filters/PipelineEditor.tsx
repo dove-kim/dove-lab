@@ -1,12 +1,13 @@
 "use client";
 
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { cx } from "@/utils/cx";
 import Select from "@/components/Select";
 import {
   GroupNode,
   ConditionType,
   ConditionNames,
+  ModelSummary,
   PipelineStageState,
   SortKey,
   SortField,
@@ -29,6 +30,15 @@ interface Props {
  * 검색식 뒤에 이어지는 순서 단계(정렬·순위/추가 조건) 편집기.
  */
 export default function PipelineEditor({ stages, onChange, names }: Props) {
+  // 모델 점수 정렬용 모델 목록(1회 로드). 실패/빈 목록이면 드롭다운은 비고 폴백.
+  const [models, setModels] = useState<ModelSummary[]>([]);
+  useEffect(() => {
+    fetch("/api/stocks/models")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((data: ModelSummary[]) => setModels(Array.isArray(data) ? data : []))
+      .catch(() => setModels([]));
+  }, []);
+
   function updateStage(index: number, next: PipelineStageState) {
     onChange(stages.map((s, i) => (i === index ? next : s)));
   }
@@ -70,6 +80,7 @@ export default function PipelineEditor({ stages, onChange, names }: Props) {
               onRemove={() => removeStage(i)}
               onChange={(next) => updateStage(i, next)}
               names={names}
+              models={models}
             />
           ))}
         </div>
@@ -105,6 +116,7 @@ function StageCard({
   onRemove,
   onChange,
   names,
+  models,
 }: {
   index: number;
   total: number;
@@ -113,10 +125,11 @@ function StageCard({
   onRemove: () => void;
   onChange: (next: PipelineStageState) => void;
   names?: ConditionNames;
+  models: ModelSummary[];
 }) {
   const typeLabel = stage.type === "RANK" ? "정렬 단계" : "조건 단계";
   const summary =
-    stage.type === "RANK" ? summarizeRankStage(stage.sort, stage.limit) : "추가 조건 그룹";
+    stage.type === "RANK" ? summarizeRankStage(stage.sort, stage.limit, names) : "추가 조건 그룹";
 
   return (
     <div className="rounded-xl border border-white/10 bg-slate-800/50">
@@ -167,6 +180,7 @@ function StageCard({
           <RankStageEditor
             sort={stage.sort}
             limit={stage.limit ?? null}
+            models={models}
             onChange={(sort, limit) => onChange({ ...stage, sort, limit })}
           />
         ) : (
@@ -188,14 +202,28 @@ const FIELD_ITEMS = SORT_FIELDS.map((f) => ({ value: f as string, label: SORT_FI
 function RankStageEditor({
   sort,
   limit,
+  models,
   onChange,
 }: {
   sort: SortKey[];
   limit: number | null;
+  models: ModelSummary[];
   onChange: (sort: SortKey[], limit: number | null) => void;
 }) {
+  const modelItems = models.map((m) => ({ value: String(m.id), label: `${m.name} (v${m.version})` }));
+
   function updateKey(index: number, next: SortKey) {
     onChange(sort.map((k, i) => (i === index ? next : k)), limit);
+  }
+
+  // 정렬 필드 변경: MODEL_SCORE로 바꾸면 첫 모델을 기본 선택, 다른 필드로 바꾸면 modelId 제거.
+  function changeField(index: number, field: SortField) {
+    const key = sort[index];
+    if (field === "MODEL_SCORE") {
+      updateKey(index, { field, direction: key.direction, modelId: key.modelId ?? models[0]?.id });
+    } else {
+      updateKey(index, { field, direction: key.direction });
+    }
   }
 
   function removeKey(index: number) {
@@ -230,14 +258,32 @@ function RankStageEditor({
         ) : (
           <div className="space-y-2">
             {sort.map((key, i) => (
-              <div key={i} className="flex items-center gap-2">
+              <div key={i} className="flex flex-wrap items-center gap-2">
                 <span className="text-xs text-slate-500 w-4 flex-shrink-0">{i + 1}</span>
                 <Select
                   value={key.field}
                   items={FIELD_ITEMS}
-                  onChange={(v) => updateKey(i, { ...key, field: v as SortField })}
+                  onChange={(v) => changeField(i, v as SortField)}
                   className="w-36"
                 />
+                {key.field === "MODEL_SCORE" && (
+                  models.length === 0 ? (
+                    <span className="text-xs text-amber-400">활성 모델 없음 — 관리자에게 문의</span>
+                  ) : (
+                    <>
+                      <Select
+                        value={key.modelId != null ? String(key.modelId) : null}
+                        items={modelItems}
+                        placeholder="모델 선택"
+                        onChange={(v) => updateKey(i, { ...key, modelId: Number(v) })}
+                        className="w-44"
+                      />
+                      {key.modelId == null && (
+                        <span className="text-xs text-amber-400">모델을 선택하세요</span>
+                      )}
+                    </>
+                  )
+                )}
                 <div className="flex gap-1">
                   {(["DESC", "ASC"] as SortDirection[]).map((d) => (
                     <button

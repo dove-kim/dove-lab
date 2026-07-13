@@ -66,6 +66,20 @@ public class ScoreSourceRepositorySupport {
     }
 
     /**
+     * universe member 거래소들에서 최근 피처 거래일을 내림차순 distinct로 최대 limit개 반환한다(드라이런 표본 대상 날짜).
+     */
+    public List<LocalDate> findRecentTradeDates(Collection<StockExchange> exchanges, PriceType priceType, int limit) {
+        return queryFactory.select(stockFeatureDaily.id.tradeDate)
+                .distinct()
+                .from(stockFeatureDaily)
+                .where(stockFeatureDaily.id.exchange.in(exchanges)
+                        .and(stockFeatureDaily.id.priceType.eq(priceType)))
+                .orderBy(stockFeatureDaily.id.tradeDate.desc())
+                .limit(limit)
+                .fetch();
+    }
+
+    /**
      * (거래소·가격유형)에서 beforeExclusive 미만의 가장 가까운 피처 거래일을 반환한다(직전 거래일).
      * 없으면 null.
      */

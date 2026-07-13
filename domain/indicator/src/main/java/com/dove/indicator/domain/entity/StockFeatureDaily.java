@@ -153,6 +153,10 @@ public class StockFeatureDaily {
     public void set(IndicatorType type, Double value) {
         if (value == null) return;
         Float v = value.floatValue();
+        // 비유한값(NaN·±Infinity)은 저장하지 않고 null 유지 — 의미 없는 값이며,
+        // rewriteBatchedStatements 배치 insert가 리터럴로 인라인할 때 SQL 오류(Unknown column 'NaN')를 유발한다.
+        // double가 유한이어도 float 범위를 넘으면 Inf가 되므로 변환 후의 float으로 판정한다.
+        if (!Float.isFinite(v)) return;
         switch (type) {
             case SMA_5 -> sma5 = v;
             case SMA_10 -> sma10 = v;

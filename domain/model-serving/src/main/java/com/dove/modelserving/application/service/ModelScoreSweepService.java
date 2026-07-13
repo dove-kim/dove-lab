@@ -1,7 +1,5 @@
 package com.dove.modelserving.application.service;
 
-import com.dove.indicator.domain.entity.StockFeatureDaily;
-import com.dove.indicator.domain.rank.entity.StockRankDaily;
 import com.dove.indicator.infrastructure.repository.RankSourceRepositorySupport;
 import com.dove.modelserving.application.exception.ModelScoringException;
 import com.dove.modelserving.application.exception.ScoreCursorRewoundException;
@@ -10,7 +8,6 @@ import com.dove.modelserving.domain.entity.MlModel;
 import com.dove.modelserving.domain.entity.StockModelScore;
 import com.dove.modelserving.domain.entity.StockModelScoreId;
 import com.dove.modelserving.domain.enums.ModelStatus;
-import com.dove.modelserving.domain.feature.FeatureRowMapper;
 import com.dove.modelserving.domain.meta.ModelMeta;
 import com.dove.modelserving.domain.meta.ModelMetaParser;
 import com.dove.modelserving.domain.repository.MlModelRepository;
@@ -52,7 +49,7 @@ public class ModelScoreSweepService {
     private final EntryZoneParser entryZoneParser;
     private final ScoreSourceRepositorySupport sourceSupport;
     private final RankSourceRepositorySupport rankSourceSupport;
-    private final FeatureRowMapper featureRowMapper;
+    private final EntryZoneRowAssembler rowAssembler;
     private final ModelScorer modelScorer;
     private final ArtifactMaterializer artifactMaterializer;
     private final ScoreDateCommitService commitService;
@@ -111,7 +108,7 @@ public class ModelScoreSweepService {
         Map<String, StockExchange> exchangeByKey = new HashMap<>();
         for (LocalDate date : dates) {
             for (StockExchange member : members) {
-                for (PredictRow row : inZoneRows(zone, member, priceType, date)) {
+                for (PredictRow row : rowAssembler.assemble(zone, member, priceType, date)) {
                     rows.add(row);
                     exchangeByKey.put(rowKey(row.ticker(), row.tradeDate()), member);
                 }
@@ -150,55 +147,21 @@ public class ModelScoreSweepService {
         List<ScoredRow> scored = modelScorer.score(new PredictInput(model.getId(), artifactPath.toString(), rows));
         LocalDateTime now = LocalDateTime.now();
         for (ScoredRow row : scored) {
-            if (row.score() == null) continue; // null=결측 → 저장 안 함
+            Double score = row.score();
+            // null·비유한값(NaN·±Infinity)은 결측 취급 → 저장 안 함(배치 insert 리터럴 인라인 SQL 오류 방지)
+            if (score == null || !Double.isFinite(score)) continue;
             StockExchange exchange = exchangeByKey.get(rowKey(row.ticker(), row.tradeDate()));
             if (exchange == null) continue;
             LocalDate date = LocalDate.parse(row.tradeDate());
             StockModelScoreId id = new StockModelScoreId(row.ticker(), exchange, priceType, date, model.getId());
             byDate.computeIfAbsent(date, k -> new ArrayList<>())
-                    .add(new StockModelScore(id, row.score().floatValue(), now));
+                    .add(new StockModelScore(id, score.floatValue(), now));
         }
         return byDate;
     }
 
-    /**
-     * 한 거래일·거래소의 진입존을 만족하는 행을 채점기 입력 행으로 만든다(채점은 호출자가 일괄 수행).
-     */
-    private List<PredictRow> inZoneRows(EntryZone zone, StockExchange exchange, PriceType priceType, LocalDate date) {
-        Map<String, StockFeatureDaily> features = byTicker(sourceSupport.findFeatures(exchange, priceType, date));
-        Map<String, StockRankDaily> ranks = ranksByTicker(sourceSupport.findRanks(exchange, priceType, date));
-        Map<String, Map<String, Double>> previous = previousFeatureMaps(exchange, priceType, date);
-
-        List<PredictRow> inZone = new ArrayList<>();
-        for (StockFeatureDaily feature : features.values()) {
-            String ticker = feature.getId().getTicker();
-            Map<String, Double> current = featureRowMapper.toFeatureMap(feature, ranks.get(ticker));
-            Map<String, Double> prev = previous.getOrDefault(ticker, Map.of());
-            if (zone.matches(current, prev)) {
-                inZone.add(new PredictRow(ticker, date.toString(), toLowerKeys(current)));
-            }
-        }
-        return inZone;
-    }
-
     private static String rowKey(String ticker, String tradeDate) {
         return ticker + "|" + tradeDate;
-    }
-
-    /**
-     * 직전 거래일의 종목별 피처 맵을 만든다(prev_ 조건 평가용). 직전 거래일이 없으면 빈 맵.
-     */
-    private Map<String, Map<String, Double>> previousFeatureMaps(StockExchange exchange, PriceType priceType,
-                                                                 LocalDate date) {
-        LocalDate prevDate = sourceSupport.findPreviousTradeDate(exchange, priceType, date);
-        if (prevDate == null) return Map.of();
-        Map<String, StockRankDaily> prevRanks = ranksByTicker(sourceSupport.findRanks(exchange, priceType, prevDate));
-        Map<String, Map<String, Double>> result = new HashMap<>();
-        for (StockFeatureDaily feature : sourceSupport.findFeatures(exchange, priceType, prevDate)) {
-            String ticker = feature.getId().getTicker();
-            result.put(ticker, featureRowMapper.toFeatureMap(feature, prevRanks.get(ticker)));
-        }
-        return result;
     }
 
     /**
@@ -217,26 +180,5 @@ public class ModelScoreSweepService {
 
     private ModelMeta parseMeta(MlModel model) {
         return metaParser.parse(model.getMetaJson());
-    }
-
-    private static Map<String, StockFeatureDaily> byTicker(List<StockFeatureDaily> rows) {
-        Map<String, StockFeatureDaily> map = new HashMap<>();
-        for (StockFeatureDaily row : rows) map.put(row.getId().getTicker(), row);
-        return map;
-    }
-
-    private static Map<String, StockRankDaily> ranksByTicker(List<StockRankDaily> rows) {
-        Map<String, StockRankDaily> map = new HashMap<>();
-        for (StockRankDaily row : rows) map.put(row.getId().getTicker(), row);
-        return map;
-    }
-
-    /**
-     * 컬럼명(대문자) 키 맵을 채점기 입력용 소문자 키 맵으로 바꾼다(meta.features는 소문자).
-     */
-    private static Map<String, Double> toLowerKeys(Map<String, Double> upper) {
-        Map<String, Double> lower = new HashMap<>(upper.size());
-        upper.forEach((k, v) -> lower.put(k.toLowerCase(), v));
-        return lower;
     }
 }

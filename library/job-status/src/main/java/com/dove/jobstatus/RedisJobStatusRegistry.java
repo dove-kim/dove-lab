@@ -72,14 +72,24 @@ public class RedisJobStatusRegistry implements JobStatusRegistry {
         try {
             Map<Object, Object> entries = redis.opsForHash().entries(KEY);
             List<JobStatus> result = new ArrayList<>(entries.size());
-            for (Object value : entries.values()) {
-                result.add(objectMapper.readValue(value.toString(), JobStatus.class));
+            for (Map.Entry<Object, Object> e : entries.entrySet()) {
+                // 현재 SchedulerJobName에 없는 이름(제거된 옛 잡의 잔여 상태)은 건너뛴다.
+                if (!isKnownJob(e.getKey().toString())) continue;
+                result.add(objectMapper.readValue(e.getValue().toString(), JobStatus.class));
             }
             return result;
         } catch (Exception e) {
             log.warn("작업 상태 조회 실패: {}", e.getMessage());
             return List.of();
         }
+    }
+
+    /** 이름이 현재 정의된 스케줄러 잡인지. 제거된 옛 잡의 잔여 Redis 필드를 대시보드에서 숨기기 위함. */
+    private static boolean isKnownJob(String name) {
+        for (SchedulerJobName job : SchedulerJobName.values()) {
+            if (job.name().equals(name)) return true;
+        }
+        return false;
     }
 
     @Override

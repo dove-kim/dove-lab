@@ -109,6 +109,12 @@ const JOB_LABEL: Record<string, string> = {
   INVESTOR_FLOW: "투자자 동향",
   DAILY_PRICE: "일일 주가",
   INDICATOR: "지표 계산",
+  RANK: "순위 계산",
+  CUSTOM_METRIC: "커스텀 지표",
+  MODEL_SCORING: "모델 채점",
+  FUNDAMENTAL_POLL: "재무 수집",
+  SHARE_COUNT: "상장주식수",
+  VALUATION: "밸류에이션",
 };
 
 /** 진행 수치 단위 */
@@ -118,6 +124,12 @@ const JOB_UNIT: Record<string, string> = {
   INVESTOR_FLOW: "종목",
   DAILY_PRICE: "시장",
   INDICATOR: "그룹",
+  RANK: "그룹",
+  CUSTOM_METRIC: "지표",
+  MODEL_SCORING: "종목",
+  FUNDAMENTAL_POLL: "종목",
+  SHARE_COUNT: "종목",
+  VALUATION: "종목",
 };
 
 function usePolling<T>(url: string, intervalMs: number, reloadToken = 0) {
@@ -192,12 +204,28 @@ function SchedulerStatusCard({ reloadToken }: { reloadToken: number }) {
             <tbody className="divide-y divide-white/5">
               {jobs.map((job) => {
                 const pct = job.total > 0 ? Math.round((job.processed / job.total) * 100) : null;
+                // 진행: 수치가 있으면 "처리/전체 단위 (n%)", 없으면 상태별 표현
+                const progressText = pct !== null
+                  ? `${job.processed.toLocaleString()} / ${job.total.toLocaleString()} ${JOB_UNIT[job.name] ?? ""} (${pct}%)`
+                  : job.state === "RUNNING" ? "진행 중…"
+                  : job.state === "COMPLETED" ? "완료"
+                  : "-";
                 return (
-                  <tr key={job.name} className="text-slate-300">
-                    <td className="py-2 pr-3">{JOB_LABEL[job.name] ?? job.name}</td>
+                  <tr key={job.name} className="text-slate-300 align-top">
+                    <td className="py-2 pr-3 whitespace-nowrap">{JOB_LABEL[job.name] ?? job.name}</td>
                     <td className="py-2 pr-3">{stateChip(job.state)}</td>
                     <td className="py-2 pr-3 text-right tabular-nums">
-                      {pct !== null ? `${job.processed.toLocaleString()} / ${job.total.toLocaleString()} ${JOB_UNIT[job.name] ?? ""} (${pct}%)` : "-"}
+                      {progressText}
+                      {job.state === "RUNNING" && pct !== null && (
+                        <div className="mt-1 h-1 w-full min-w-[80px] rounded bg-white/10 overflow-hidden">
+                          <div className="h-full bg-indigo-400" style={{ width: `${pct}%` }} />
+                        </div>
+                      )}
+                      {job.state === "FAILED" && job.message && (
+                        <div className="mt-0.5 text-left text-rose-400/80 font-normal normal-case whitespace-normal break-words max-w-[220px]">
+                          {job.message}
+                        </div>
+                      )}
                     </td>
                     <td className="py-2 pr-3 text-right text-slate-400 tabular-nums whitespace-nowrap">{jobEta(job) ?? "-"}</td>
                     <td className="py-2 text-right text-slate-400 tabular-nums whitespace-nowrap">{formatTime(job.updatedAtEpochMs)}</td>

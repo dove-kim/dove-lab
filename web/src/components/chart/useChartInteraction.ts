@@ -16,16 +16,17 @@ interface Params {
   onViewportChangeRef:  React.MutableRefObject<() => void>;
 }
 
-type TouchMode = "undecided" | "pan" | "crosshair" | "two-finger";
+type TouchMode = "undecided" | "pan" | "crosshair" | "two-finger" | "native-scroll";
 
 interface TouchState {
-  mode:      TouchMode;
-  startX?:   number;
-  startY?:   number;
-  startRi?:  number;
-  prevDist?: number;
-  prevMidX?: number;
-  timer?:    ReturnType<typeof setTimeout>;
+  mode:          TouchMode;
+  startX?:       number;
+  startY?:       number;
+  prevDist?:     number;
+  prevMidX?:     number;
+  timer?:        ReturnType<typeof setTimeout>;
+  /** 팬 중 아직 적용하지 않은 소수 봉 (라운딩 드리프트 방지) */
+  panRemainder?: number;
 }
 
 export function useChartInteraction({
@@ -115,7 +116,7 @@ export function useChartInteraction({
           setHoverIdx(xToBarIdx(ts.startX!));
         }
       }, 250);
-      touchRef.current = { mode: "undecided", startX, startY, startRi: riRef.current, timer };
+      touchRef.current = { mode: "undecided", startX, startY, timer };
     } else if (e.touches.length === 2) {
       const [t1, t2] = [e.touches[0], e.touches[1]];
       touchRef.current = {
@@ -132,26 +133,41 @@ export function useChartInteraction({
     const total = totalRef.current;
     if (total === 0) return;
 
-    // 결정 대기 중: 8px 이상 빠르게 움직이면 팬 모드
+    // 결정 대기 중: 8px 이상 움직이면 우세 축으로 모드 확정
     if (ts.mode === "undecided" && e.touches.length === 1) {
       const dx = e.touches[0].clientX - ts.startX!;
       const dy = e.touches[0].clientY - ts.startY!;
       if (dx * dx + dy * dy > 64) {
         clearTimeout(ts.timer);
-        ts.mode    = "pan";
-        ts.startX  = e.touches[0].clientX;
-        ts.startRi = riRef.current;
+        if (Math.abs(dx) >= Math.abs(dy)) {
+          // 수평 우세 → 차트 팬 (여기서부터 증분 앵커)
+          ts.mode         = "pan";
+          ts.startX       = e.touches[0].clientX;
+          ts.panRemainder = 0;
+        } else {
+          // 수직 우세 → 브라우저 세로 스크롤에 양보 (하단 지표 서브패널 보기)
+          ts.mode = "native-scroll";
+        }
       }
       return;
     }
 
-    if (ts.mode === "pan" && e.touches.length === 1 && ts.startX != null && ts.startRi != null) {
-      const dx    = e.touches[0].clientX - ts.startX;
-      const plotW = widthRef.current - PAD.left - PAD.right;
-      const delta = Math.round((dx * vcRef.current) / plotW);
-      const newRi = clamp(ts.startRi - delta, vcRef.current - 1, total - 1);
-      // ★ React 상태 업데이트 없음 — ref만 갱신 후 직접 draw
-      riRef.current = newRi;
+    // 세로 스크롤 양보 모드: 차트는 손대지 않고 브라우저가 스크롤하게 둔다
+    if (ts.mode === "native-scroll") return;
+
+    if (ts.mode === "pan" && e.touches.length === 1 && ts.startX != null) {
+      // 증분 팬: 직전 앵커 대비 이동량만 riRef에 누적 → 팬 도중 과거 데이터가
+      // prepend되며 riRef가 밀려도(위치 보존) 낡은 절대값으로 덮어쓰지 않는다.
+      const dx        = e.touches[0].clientX - ts.startX;
+      const plotW     = widthRef.current - PAD.left - PAD.right;
+      const deltaBars = (dx * vcRef.current) / plotW + (ts.panRemainder ?? 0);
+      const step      = Math.round(deltaBars);
+      ts.panRemainder = deltaBars - step;
+      if (step !== 0) {
+        // ★ React 상태 업데이트 없음 — ref만 갱신 후 직접 draw. total은 라이브(prepend 반영)
+        riRef.current = clamp(riRef.current - step, vcRef.current - 1, totalRef.current - 1);
+        ts.startX     = e.touches[0].clientX;
+      }
       scheduleDraw();
       return;
     }

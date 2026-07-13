@@ -6,7 +6,8 @@ package com.dove.screening.domain.pipeline;
 public enum SortField {
     CHANGE_RATE,
     MARKET_CAP,
-    VOLUME;
+    VOLUME,
+    MODEL_SCORE;
 
     /**
      * 이름으로 정렬 필드를 찾되, 없으면 null을 반환한다.
