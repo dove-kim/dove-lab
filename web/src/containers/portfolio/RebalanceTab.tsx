@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { cx } from "@/utils/cx";
+import CommaInput from "@/components/CommaInput";
 import { type PortfolioPosition, type PortfolioRebalancePlan, CUR_SYMBOL } from "@/types/portfolio";
 import { usePortfolioData, won, fxRateOf } from "./usePortfolioData";
 import { StatTile } from "./StatTile";
@@ -284,7 +285,7 @@ export default function RebalanceTab() {
                   ))}
                 </select>
                 <label className="text-sm text-slate-400 ml-2">투자금(추가)</label>
-                <input value={cash} onChange={(e) => setCash(e.target.value)} className={cx.inputNumber + " w-32"} />
+                <CommaInput decimal value={cash} onChange={setCash} className={cx.inputNumber + " w-32"} />
                 {mode === "buy" && (
                   <button onClick={() => setCash(String(Math.round(need)))} className={cx.btnSecondary}>완전 채우기</button>
                 )}

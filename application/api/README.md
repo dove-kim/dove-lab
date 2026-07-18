@@ -49,6 +49,7 @@
 # 포트폴리오 (PORTFOLIO_LEDGER)
 /portfolio/accounts          CRUD  계좌
 /portfolio/transactions      CRUD  거래 (매수·매도·입출금·배당·이자, 수수료 포함) — 보유·평단·라운드트립은 거래 fold로 파생
+/portfolio/fx-conversions    CRUD  환전 (통화 전환, 예: KRW→USD) — 통화별 현금만 이동, 순납입엔 제외
 /portfolio/holdings          GET/POST/DELETE  보유종목 식별 매핑 + 배당률(/{id}/dividend)·배당추적(/{id}/tracking) 설정
 /portfolio/summary           GET   요약 (총자산·순납입·누적손익·XIRR·통화별 현금)
 /portfolio/positions         GET   보유 포지션 (평가액·손익·비중, 현재환율 원화 환산)

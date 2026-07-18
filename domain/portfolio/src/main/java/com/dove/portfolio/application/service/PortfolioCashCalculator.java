@@ -1,5 +1,6 @@
 package com.dove.portfolio.application.service;
 
+import com.dove.portfolio.domain.entity.PortfolioFxConversion;
 import com.dove.portfolio.domain.entity.PortfolioTransaction;
 import com.dove.portfolio.domain.enums.TxType;
 import org.springframework.stereotype.Service;
@@ -21,9 +22,21 @@ public class PortfolioCashCalculator {
      * 거래를 접어 통화별 현금잔액을 계산한다.
      */
     public Map<String, BigDecimal> cashByCurrency(List<PortfolioTransaction> transactions) {
+        return cashByCurrency(transactions, List.of());
+    }
+
+    /**
+     * 거래와 환전을 접어 통화별 현금잔액을 계산한다. 환전은 보낸 통화(+수수료)를 빼고 받은 통화를 더한다.
+     */
+    public Map<String, BigDecimal> cashByCurrency(List<PortfolioTransaction> transactions,
+                                                  List<PortfolioFxConversion> conversions) {
         Map<String, BigDecimal> byCurrency = new LinkedHashMap<>();
         for (PortfolioTransaction t : transactions) {
             add(byCurrency, t.getCurrency(), cashEffect(t));
+        }
+        for (PortfolioFxConversion c : conversions) {
+            add(byCurrency, c.getFromCurrency(), c.getFromAmount().add(BigDecimal.valueOf(c.getFee())).negate());
+            add(byCurrency, c.getToCurrency(), c.getToAmount());
         }
         return byCurrency;
     }

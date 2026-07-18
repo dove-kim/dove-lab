@@ -32,6 +32,20 @@ export interface PortfolioTx {
   memo?: string;
 }
 
+/** 환전 한 건(통화 전환, 예: KRW→USD). 순납입엔 잡히지 않음. */
+export interface PortfolioFxConversion {
+  id: number;
+  accountId?: number;
+  account: string;
+  convDate: string;
+  fromCurrency: string;
+  fromAmount: number;
+  toCurrency: string;
+  toAmount: number;
+  fee?: number;
+  memo?: string;
+}
+
 /** 거래 유형별 한국어 라벨. */
 export const TX_TYPE_LABEL: Record<TxType, string> = {
   BUY: "매수",
