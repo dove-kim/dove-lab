@@ -26,6 +26,7 @@ import org.springframework.stereotype.Component;
 
 import java.time.Clock;
 import java.time.LocalDate;
+import java.util.ArrayList;
 import java.util.List;
 
 /**
@@ -39,6 +40,9 @@ import java.util.List;
 @Component
 @RequiredArgsConstructor
 public class DailyPipelineOrchestrator {
+
+    /** 주가 재수집 창(일). 주말·연휴·실행 누락으로 놓친 거래일을 이 기간 재수집으로 회수한다(멱등). */
+    private static final int FILL_WINDOW_DAYS = 14;
 
     private final PriceCollectionService priceCollectionService;
     private final IndicatorComputeService indicatorComputeService;
@@ -55,21 +59,17 @@ public class DailyPipelineOrchestrator {
     private final Clock clock;
 
     /**
-     * 일일 파이프라인을 순차 실행한다. 휴장일이면 전체를 건너뛴다.
+     * 일일 파이프라인을 순차 실행한다. 주말·휴장일에도 실행하며, 최근 창을 재수집해 놓친 거래일을 자동 회수한다.
      */
     @Scheduled(cron = "${daily.price.cron:0 0 21 * * *}", zone = "Asia/Seoul")
     public void run() {
         LocalDate today = LocalDate.now(clock);
-        log.info("DailyPipelineOrchestrator 시작: {}", today);
+        LocalDate from = today.minusDays(FILL_WINDOW_DAYS);
+        log.info("DailyPipelineOrchestrator 시작: {}~{}", from, today);
 
-        if (!tradingDayAdapter.isTradingDay(today)) {
-            log.info("DailyPipelineOrchestrator skip — 휴장일: {}", today);
-            return;
-        }
-
-        // ⓪ 주가 수집 — 실패 시 이후 단계 스킵
-        if (!collectPrices(today)) {
-            log.warn("DailyPipelineOrchestrator 중단 — 주가 수집 실패: {}", today);
+        // ⓪ 주가 수집(최근 창) — 놓친 거래일을 기간 재수집으로 회수(멱등). 실패 시 이후 단계 스킵.
+        if (!collectPrices(from, today)) {
+            log.warn("DailyPipelineOrchestrator 중단 — 주가 수집 실패: {}~{}", from, today);
             return;
         }
 
@@ -98,21 +98,32 @@ public class DailyPipelineOrchestrator {
     }
 
     /**
-     * 당일 거래소별 주가를 수집한다. 전 거래소 성공 시 true.
+     * [from..to] 구간의 거래소별 주가를 수집한다(놓친 거래일 회수). 실제 거래일만 캘린더에 등록·마킹한다. 전 거래소 성공 시 true.
      */
-    private boolean collectPrices(LocalDate today) {
-        tradingDateService.register(Exchange.KRX, today);
-        jobStatusRegistry.start(SchedulerJobName.DAILY_PRICE.name(), StockExchange.values().length);
+    private boolean collectPrices(LocalDate from, LocalDate to) {
+        // 창 내 실제 거래일만 등록(주말·휴장일 제외 → 캘린더 오염 방지). 이미 등록된 날은 KIS 재조회 없이 통과.
+        List<LocalDate> tradingDays = new ArrayList<>();
+        for (LocalDate d = from; !d.isAfter(to); d = d.plusDays(1)) {
+            if (tradingDateService.existsTradingDay(Exchange.KRX, d) || tradingDayAdapter.isTradingDay(d)) {
+                tradingDateService.register(Exchange.KRX, d);
+                tradingDays.add(d);
+            }
+        }
+        if (tradingDays.isEmpty()) {
+            log.info("주가 수집 skip — 창 내 거래일 없음: {}~{}", from, to);
+            return true;
+        }
 
+        jobStatusRegistry.start(SchedulerJobName.DAILY_PRICE.name(), StockExchange.values().length);
         boolean allSynced = true;
         int done = 0;
         for (StockExchange exchange : StockExchange.values()) {
             try {
-                priceCollectionService.collect(exchange, today, today, CollectionProgress.NOOP,
+                priceCollectionService.collect(exchange, from, to, CollectionProgress.NOOP,
                         DailyPriceFetcher.ADJUSTED_DATA_START);
             } catch (ParallelException e) {
                 Throwable cause = e.getCause();
-                log.error("[{}] 당일 수집 실패: {}", exchange, cause.getMessage(), cause);
+                log.error("[{}] 주가 수집 실패({}~{}): {}", exchange, from, to, cause.getMessage(), cause);
                 systemEventService.recordKisApiFailure(exchange.name(), cause.getMessage());
                 allSynced = false;
             }
@@ -120,7 +131,7 @@ public class DailyPipelineOrchestrator {
         }
 
         if (allSynced) {
-            tradingDateService.markPricesSynced(Exchange.KRX, today);
+            tradingDays.forEach(d -> tradingDateService.markPricesSynced(Exchange.KRX, d));
         }
         jobStatusRegistry.complete(SchedulerJobName.DAILY_PRICE.name());
         return allSynced;

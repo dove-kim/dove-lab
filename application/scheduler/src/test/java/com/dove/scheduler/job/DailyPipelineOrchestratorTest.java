@@ -95,21 +95,23 @@ class DailyPipelineOrchestratorTest {
     }
 
     @Nested
-    @DisplayName("run() — 휴장일")
-    class WhenHoliday {
+    @DisplayName("run() — 오늘이 비거래일(주말)")
+    class WhenTodayNotTradingDay {
 
         @Test
-        @DisplayName("휴장일이면 수집·지표·rank 단계를 모두 스킵한다")
-        void shouldSkipAllStagesWhenNotTradingDay() {
-            given(tradingDayAdapter.isTradingDay(TODAY)).willReturn(false);
+        @DisplayName("주말이어도 창 내 거래일은 수집·등록하고 지표를 실행하며, 비거래일은 등록하지 않는다")
+        void shouldStillCollectWindowTradingDaysWhenTodayIsWeekend() {
+            LocalDate tradingDayInWindow = TODAY.minusDays(2);
+            given(tradingDayAdapter.isTradingDay(any())).willReturn(false);
+            given(tradingDayAdapter.isTradingDay(tradingDayInWindow)).willReturn(true);
 
             orchestrator().run();
 
-            verify(priceCollectionService, never()).collect(any(), any(), any(), any(), any());
-            verify(indicatorComputeService, never()).computeAll(any());
-            verify(rankComputeService, never()).calculateAll(any());
-            verify(customMetricComputeService, never()).calculateAll(any());
-            verify(tradingDateService, never()).register(any(), any());
+            verify(tradingDateService).register(Exchange.KRX, tradingDayInWindow);
+            verify(tradingDateService, never()).register(Exchange.KRX, TODAY);
+            verify(priceCollectionService, times(StockExchange.values().length))
+                    .collect(any(), any(), any(), any(), any());
+            verify(indicatorComputeService).computeAll(TODAY);
         }
     }
 
@@ -120,12 +122,14 @@ class DailyPipelineOrchestratorTest {
         @Test
         @DisplayName("주가 → 지표 → rank 순서로 단계를 호출한다")
         void shouldRunStagesInOrderWhenTradingDay() {
+            given(tradingDayAdapter.isTradingDay(any())).willReturn(false);
             given(tradingDayAdapter.isTradingDay(TODAY)).willReturn(true);
 
             orchestrator().run();
 
+            LocalDate from = TODAY.minusDays(14);
             for (StockExchange exchange : StockExchange.values()) {
-                verify(priceCollectionService).collect(eq(exchange), eq(TODAY), eq(TODAY),
+                verify(priceCollectionService).collect(eq(exchange), eq(from), eq(TODAY),
                         eq(CollectionProgress.NOOP), eq(DailyPriceFetcher.ADJUSTED_DATA_START));
             }
             InOrder inOrder = inOrder(priceCollectionService, indicatorComputeService,
@@ -151,6 +155,7 @@ class DailyPipelineOrchestratorTest {
         @Test
         @DisplayName("일부 거래소 수집이 실패하면 이벤트를 기록하고 이후 단계를 스킵한다")
         void shouldRecordFailureAndSkipDownstreamWhenPriceFails() {
+            given(tradingDayAdapter.isTradingDay(any())).willReturn(false);
             given(tradingDayAdapter.isTradingDay(TODAY)).willReturn(true);
             StockExchange first = StockExchange.values()[0];
             ParallelException failure = new ParallelException(new IllegalStateException("KIS 호출 실패"));
@@ -174,6 +179,7 @@ class DailyPipelineOrchestratorTest {
         @Test
         @DisplayName("지표 계산이 실패해도 이벤트 기록 후 rank 단계를 계속 진행한다")
         void shouldRecordFailureAndContinueWhenIndicatorThrows() {
+            given(tradingDayAdapter.isTradingDay(any())).willReturn(false);
             given(tradingDayAdapter.isTradingDay(TODAY)).willReturn(true);
             doThrow(new RuntimeException("지표 계산 오류")).when(indicatorComputeService).computeAll(TODAY);
 
@@ -192,6 +198,7 @@ class DailyPipelineOrchestratorTest {
         @Test
         @DisplayName("rank 계산이 실패해도 이벤트 기록 후 커스텀 지표 단계를 계속 진행한다")
         void shouldRecordFailureAndContinueWhenRankThrows() {
+            given(tradingDayAdapter.isTradingDay(any())).willReturn(false);
             given(tradingDayAdapter.isTradingDay(TODAY)).willReturn(true);
             doThrow(new RuntimeException("rank 계산 오류")).when(rankComputeService).calculateAll(TODAY);
 
@@ -210,6 +217,7 @@ class DailyPipelineOrchestratorTest {
         @Test
         @DisplayName("커스텀 지표 계산이 실패해도 이벤트 기록 후 모델 채점 단계를 계속 진행한다")
         void shouldRecordFailureAndContinueWhenCustomMetricThrows() {
+            given(tradingDayAdapter.isTradingDay(any())).willReturn(false);
             given(tradingDayAdapter.isTradingDay(TODAY)).willReturn(true);
             doThrow(new RuntimeException("커스텀 지표 계산 오류")).when(customMetricComputeService).calculateAll(TODAY);
 

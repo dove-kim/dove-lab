@@ -33,11 +33,13 @@ public class MemberAdminController {
     private final ForcedLogoutService forcedLogoutService;
 
     /**
-     * 전체 회원 요약 목록을 반환한다.
+     * 회원 요약 목록을 반환한다. 기본은 활성 회원만, includeDeleted=true면 탈퇴 회원도 포함(사용자 관리 화면 전용).
      */
     @GetMapping
-    public List<MemberSummaryResponse> listMembers() {
+    public List<MemberSummaryResponse> listMembers(
+            @RequestParam(defaultValue = "false") boolean includeDeleted) {
         return memberSummaryQueryService.findAllSummaries().stream()
+                .filter(s -> includeDeleted || s.deletedAt() == null)
                 .map(MemberSummaryResponse::from)
                 .toList();
     }

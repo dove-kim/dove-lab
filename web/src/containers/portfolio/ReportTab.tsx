@@ -2,7 +2,7 @@
 
 import { useMemo } from "react";
 import { type PortfolioPosition, type PortfolioSummary } from "@/types/portfolio";
-import { usePortfolioData, won, signed, pnlColor } from "./usePortfolioData";
+import { usePortfolioData, won, signed, pnlColor, fxRateOf } from "./usePortfolioData";
 import { useScope, scopeBase, ScopeSelector } from "./scopeView";
 import { StatTile } from "./StatTile";
 
@@ -86,14 +86,30 @@ export default function ReportTab() {
       return Array.from(m.entries()).sort((a, b) => b[1] - a[1]);
     };
     const total = list.reduce((s, p) => s + p.evalKrw, 0);
+
+    // 통화별 현금(원화 환산). 환율은 보유 포지션에서 역산(KRW=1). 양수 현금만 비중에 반영.
+    const fxByCur = new Map<string, number>();
+    for (const p of list) {
+      if (p.currency === "KRW") continue;
+      const fx = fxRateOf(p);
+      if (fx != null && !fxByCur.has(p.currency)) fxByCur.set(p.currency, fx);
+    }
+    const cashRows: [string, number][] = [];
+    for (const [cur, nat] of Object.entries(summary?.cashByCurrency ?? {})) {
+      const krw = cur === "KRW" ? nat : nat * (fxByCur.get(cur) ?? 0);
+      if (krw > 1) cashRows.push([`현금·${cur}`, Math.round(krw)]);
+    }
+    const cashTotal = cashRows.reduce((s, [, v]) => s + v, 0);
+
     return {
       monthlyDividend,
       bySymbol: sumBy((p) => p.symbol),
       byAccount: sumBy((p) => p.account),
-      byCurrency: sumBy((p) => p.currency),
+      byCurrency: [...sumBy((p) => p.currency), ...cashRows].sort((a, b) => b[1] - a[1]),
       total,
+      totalWithCash: total + cashTotal,
     };
-  }, [positions]);
+  }, [positions, summary]);
 
   if (err) return <p className="text-sm text-rose-300 py-8 text-center">리포트를 불러오지 못했습니다.</p>;
   if (!summary) return <p className="text-sm text-slate-500 py-8 text-center">불러오는 중…</p>;
@@ -129,7 +145,7 @@ export default function ReportTab() {
           <DonutChart title="종목별 비중" rows={derived.bySymbol} total={derived.total} />
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-3">
             <DonutChart title="계좌별 비중" rows={derived.byAccount} total={derived.total} />
-            <DonutChart title="통화별 비중" rows={derived.byCurrency} total={derived.total} />
+            <DonutChart title="통화별 비중 (현금 포함)" rows={derived.byCurrency} total={derived.totalWithCash} />
           </div>
         </div>
       ) : (

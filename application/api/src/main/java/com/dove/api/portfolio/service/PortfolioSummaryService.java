@@ -3,10 +3,12 @@ package com.dove.api.portfolio.service;
 import com.dove.api.portfolio.dto.PortfolioPositionResponse;
 import com.dove.api.portfolio.dto.PortfolioSummaryResponse;
 import com.dove.portfolio.application.service.PortfolioCashCalculator;
+import com.dove.portfolio.application.service.PortfolioFxConversionService;
 import com.dove.portfolio.application.service.PortfolioFxRateService;
 import com.dove.portfolio.application.service.PortfolioTransactionService;
 import com.dove.portfolio.application.service.Xirr;
 import com.dove.portfolio.application.service.ExternalFlow;
+import com.dove.portfolio.domain.entity.PortfolioFxConversion;
 import com.dove.portfolio.domain.entity.PortfolioTransaction;
 import com.dove.portfolio.domain.enums.TxType;
 import lombok.RequiredArgsConstructor;
@@ -31,6 +33,7 @@ public class PortfolioSummaryService {
     private final PortfolioPositionService positionService;
     private final PortfolioCashCalculator cashCalculator;
     private final PortfolioFxRateService fxRateService;
+    private final PortfolioFxConversionService fxConversionService;
 
     /**
      * 소유 회원의 포트폴리오 요약을 계산한다.
@@ -46,9 +49,12 @@ public class PortfolioSummaryService {
         List<PortfolioTransaction> txns = transactionService.findByOwner(memberId).stream()
                 .filter(t -> accountFilter == null || accountFilter.equals(t.getAccountId()))
                 .toList();
+        List<PortfolioFxConversion> convs = fxConversionService.findByOwner(memberId).stream()
+                .filter(c -> accountFilter == null || accountFilter.equals(c.getAccountId()))
+                .toList();
         Map<String, BigDecimal> fxRates = fxRateService.ratesByCurrency();
 
-        Map<String, BigDecimal> cashByCurrency = cashCalculator.cashByCurrency(txns);
+        Map<String, BigDecimal> cashByCurrency = cashCalculator.cashByCurrency(txns, convs);
         long cash = toKrw(cashByCurrency, fxRates);
 
         List<PortfolioPositionResponse> positions = positionService.compute(memberId, accountFilter);

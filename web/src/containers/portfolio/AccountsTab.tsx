@@ -3,8 +3,16 @@
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/Modal";
+import CommaInput from "@/components/CommaInput";
 import { cx } from "@/utils/cx";
-import { type PortfolioAccount, type PortfolioTx, type PortfolioPosition, natMoney } from "@/types/portfolio";
+import {
+  type PortfolioAccount,
+  type PortfolioTx,
+  type PortfolioPosition,
+  type PortfolioFxConversion,
+  natMoney,
+  CURRENCIES,
+} from "@/types/portfolio";
 import { won, fxRateOf } from "./usePortfolioData";
 import AddTransactionModal from "./AddTransactionModal";
 import { usePaged, Pagination } from "@/components/Pagination";
@@ -37,11 +45,13 @@ export default function AccountsTab() {
   const [accounts, setAccounts] = useState<PortfolioAccount[] | null>(null);
   const [txns, setTxns] = useState<PortfolioTx[]>([]);
   const [positions, setPositions] = useState<PortfolioPosition[]>([]);
+  const [convs, setConvs] = useState<PortfolioFxConversion[]>([]);
   const [err, setErr] = useState(false);
   const [showAddAccount, setShowAddAccount] = useState(false);
   const [editingAccount, setEditingAccount] = useState<PortfolioAccount | null>(null);
   const [showCash, setShowCash] = useState(false);
-  const [tab, setTab] = useState<"accounts" | "flows">("accounts");
+  const [showConv, setShowConv] = useState(false);
+  const [tab, setTab] = useState<"accounts" | "flows" | "conversions">("accounts");
   const [valueMode, setValueMode] = useState<"krw" | "native">("krw");
   const dr = useDateRange();
   const router = useRouter();
@@ -68,6 +78,10 @@ export default function AccountsTab() {
       .then((r) => (r.ok ? r.json() : []))
       .then((d: PortfolioPosition[]) => setPositions(Array.isArray(d) ? d : []))
       .catch(() => {});
+    fetch("/api/portfolio/fx-conversions")
+      .then((r) => (r.ok ? r.json() : []))
+      .then((d: PortfolioFxConversion[]) => setConvs(Array.isArray(d) ? d : []))
+      .catch(() => {});
   }
 
   useEffect(() => {
@@ -82,18 +96,27 @@ export default function AccountsTab() {
 
   const flows = txns.filter((t) => (t.type === "DEPOSIT" || t.type === "WITHDRAW") && dr.inRange(t.tradedAt));
   const pagedFlows = usePaged(flows, `flows|${dr.key}`, 10);
+  const pagedConvs = usePaged(convs, "convs", 10);
 
-  // 계좌별 통화별 예수금(거래를 접어 계산).
+  // 계좌별 통화별 예수금(거래 + 환전을 접어 계산).
   const cashByAccount = useMemo(() => {
     const m = new Map<number, Record<string, number>>();
+    const bump = (accId: number, cur: string, delta: number) => {
+      const rec = m.get(accId) ?? {};
+      rec[cur] = (rec[cur] ?? 0) + delta;
+      m.set(accId, rec);
+    };
     for (const t of txns) {
       if (t.accountId == null) continue;
-      const rec = m.get(t.accountId) ?? {};
-      rec[t.currency] = (rec[t.currency] ?? 0) + cashEffect(t);
-      m.set(t.accountId, rec);
+      bump(t.accountId, t.currency, cashEffect(t));
+    }
+    for (const c of convs) {
+      if (c.accountId == null) continue;
+      bump(c.accountId, c.fromCurrency, -(c.fromAmount + (c.fee ?? 0)));
+      bump(c.accountId, c.toCurrency, c.toAmount);
     }
     return m;
-  }, [txns]);
+  }, [txns, convs]);
 
   // 통화별 현재 환율(보유 포지션의 평가액/원통화평가에서 파생, KRW=1).
   const fxOf = useMemo(() => {
@@ -128,7 +151,7 @@ export default function AccountsTab() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex gap-1 border-b border-white/10">
-        {([["accounts", "계좌"], ["flows", "입출금"]] as const).map(([k, label]) => (
+        {([["accounts", "계좌"], ["flows", "입출금"], ["conversions", "환전"]] as const).map(([k, label]) => (
           <button
             key={k}
             onClick={() => setTab(k)}
@@ -282,6 +305,73 @@ export default function AccountsTab() {
       </section>
       )}
 
+      {tab === "conversions" && (
+      <section>
+        <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
+          <div>
+            <h2 className="text-sm font-medium text-slate-300">환전 내역</h2>
+            <p className="text-xs text-slate-500 mt-0.5">통화 전환(예: 원화→달러). 순납입엔 잡히지 않고 통화별 현금만 이동합니다.</p>
+          </div>
+          <button className={cx.btnSecondary} onClick={() => setShowConv(true)} disabled={accounts.length === 0}>
+            ＋ 환전
+          </button>
+        </div>
+        <div className="rounded-xl border border-white/10 bg-slate-900/40 overflow-x-auto">
+          <table className={cx.table.root}>
+            <thead className={cx.table.head}>
+              <tr>
+                <th className={cx.table.th}>일자</th>
+                <th className={cx.table.th}>계좌</th>
+                <th className={cx.table.th + " text-right"}>보낸 금액</th>
+                <th className={cx.table.th + " text-right"}>받은 금액</th>
+                <th className={cx.table.th + " text-right"}>환율</th>
+                <th className={cx.table.th}></th>
+              </tr>
+            </thead>
+            <tbody className={cx.table.body}>
+              {pagedConvs.rows.map((c) => (
+                <tr key={c.id} className={cx.table.tr}>
+                  <td className={cx.table.td + " tabular-nums whitespace-nowrap"}>{c.convDate.slice(2)}</td>
+                  <td className={cx.table.td}>{c.account}</td>
+                  <td className={cx.table.td + " text-right tabular-nums text-sky-300"}>
+                    −{natMoney(c.fromAmount, c.fromCurrency)}
+                  </td>
+                  <td className={cx.table.td + " text-right tabular-nums text-emerald-300"}>
+                    +{natMoney(c.toAmount, c.toCurrency)}
+                  </td>
+                  <td className={cx.table.td + " text-right tabular-nums text-slate-400"}>
+                    {c.toAmount > 0 ? (c.fromAmount / c.toAmount).toFixed(2) : "—"}
+                  </td>
+                  <td className={cx.table.td + " text-right"}>
+                    <button
+                      onClick={async () => {
+                        if (!confirm("이 환전을 삭제할까요?")) return;
+                        await fetch(`/api/portfolio/fx-conversions/${c.id}`, { method: "DELETE" });
+                        reload();
+                      }}
+                      className="text-xs text-slate-400 hover:text-rose-300 transition"
+                    >
+                      삭제
+                    </button>
+                  </td>
+                </tr>
+              ))}
+              {convs.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-slate-500">
+                    환전 내역이 없습니다.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+        <div className="mt-2">
+          <Pagination page={pagedConvs.page} pageCount={pagedConvs.pageCount} from={pagedConvs.from} to={pagedConvs.to} total={pagedConvs.total} onPage={pagedConvs.setPage} />
+        </div>
+      </section>
+      )}
+
       {showAddAccount && (
         <AddAccountModal
           onClose={() => setShowAddAccount(false)}
@@ -312,7 +402,156 @@ export default function AccountsTab() {
           }}
         />
       )}
+      {showConv && (
+        <AddFxConversionModal
+          accounts={accounts}
+          onClose={() => setShowConv(false)}
+          onSaved={() => {
+            setShowConv(false);
+            reload();
+          }}
+        />
+      )}
     </div>
+  );
+}
+
+/**
+ * 환전 추가 모달.
+ *
+ * @param accounts 계좌 목록
+ * @param onClose  닫기
+ * @param onSaved  저장 성공 후 콜백
+ */
+function AddFxConversionModal({
+  accounts,
+  onClose,
+  onSaved,
+}: {
+  accounts: PortfolioAccount[];
+  onClose: () => void;
+  onSaved: () => void;
+}) {
+  const [accountId, setAccountId] = useState<number>(accounts[0]?.id ?? 0);
+  const [convDate, setConvDate] = useState(new Date().toISOString().slice(0, 10));
+  const [fromCurrency, setFromCurrency] = useState("KRW");
+  const [fromAmount, setFromAmount] = useState("");
+  const [toCurrency, setToCurrency] = useState("USD");
+  const [toAmount, setToAmount] = useState("");
+  const [fee, setFee] = useState("");
+  const [memo, setMemo] = useState("");
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+
+  const rate = Number(fromAmount) > 0 && Number(toAmount) > 0 ? Number(fromAmount) / Number(toAmount) : null;
+
+  async function submit() {
+    if (!accountId || !fromAmount || !toAmount) {
+      setError("계좌·보낸 금액·받은 금액을 입력하세요.");
+      return;
+    }
+    if (fromCurrency === toCurrency) {
+      setError("보낸 통화와 받은 통화가 같습니다.");
+      return;
+    }
+    setSaving(true);
+    setError(null);
+    try {
+      const res = await fetch("/api/portfolio/fx-conversions", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({
+          accountId,
+          convDate,
+          fromCurrency,
+          fromAmount: parseFloat(fromAmount),
+          toCurrency,
+          toAmount: parseFloat(toAmount),
+          fee: fee ? parseInt(fee, 10) : 0,
+          memo: memo.trim() || null,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      onSaved();
+    } catch {
+      setError("저장에 실패했습니다.");
+    } finally {
+      setSaving(false);
+    }
+  }
+
+  return (
+    <Modal
+      title="환전 추가"
+      onClose={onClose}
+      footer={
+        <>
+          <button onClick={onClose} className={cx.btnSecondary}>
+            취소
+          </button>
+          <button onClick={submit} disabled={saving} className={cx.btnPrimary}>
+            {saving ? "저장 중…" : "저장"}
+          </button>
+        </>
+      }
+    >
+      <div className="flex flex-col gap-3">
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-400">계좌</span>
+          <select value={accountId} onChange={(e) => setAccountId(Number(e.target.value))} className={cx.select}>
+            {accounts.map((a) => (
+              <option key={a.id} value={a.id}>
+                {a.name}
+              </option>
+            ))}
+          </select>
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-400">환전 일자</span>
+          <input type="date" value={convDate} onChange={(e) => setConvDate(e.target.value)} className={cx.inputDate} />
+        </label>
+        <div className="grid grid-cols-2 gap-3">
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-slate-400">보낸 통화</span>
+            <select value={fromCurrency} onChange={(e) => setFromCurrency(e.target.value)} className={cx.select}>
+              {CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-slate-400">보낸 금액</span>
+            <CommaInput decimal value={fromAmount} onChange={setFromAmount} className={cx.inputNumber} />
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-slate-400">받은 통화</span>
+            <select value={toCurrency} onChange={(e) => setToCurrency(e.target.value)} className={cx.select}>
+              {CURRENCIES.map((c) => (
+                <option key={c} value={c}>
+                  {c}
+                </option>
+              ))}
+            </select>
+          </label>
+          <label className="flex flex-col gap-1">
+            <span className="text-xs text-slate-400">받은 금액</span>
+            <CommaInput decimal value={toAmount} onChange={setToAmount} className={cx.inputNumber} />
+          </label>
+        </div>
+        {rate && <div className="text-xs text-slate-500">적용 환율 ≈ {rate.toFixed(2)} {fromCurrency}/{toCurrency}</div>}
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-400">수수료 (보낸 통화, 선택)</span>
+          <CommaInput value={fee} onChange={setFee} placeholder="0" className={cx.inputNumber} />
+        </label>
+        <label className="flex flex-col gap-1">
+          <span className="text-xs text-slate-400">메모 (선택)</span>
+          <input value={memo} onChange={(e) => setMemo(e.target.value)} className={cx.input} />
+        </label>
+        {error && <p className="text-xs text-rose-300">{error}</p>}
+      </div>
+    </Modal>
   );
 }
 

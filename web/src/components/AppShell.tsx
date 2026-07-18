@@ -2,6 +2,7 @@ import { cookies, headers } from "next/headers";
 import { redirect } from "next/navigation";
 import Header from "./Header";
 import ContentLayout from "./ContentLayout";
+import SessionKeeper from "./SessionKeeper";
 import { decodeJwtPayload } from "@/utils/jwt";
 
 export default async function AppShell({ children }: { children: React.ReactNode }) {
@@ -20,6 +21,7 @@ export default async function AppShell({ children }: { children: React.ReactNode
 
   return (
     <div className="h-screen flex flex-col bg-gradient-to-br from-gray-950 via-slate-900 to-indigo-950">
+      <SessionKeeper />
       <Header />
       <ContentLayout role={role} capabilities={capabilities} mustChangePassword={mustChangePassword}>
         {children}

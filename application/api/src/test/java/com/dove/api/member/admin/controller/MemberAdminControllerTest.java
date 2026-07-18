@@ -179,12 +179,18 @@ class MemberAdminControllerTest {
 
         @Test
         @WithApiUser(role = "ROOT")
-        @DisplayName("ROOT 권한이면 삭제 204 + 목록에 탈퇴일시 표시")
-        void shouldSoftDeleteAndMarkDeletedInListWhenRoot() throws Exception {
+        @DisplayName("ROOT 권한이면 삭제 204 + 기본 목록 제외 + includeDeleted로 탈퇴 표시")
+        void shouldSoftDeleteAndExcludeByDefaultWhenRoot() throws Exception {
             mockMvc.perform(delete("/admin/users/" + targetUserId))
                     .andExpect(status().isNoContent());
 
+            // 기본(활성만): 목록에서 제외
             mockMvc.perform(get("/admin/users"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[?(@.id == " + targetUserId + ")]").isEmpty());
+
+            // includeDeleted=true: 탈퇴일시와 함께 표시
+            mockMvc.perform(get("/admin/users").param("includeDeleted", "true"))
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$[?(@.id == " + targetUserId + ")].deletedAt").isNotEmpty());
         }

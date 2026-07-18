@@ -7,7 +7,7 @@ import type { UserSummary } from "@/types/user";
 import RootUsersClient from "@/containers/root/RootUsersClient";
 
 async function fetchUsers(): Promise<UserSummary[]> {
-  const res = await backendFetch("/admin/users");
+  const res = await backendFetch("/admin/users?includeDeleted=true");
   if (!res || !res.ok) return [];
   return res.json();
 }
