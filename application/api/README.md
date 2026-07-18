@@ -60,12 +60,15 @@
 /portfolio/shared/{accountId}/{summary|positions|transactions|roundtrips}  GET  공유받은 계좌 열람
 /portfolio/shared/{accountId}/transactions  POST  공유받은 계좌에 거래 추가
 
+/admin/users                    GET          회원 목록 (활성만, ADMIN↑)
 /admin/users/{id}/capabilities  GET / PATCH  capability 권한 조회·부여·회수 (ADMIN↑)
 /admin/users/{id}/menu          GET          사용자 메뉴 미리보기 (ADMIN↑)
+/admin/users/{id}/role          PATCH        역할 변경 (ROOT)
+/admin/users/{id}/reset-password POST        비밀번호 초기화 → 임시 비밀번호 (ROOT)
+/admin/users/{id}               DELETE       회원 탈퇴(soft delete — 행·참조 보존, 로그인 차단·강제 로그아웃) (ROOT)
 /admin/custom-metric-grants     GET / PATCH  사용자별 커스텀 지표 접근 부여·회수 (ADMIN↑)
 
 /root/invite-codes       GET / POST  초대 코드 관리 (ROOT)
-/root/users              GET / PATCH 사용자 관리 (ROOT)
 
 # 운영 관리 (ROOT) — /admin/ops
 /admin/ops/collection/price   POST  주가 재조회(기간) 시작 → 작업ID (범위 ≤어제, 수정주가 재조회는 ADJUSTED_TOTAL/DONE에 별도 표시)

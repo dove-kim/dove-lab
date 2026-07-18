@@ -7,7 +7,7 @@ import { cx } from "@/utils/cx";
 import { type PortfolioAccount, type PortfolioTx, type PortfolioPosition, natMoney } from "@/types/portfolio";
 import { won, fxRateOf } from "./usePortfolioData";
 import AddTransactionModal from "./AddTransactionModal";
-import { usePaged, Pagination } from "./Pagination";
+import { usePaged, Pagination } from "@/components/Pagination";
 import { useDateRange, DateRangeFilter } from "./DateRange";
 
 /** 거래 1건이 자기 통화 현금에 미치는 영향(백엔드 PortfolioCashCalculator와 동일 규칙). */

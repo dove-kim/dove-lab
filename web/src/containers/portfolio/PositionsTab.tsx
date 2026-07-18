@@ -5,7 +5,7 @@ import { cx } from "@/utils/cx";
 import { type PortfolioPosition, natMoney, natSigned } from "@/types/portfolio";
 import { usePortfolioData, won, signed, pnlColor } from "./usePortfolioData";
 import { useScope, scopeBase, ScopeSelector } from "./scopeView";
-import { usePaged, Pagination } from "./Pagination";
+import { usePaged, Pagination } from "@/components/Pagination";
 
 type Sort = "eval" | "pnl" | "weight";
 

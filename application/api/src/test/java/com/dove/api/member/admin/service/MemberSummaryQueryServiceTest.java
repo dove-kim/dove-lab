@@ -17,6 +17,7 @@ import java.util.List;
 import java.util.Map;
 
 import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.tuple;
 import static org.mockito.ArgumentMatchers.anyCollection;
 import static org.mockito.BDDMockito.given;
 
@@ -52,9 +53,12 @@ class MemberSummaryQueryServiceTest {
 
             List<MemberSummary> result = service.findAllSummaries();
 
-            assertThat(result).containsExactly(
-                    new MemberSummary(1L, "에이", "a@a.com", "userA", "ADMIN"),
-                    new MemberSummary(2L, "비", "b@b.com", "userB", "USER"));
+            assertThat(result)
+                    .extracting(MemberSummary::id, MemberSummary::name, MemberSummary::email,
+                            MemberSummary::username, MemberSummary::role)
+                    .containsExactly(
+                            tuple(1L, "에이", "a@a.com", "userA", "ADMIN"),
+                            tuple(2L, "비", "b@b.com", "userB", "USER"));
         }
 
         @Test

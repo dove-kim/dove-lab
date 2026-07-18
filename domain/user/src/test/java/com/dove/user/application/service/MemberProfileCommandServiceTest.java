@@ -100,4 +100,58 @@ class MemberProfileCommandServiceTest {
                     .isInstanceOf(NoSuchElementException.class);
         }
     }
+
+    @Nested
+    @DisplayName("softDelete")
+    class SoftDelete {
+
+        @Test
+        @DisplayName("shouldSoftDeleteAndMarkLogout")
+        void shouldSoftDeleteAndMarkLogout() {
+            MemberProfile profile = MemberProfile.create("user@example.com", "User", MemberRole.USER);
+            given(memberProfileRepository.findById(1L)).willReturn(Optional.of(profile));
+            given(memberProfileRepository.save(any())).willAnswer(i -> i.getArgument(0));
+
+            commandService.softDelete(1L);
+
+            assertThat(profile.isDeleted()).isTrue();
+            verify(forcedLogoutService).markLogoutNow(1L);
+        }
+
+        @Test
+        @DisplayName("shouldThrowIllegalStateWhenDeletingRoot")
+        void shouldThrowIllegalStateWhenDeletingRoot() {
+            MemberProfile root = MemberProfile.create("root@example.com", "Root", MemberRole.ROOT);
+            given(memberProfileRepository.findById(1L)).willReturn(Optional.of(root));
+
+            assertThatThrownBy(() -> commandService.softDelete(1L))
+                    .isInstanceOf(IllegalStateException.class)
+                    .hasMessage("ROOT_CANNOT_BE_DELETED");
+
+            verify(memberProfileRepository, never()).save(any());
+            verify(forcedLogoutService, never()).markLogoutNow(any());
+        }
+
+        @Test
+        @DisplayName("shouldBeNoOpWhenAlreadyDeleted")
+        void shouldBeNoOpWhenAlreadyDeleted() {
+            MemberProfile profile = MemberProfile.create("user@example.com", "User", MemberRole.USER);
+            profile.softDelete();
+            given(memberProfileRepository.findById(1L)).willReturn(Optional.of(profile));
+
+            commandService.softDelete(1L);
+
+            verify(memberProfileRepository, never()).save(any());
+            verify(forcedLogoutService, never()).markLogoutNow(any());
+        }
+
+        @Test
+        @DisplayName("shouldThrowNoSuchElementWhenMemberNotFound")
+        void shouldThrowNoSuchElementWhenMemberNotFound() {
+            given(memberProfileRepository.findById(99L)).willReturn(Optional.empty());
+
+            assertThatThrownBy(() -> commandService.softDelete(99L))
+                    .isInstanceOf(NoSuchElementException.class);
+        }
+    }
 }

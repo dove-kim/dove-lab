@@ -29,7 +29,8 @@ public class MemberSummaryQueryService {
         return profiles.stream()
                 .map(p -> new MemberSummary(
                         p.getId(), p.getName(), p.getEmail(),
-                        usernameMap.getOrDefault(p.getId(), ""), p.getRole().name()))
+                        usernameMap.getOrDefault(p.getId(), ""), p.getRole().name(),
+                        p.getCreatedAt(), p.getDeletedAt()))
                 .toList();
     }
 }

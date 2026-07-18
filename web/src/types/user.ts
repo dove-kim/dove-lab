@@ -4,4 +4,6 @@ export interface UserSummary {
   email: string;
   username: string;
   role: "USER" | "ADMIN" | "ROOT";
+  createdAt: string;
+  deletedAt: string | null;
 }
