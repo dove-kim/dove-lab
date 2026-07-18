@@ -11,6 +11,8 @@
     "px-5 py-2 rounded-lg text-sm font-medium bg-indigo-600 hover:bg-indigo-500 text-white transition disabled:opacity-50",
   btnSecondary:
     "px-4 py-2 rounded-lg text-sm text-slate-400 border border-white/15 hover:text-white transition",
+  btnDanger:
+    "px-5 py-2 rounded-lg text-sm font-medium bg-rose-600 hover:bg-rose-500 text-white transition disabled:opacity-50",
   btnToggleOn:
     "px-3 py-2 rounded-lg text-sm font-medium bg-indigo-600 text-white transition",
   btnToggleOff:

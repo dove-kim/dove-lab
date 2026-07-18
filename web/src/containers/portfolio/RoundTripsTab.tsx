@@ -5,7 +5,7 @@ import { cx } from "@/utils/cx";
 import { type PortfolioRoundTrip, CUR_SYMBOL, natSigned } from "@/types/portfolio";
 import { usePortfolioData, won, signed, pnlColor } from "./usePortfolioData";
 import { useScope, scopeBase, ScopeSelector } from "./scopeView";
-import { usePaged, Pagination } from "./Pagination";
+import { usePaged, Pagination } from "@/components/Pagination";
 import { useDateRange, DateRangeFilter } from "./DateRange";
 import { StatTile } from "./StatTile";
 

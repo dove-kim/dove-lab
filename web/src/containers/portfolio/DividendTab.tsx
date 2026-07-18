@@ -5,7 +5,7 @@ import Modal from "@/components/Modal";
 import { cx } from "@/utils/cx";
 import { type PortfolioPosition, type PortfolioTx, natMoney } from "@/types/portfolio";
 import { usePortfolioData, won, fxRateOf } from "./usePortfolioData";
-import { usePaged, Pagination } from "./Pagination";
+import { usePaged, Pagination } from "@/components/Pagination";
 import { useScope, scopeBase, ScopeSelector } from "./scopeView";
 
 /** 종목별 실수령 배당 집계 — 세후 합계와 개별 배당 거래 목록. */

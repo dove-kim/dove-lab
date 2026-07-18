@@ -19,6 +19,7 @@ import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.transaction.annotation.Transactional;
 
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.delete;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
@@ -161,6 +162,50 @@ class MemberAdminControllerTest {
 
             mockMvc.perform(post("/admin/users/" + noCredentialUser.getId() + "/reset-password"))
                     .andExpect(status().isNotFound());
+        }
+    }
+
+    @Nested
+    @DisplayName("DELETE /admin/users/{id}")
+    class DeleteUser {
+
+        @Test
+        @WithApiUser(role = "ADMIN")
+        @DisplayName("ADMIN 권한이면 403")
+        void shouldReturn403WhenAdminDeletesUser() throws Exception {
+            mockMvc.perform(delete("/admin/users/" + targetUserId))
+                    .andExpect(status().isForbidden());
+        }
+
+        @Test
+        @WithApiUser(role = "ROOT")
+        @DisplayName("ROOT 권한이면 삭제 204 + 목록에 탈퇴일시 표시")
+        void shouldSoftDeleteAndMarkDeletedInListWhenRoot() throws Exception {
+            mockMvc.perform(delete("/admin/users/" + targetUserId))
+                    .andExpect(status().isNoContent());
+
+            mockMvc.perform(get("/admin/users"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[?(@.id == " + targetUserId + ")].deletedAt").isNotEmpty());
+        }
+
+        @Test
+        @WithApiUser(role = "ROOT")
+        @DisplayName("없는 사용자면 404")
+        void shouldReturn404WhenDeletingNonExistentUser() throws Exception {
+            mockMvc.perform(delete("/admin/users/99999"))
+                    .andExpect(status().isNotFound());
+        }
+
+        @Test
+        @WithApiUser(role = "ROOT")
+        @DisplayName("ROOT 유저 삭제 시도 시 403")
+        void shouldReturn403WhenDeletingRootUser() throws Exception {
+            MemberProfile anotherRoot = memberProfileCommandService.save(
+                    MemberProfile.create("rootdel@test.com", "다른루트", MemberRole.ROOT));
+
+            mockMvc.perform(delete("/admin/users/" + anotherRoot.getId()))
+                    .andExpect(status().isForbidden());
         }
     }
 }

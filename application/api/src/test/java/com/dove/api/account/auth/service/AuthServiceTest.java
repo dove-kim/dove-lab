@@ -120,6 +120,23 @@ class AuthServiceTest {
                     .extracting(e -> ((ResponseStatusException) e).getStatusCode().value())
                     .isEqualTo(HttpStatus.UNAUTHORIZED.value());
         }
+
+        @Test
+        @DisplayName("탈퇴한 계정이면 401 예외")
+        void shouldThrowWhenAccountDeleted() {
+            Credential credential = Credential.create(1L, "test", "encoded");
+            MemberProfile profile = profileWithId(1L, "t@t.com", "테스트", MemberRole.USER);
+            profile.softDelete();
+
+            given(credentialService.findByUsername("test")).willReturn(Optional.of(credential));
+            given(passwordEncoder.matches("1234", "encoded")).willReturn(true);
+            given(memberProfileQueryService.findById(1L)).willReturn(Optional.of(profile));
+
+            assertThatThrownBy(() -> authService.login("test", "1234", false))
+                    .isInstanceOf(ResponseStatusException.class)
+                    .extracting(e -> ((ResponseStatusException) e).getStatusCode().value())
+                    .isEqualTo(HttpStatus.UNAUTHORIZED.value());
+        }
     }
 
     @Nested

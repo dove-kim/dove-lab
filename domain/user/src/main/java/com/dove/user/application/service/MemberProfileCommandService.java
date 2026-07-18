@@ -53,4 +53,25 @@ public class MemberProfileCommandService {
         forcedLogoutService.markLogoutNow(userId);
         return saved;
     }
+
+    /**
+     * 지정 회원을 탈퇴 처리한다(soft delete). 행은 유지되어 참조 무결성이 보존되고, 활성 세션은 강제 로그아웃된다.
+     *
+     * @param userId 대상 회원 ID
+     * @throws NoSuchElementException 회원이 존재하지 않을 경우
+     * @throws IllegalStateException  ROOT 회원을 삭제하려 할 경우
+     */
+    public void softDelete(Long userId) {
+        MemberProfile profile = memberProfileRepository.findById(userId)
+                .orElseThrow(NoSuchElementException::new);
+        if (profile.getRole() == MemberRole.ROOT) {
+            throw new IllegalStateException("ROOT_CANNOT_BE_DELETED");
+        }
+        if (profile.isDeleted()) {
+            return;
+        }
+        profile.softDelete();
+        memberProfileRepository.save(profile);
+        forcedLogoutService.markLogoutNow(userId);
+    }
 }

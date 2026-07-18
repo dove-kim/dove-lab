@@ -68,4 +68,20 @@ public class MemberAdminController {
     public ResetPasswordResponse resetPassword(@PathVariable Long userId) {
         return new ResetPasswordResponse(adminPasswordResetService.resetPassword(userId));
     }
+
+    /**
+     * ROOT 전용 — 회원 탈퇴 처리(soft delete).
+     */
+    @DeleteMapping("/{userId}")
+    @ResponseStatus(HttpStatus.NO_CONTENT)
+    @RequireRole(Role.ROOT)
+    public void deleteUser(@PathVariable Long userId) {
+        try {
+            memberProfileCommandService.softDelete(userId);
+        } catch (NoSuchElementException e) {
+            throw new ResponseStatusException(HttpStatus.NOT_FOUND, "USER_NOT_FOUND");
+        } catch (IllegalStateException e) {
+            throw new ResponseStatusException(HttpStatus.FORBIDDEN, "ROOT_CANNOT_BE_DELETED");
+        }
+    }
 }

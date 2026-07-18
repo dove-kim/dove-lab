@@ -54,6 +54,10 @@ public class MemberProfile {
     @Comment("가입일시")
     private LocalDateTime createdAt;
 
+    @Column(name = "DELETED_AT")
+    @Comment("탈퇴(soft delete) 일시 (null이면 활성)")
+    private LocalDateTime deletedAt;
+
     /**
      * 신규 회원 프로필을 생성한다.
      *
@@ -78,5 +82,16 @@ public class MemberProfile {
      */
     public void changeRole(MemberRole role) {
         this.role = role;
+    }
+
+    /**
+     * 회원을 탈퇴 처리한다(soft delete). 행과 참조는 유지되고 활성 상태만 해제된다.
+     */
+    public void softDelete() {
+        this.deletedAt = LocalDateTime.now();
+    }
+
+    public boolean isDeleted() {
+        return deletedAt != null;
     }
 }

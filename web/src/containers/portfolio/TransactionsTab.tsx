@@ -6,7 +6,7 @@ import { cx } from "@/utils/cx";
 import { type PortfolioTx, type PortfolioAccount, type PortfolioShare, TX_TYPE_LABEL, CUR_SYMBOL, natMoney } from "@/types/portfolio";
 import AddTransactionModal from "./AddTransactionModal";
 import { useScope, scopeBase, ScopeSelector } from "./scopeView";
-import { usePaged, Pagination } from "./Pagination";
+import { usePaged, Pagination } from "@/components/Pagination";
 import { useDateRange, DateRangeFilter } from "./DateRange";
 import { won } from "./usePortfolioData";
 

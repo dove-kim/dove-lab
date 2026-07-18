@@ -21,7 +21,7 @@ public class MemberProfileQueryService {
     private final MemberProfileRepository memberProfileRepository;
 
     /**
-     * 전체 회원을 가입일시 내림차순으로 반환한다.
+     * 전체 회원(탈퇴 포함)을 가입일시 내림차순으로 반환한다.
      */
     public List<MemberProfile> findAll() {
         return memberProfileRepository.findAllByOrderByCreatedAtDesc();

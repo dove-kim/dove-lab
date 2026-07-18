@@ -58,6 +58,9 @@ public class AuthService {
 
         MemberProfile profile = memberProfileQueryService.findById(credential.getMemberId())
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "PROFILE_NOT_FOUND"));
+        if (profile.isDeleted()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS");
+        }
 
         boolean mustChangePassword = credential.isPasswordResetRequired();
         credential.recordSuccessfulLogin();
@@ -108,6 +111,9 @@ public class AuthService {
     public LoginResult refresh(Long memberId) {
         MemberProfile profile = memberProfileQueryService.findById(memberId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "PROFILE_NOT_FOUND"));
+        if (profile.isDeleted()) {
+            throw new ResponseStatusException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS");
+        }
         Credential credential = credentialService.findByMemberId(memberId)
                 .orElseThrow(() -> new ResponseStatusException(HttpStatus.UNAUTHORIZED, "INVALID_CREDENTIALS"));
         if (credential.isLocked()) {
