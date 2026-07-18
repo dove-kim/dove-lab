@@ -44,13 +44,13 @@ public class CustomMetricSourceSupport {
 
     /**
      * universe(tickers)에 대해 거래일별 횡단 집계값을 반환한다. MEAN=colA 평균, RATIO_GT=colA&gt;colB 비율.
-     * 집계는 거래일별로 독립이므로 전 구간을 연 단위 청크로 나눠 실행·병합한다(단일 대형 스캔의 타임아웃 회피).
+     * 집계는 거래일별로 독립이므로 전 구간을 월 단위 청크로 나눠 실행·병합한다(단일 대형 스캔의 타임아웃 회피).
      */
     public Map<LocalDate, Double> aggregate(MetricAgg agg, String colA, String colB,
                                             Collection<String> tickers, PriceType priceType,
                                             LocalDate fromInclusive, LocalDate toInclusive) {
         Map<LocalDate, Double> result = new LinkedHashMap<>();
-        for (DateWindow w : DateWindows.yearly(fromInclusive, toInclusive)) {
+        for (DateWindow w : DateWindows.monthly(fromInclusive, toInclusive)) {
             result.putAll(aggregateWindow(agg, colA, colB, tickers, priceType, w.fromInclusive(), w.toInclusive()));
         }
         return result;
@@ -62,7 +62,8 @@ public class CustomMetricSourceSupport {
                                                    LocalDate fromInclusive, LocalDate toInclusive) {
         QStockFeatureDaily f = QStockFeatureDaily.stockFeatureDaily;
         NumberExpression<Double> a = col(f, colA);
-        BooleanExpression where = f.id.ticker.in(tickers).and(f.id.priceType.eq(priceType))
+        // 거래소를 KRX(코스피·코스닥)로 좁혀 날짜 축(marketTradeDates)과 정합시키고 스캔 대상을 줄인다.
+        BooleanExpression where = f.id.ticker.in(tickers).and(f.id.exchange.in(KRX)).and(f.id.priceType.eq(priceType))
                 .and(f.id.tradeDate.loe(toInclusive)).and(a.isNotNull());
         if (fromInclusive != null) where = where.and(f.id.tradeDate.goe(fromInclusive));
 

@@ -94,11 +94,13 @@ domain/                Aggregate 단위 모듈 (entity + repo + JPA/QueryDSL + C
   custom-metric        ROOT 정의 커스텀 지표(DSL 계산식 JSON) — CustomMetricDef/Daily + 순수 평가기 + SERIES 시장지표(레짐·상승비율 등, 야간 증분 계산·저장). 전략을 코드 아닌 데이터로 은닉
   system-event         수집·계산 운영 이벤트(KRX/KIS 실패 등) — ROOT 모니터링
   screening            사용자 정의 종목 필터(불리언 트리 + 순서 파이프라인: FILTER·RANK 단계, 등락/시총/거래량 정렬·top-N) + 종목 세트 + 지표 프리셋
+  portfolio            국내·해외 자산 포트폴리오 — 계좌·거래(PortfolioTransaction)를 fold해 보유·평단·라운드트립 파생. 보유종목 식별·배당추적(PortfolioHolding), 해외 종가·환율 스냅샷(PortfolioQuote/PortfolioFxRate), 리밸런싱 프리셋(PortfolioRebalancePlan), 계좌 공유(PortfolioShare). 금액은 원통화 저장·현재환율 원화 환산(파생)
 
 infrastructure/        Driven adapter — 외부 시스템 연결
   krx                  KRX API 어댑터 (Feign) — 종목·일별시세(상장주식수)
-  kis                  KIS API 어댑터 (Feign) + KisGate(초당 20회 율제한)
+  kis                  KIS API 어댑터 (Feign) + KisGate(초당 20회 율제한) — 국내·해외 주가
   dart                 DART OpenAPI 어댑터 (Feign) — 재무제표·고유번호·정기공시
+  frankfurter          Frankfurter API 어댑터 (Feign) — 원통화→KRW 환율
 
 library/               도메인 무관 공통 기술
   jpa, logging, api-quota, concurrent(Parallel), datetime, job-status(Redis 진행률), workspace(임시 작업파일 관리)

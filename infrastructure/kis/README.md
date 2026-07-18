@@ -5,7 +5,7 @@
 베이스 URL: `https://openapi.koreainvestment.com:9443`  
 인증: OAuth 2.0 Bearer Token (`KisTokenManager` 가 자동 갱신)
 
-> **사용 범위**: 당일·역사적 주가 수집과 수정주가 적용(`PriceCollectionService`), 종목 상세정보(`StockDetailService`), 투자자매매동향(`InvestorCollectService`)에 사용된다.  
+> **사용 범위**: 당일·역사적 주가 수집과 수정주가 적용(`PriceCollectionService`), 종목 상세정보(`StockDetailService`), 투자자매매동향(`InvestorCollectService`), 포트폴리오 해외 보유 종가(`KisOverseasPriceAdapter`)에 사용된다.  
 > 종목 목록 조회는 KRX(infrastructure/krx) 어댑터가 담당한다. 모든 KIS 호출은 `KisGate`(초당 20회)를 통과한다.
 
 ## KRX vs KIS 역할 분리
@@ -31,8 +31,10 @@
 | CTPF1002R | 주식기본정보 (상장폐지일·액면가·상장주식수) | `/uapi/domestic-stock/v1/quotations/search-stock-info` |
 | CTPF1604R | 상품기본정보 (종목명·분류 등) | `/uapi/domestic-stock/v1/quotations/search-info` |
 | FHKST01010900 | 종목별 투자자매매동향 | `/uapi/domestic-stock/v1/quotations/inquire-investor` |
+| HHDFS00000300 | 해외주식 현재가 (포트폴리오 해외 보유 평가) | `/uapi/overseas-price/v1/quotations/price` |
 
 공통 파라미터 `FID_COND_MRKT_DIV_CODE`: `J`=KRX(KOSPI/KOSDAQ/KONEX), `NX`=NXT, `UN`=통합
+해외 파라미터 `EXCD`: `NAS`=나스닥, `NYS`=뉴욕, `AMS`=아멕스(NYSE Arca ETF 포함) 등
 
 ---
 
@@ -163,4 +165,5 @@
 | `KisGate` | 모든 KIS 호출의 초당 율제한 게이트 (`call(supplier)`) |
 | `KisPeriodChartFetcher` | 기간별시세 조회 `fetchDaily(exchange, ticker, from, to, priceType)` — `PriceType`로 수정/비수정 결정 |
 | `KisStockClient` | Feign 클라이언트 — 주식기본조회·상품기본조회·투자자매매동향 |
+| `KisOverseasPriceAdapter` | 해외주식 현재가 조회 `fetchClose(market, ticker)` — 포트폴리오 해외 보유 평가용 (`OverseasPricePort`) |
 | `KisTokenManager` | OAuth 토큰 자동 갱신 |

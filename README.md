@@ -9,7 +9,7 @@
 
 ![system](./doc/system.svg)
 
-1. **scheduler**: 잡마다 독립 스레드로 — KRX 당일 종목 동기화(08:05), KIS 종목 상세·투자자동향 수집(12:00), 일일 파이프라인(21:00: 당일 주가 → 지표·순위·커스텀 지표 ∥ DART 재무폴링·상장주식수·밸류에이션 → 모델 채점), DART 고유번호 주간 동기화(일 06:00). 역사적 수집은 ROOT 전용 백필 API(비동기, 재조회 ≤어제) + 대량 과거 데이터는 별도 스크립트. 진행률은 ROOT 대시보드로 조회.
+1. **scheduler**: 잡마다 독립 스레드로 — KRX 당일 종목 동기화(08:05), 포트폴리오 시세·환율 갱신(07:30: 보유 해외 종가 + 원통화 환율), KIS 종목 상세·투자자동향 수집(12:00), 일일 파이프라인(21:00: 당일 주가 → 지표·순위·커스텀 지표 ∥ DART 재무폴링·상장주식수·밸류에이션 → 모델 채점), DART 고유번호 주간 동기화(일 06:00). 역사적 수집은 ROOT 전용 백필 API(비동기, 재조회 ≤어제) + 대량 과거 데이터는 별도 스크립트. 진행률은 ROOT 대시보드로 조회.
 2. **api**: REST API 서버 — 회원 인증 + 주식 데이터 조회 + 사용자 기능 권한 관리 + 운영(수집·스케줄러) 관리
 3. **web**: Next.js 기반 UI
 
@@ -36,11 +36,13 @@ domain/                     Aggregate 단위 모듈 (entity + repository + CQRS 
   model-serving             ML 모델 레지스트리(ML_MODEL) + 일일 채점 점수(STOCK_MODEL_SCORE)
   custom-metric             ROOT 정의 커스텀 지표(DSL) — SERIES 시장지표(레짐·상승비율) 야간 계산·저장
   system-event              수집·계산 운영 이벤트 기록 (ROOT 모니터링)
+  portfolio                 국내·해외 자산 포트폴리오 — 계좌·거래(PortfolioTransaction) fold로 보유·평단·라운드트립 파생, 보유종목 식별·배당추적(PortfolioHolding), 해외 종가·환율 스냅샷(PortfolioQuote/PortfolioFxRate), 리밸런싱 프리셋, 계좌 공유
 
 infrastructure/             Driven adapter
   krx                       KRX API 어댑터 (Feign) — 종목·일별시세(상장주식수)
-  kis                       KIS API 어댑터 (Feign) + KisGate (초당 20회 율제한)
+  kis                       KIS API 어댑터 (Feign) + KisGate (초당 20회 율제한) — 국내·해외 주가
   dart                      DART OpenAPI 어댑터 (Feign) — 재무제표·고유번호·공시
+  frankfurter               Frankfurter API 어댑터 (Feign) — 원통화→KRW 환율
 
 library/
   jpa                       JpaConfig, QuerydslConfiguration

@@ -1,6 +1,20 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { type PortfolioTx, TX_TYPE_LABEL, natMoney } from "@/types/portfolio";
+
+interface PortfolioSummary {
+  totalKrw: number;
+  cashKrw: number;
+  netContribKrw: number;
+  growthKrw: number;
+  evalPnlKrw: number;
+  evalPnlPct: number;
+  xirrPct: number;
+}
+
+const won = (n: number) => n.toLocaleString("ko-KR");
+const signed = (n: number) => (n >= 0 ? "+" : "") + won(n);
 
 function MarketStatusCard() {
   return (
@@ -23,26 +37,55 @@ function MarketStatusCard() {
   );
 }
 
-function PortfolioCard({ tall }: { tall?: boolean }) {
+function Stat({ label, value, sub, tone }: { label: string; value: React.ReactNode; sub?: string; tone?: "up" | "down" }) {
+  const color = tone === "up" ? "text-rose-300" : tone === "down" ? "text-sky-300" : "text-white";
   return (
-    <div className={`bg-white/5 border border-white/10 rounded-xl p-5 ${tall ? "h-full" : ""}`}>
-      <h3 className="text-slate-300 text-sm font-medium mb-4 flex items-center gap-2">
-        <svg className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <rect x="2" y="7" width="20" height="14" rx="2" />
-          <path d="M16 7V5a2 2 0 0 0-4 0v2" />
-          <path d="M12 12v4" />
-          <path d="M10 14h4" />
-        </svg>
-        포트폴리오
-      </h3>
-      <div className="flex flex-col items-center justify-center py-8 gap-2">
-        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
-          <svg className="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <rect x="2" y="7" width="20" height="14" rx="2" />
+    <div className="bg-white/5 rounded-lg p-3">
+      <div className="text-xs text-slate-400">{label}</div>
+      <div className={`text-lg font-semibold tabular-nums ${color}`}>{value}</div>
+      {sub && <div className="text-xs text-slate-500 mt-0.5">{sub}</div>}
+    </div>
+  );
+}
+
+function PortfolioSummaryCard({ reloadToken }: { reloadToken: number }) {
+  const [s, setS] = useState<PortfolioSummary | null>(null);
+  const [err, setErr] = useState(false);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/portfolio/summary", { cache: "no-store" })
+      .then((r) => {
+        if (!r.ok) throw new Error();
+        return r.json();
+      })
+      .then((d: PortfolioSummary) => live && setS(d))
+      .catch(() => live && setErr(true));
+    return () => {
+      live = false;
+    };
+  }, [reloadToken]);
+
+  return (
+    <div className="bg-white/5 border border-white/10 rounded-xl p-5 h-full">
+      <div className="flex items-center justify-between mb-4">
+        <h3 className="text-slate-300 text-sm font-medium flex items-center gap-2">
+          <svg className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="2" y="7" width="20" height="14" rx="2" /><path d="M16 7V5a2 2 0 0 0-4 0v2" /><path d="M12 12v4" /><path d="M10 14h4" />
           </svg>
-        </div>
-        <p className="text-slate-500 text-xs">포트폴리오 기능 준비 중</p>
+          포트폴리오 요약
+        </h3>
+        <a href="/portfolio" className="text-xs text-indigo-300 hover:text-indigo-200 transition">포트폴리오 →</a>
       </div>
+      {err && <p className="text-rose-400 text-xs">불러오지 못했습니다.</p>}
+      {!err && !s && <p className="text-slate-500 text-xs">불러오는 중…</p>}
+      {s && (
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
+          <Stat label="총 평가자산" value={won(s.totalKrw)} sub={`현금 ${won(s.cashKrw)} 포함`} />
+          <Stat label="누적 손익" value={signed(s.growthKrw)} tone={s.growthKrw >= 0 ? "up" : "down"} sub={`순납입 ${won(s.netContribKrw)}`} />
+          <Stat label="평가손익" value={`${signed(s.evalPnlKrw)} (${s.evalPnlPct >= 0 ? "+" : ""}${s.evalPnlPct}%)`} tone={s.evalPnlKrw >= 0 ? "up" : "down"} />
+          <Stat label="연평균(XIRR)" value={`${s.xirrPct >= 0 ? "+" : ""}${s.xirrPct}%`} tone={s.xirrPct >= 0 ? "up" : "down"} />
+        </div>
+      )}
     </div>
   );
 }
@@ -70,25 +113,44 @@ function WatchlistCard() {
   );
 }
 
-function RecentActivityCard() {
+function RecentTradesCard({ reloadToken }: { reloadToken: number }) {
+  const [rows, setRows] = useState<PortfolioTx[] | null>(null);
+  useEffect(() => {
+    let live = true;
+    fetch("/api/portfolio/transactions", { cache: "no-store" })
+      .then((r) => (r.ok ? r.json() : Promise.reject()))
+      .then((d: PortfolioTx[]) => live && setRows(d.slice(0, 6)))
+      .catch(() => live && setRows([]));
+    return () => {
+      live = false;
+    };
+  }, [reloadToken]);
+
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-5">
-      <h3 className="text-slate-300 text-sm font-medium mb-4 flex items-center gap-2">
-        <svg className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-          <circle cx="12" cy="12" r="10" />
-          <polyline points="12 6 12 12 16 14" />
-        </svg>
-        최근 활동
-      </h3>
-      <div className="flex flex-col items-center justify-center py-8 gap-2">
-        <div className="w-8 h-8 rounded-full bg-white/5 flex items-center justify-center">
-          <svg className="w-4 h-4 text-slate-500" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-            <circle cx="12" cy="12" r="10" />
-            <polyline points="12 6 12 12 16 14" />
+    <div className="bg-white/5 border border-white/10 rounded-xl p-5 h-full">
+      <div className="flex items-center justify-between mb-3">
+        <h3 className="text-slate-300 text-sm font-medium flex items-center gap-2">
+          <svg className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <circle cx="12" cy="12" r="10" /><polyline points="12 6 12 12 16 14" />
           </svg>
-        </div>
-        <p className="text-slate-500 text-xs">활동 내역 준비 중</p>
+          최근 거래
+        </h3>
+        <a href="/portfolio" className="text-xs text-indigo-300 hover:text-indigo-200 transition">전체 →</a>
       </div>
+      {!rows && <p className="text-slate-500 text-xs">불러오는 중…</p>}
+      {rows && rows.length === 0 && <p className="text-slate-500 text-xs">거래 내역 없음</p>}
+      {rows &&
+        rows.map((r) => (
+          <div key={r.id} className="flex items-center justify-between py-1.5 text-sm border-b border-white/5 last:border-0">
+            <div className="flex items-center gap-2 min-w-0">
+              <span className="text-xs text-slate-500 tabular-nums">{r.tradedAt.slice(5)}</span>
+              <span className="text-slate-200 truncate">{r.symbol ?? TX_TYPE_LABEL[r.type]}</span>
+            </div>
+            <span className="text-xs text-slate-400 tabular-nums whitespace-nowrap">
+              {TX_TYPE_LABEL[r.type]} {natMoney(r.amount, r.currency)}
+            </span>
+          </div>
+        ))}
     </div>
   );
 }
@@ -280,26 +342,25 @@ export default function Dashboard({ role }: { role: string }) {
           </button>
         </div>
       </div>
-      {isRoot ? (
-        // ROOT: 배치 작업 현황 전체 폭
-        <div>
-          <SchedulerStatusCard reloadToken={reloadToken} />
+      <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+        {isRoot && (
+          <div className="md:col-span-2 lg:col-span-3">
+            <SchedulerStatusCard reloadToken={reloadToken} />
+          </div>
+        )}
+        <div className="md:col-span-2">
+          <PortfolioSummaryCard reloadToken={reloadToken} />
         </div>
-      ) : (
-        // USER/ADMIN: 기능 준비 중 카드들
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
-          <div className="md:col-span-2">
-            <MarketStatusCard />
-          </div>
-          <div className="lg:row-span-2">
-            <PortfolioCard tall />
-          </div>
-          <WatchlistCard />
-          <div className="md:col-span-2 lg:col-span-1">
-            <RecentActivityCard />
-          </div>
-        </div>
-      )}
+        <RecentTradesCard reloadToken={reloadToken} />
+        {!isRoot && (
+          <>
+            <div className="md:col-span-2">
+              <MarketStatusCard />
+            </div>
+            <WatchlistCard />
+          </>
+        )}
+      </div>
     </div>
   );
 }

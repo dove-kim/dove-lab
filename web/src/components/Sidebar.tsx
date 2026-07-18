@@ -81,6 +81,43 @@ const STOCK_GROUP_ICON = (
   </svg>
 );
 
+const WALLET_ICON = (
+  <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M21 12V7H5a2 2 0 0 1 0-4h14v4" /><path d="M3 5v14a2 2 0 0 0 2 2h16v-5" /><path d="M18 12a2 2 0 0 0 0 4h4v-4z" />
+  </svg>
+);
+
+const REPORT_ICON = (
+  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <path d="M3 3v18h18" /><path d="m7 14 3-3 3 3 4-5" />
+  </svg>
+);
+
+const TX_ICON = (
+  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="8" y1="6" x2="21" y2="6" /><line x1="8" y1="12" x2="21" y2="12" /><line x1="8" y1="18" x2="21" y2="18" />
+    <line x1="3" y1="6" x2="3.01" y2="6" /><line x1="3" y1="12" x2="3.01" y2="12" /><line x1="3" y1="18" x2="3.01" y2="18" />
+  </svg>
+);
+
+const ACCOUNTS_ICON = (
+  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <rect x="2" y="5" width="20" height="14" rx="2" /><line x1="2" y1="10" x2="22" y2="10" />
+  </svg>
+);
+
+const REBALANCE_ICON = (
+  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <line x1="4" y1="21" x2="4" y2="14" /><line x1="4" y1="10" x2="4" y2="3" /><line x1="12" y1="21" x2="12" y2="12" /><line x1="12" y1="8" x2="12" y2="3" /><line x1="20" y1="21" x2="20" y2="16" /><line x1="20" y1="12" x2="20" y2="3" /><line x1="1" y1="14" x2="7" y2="14" /><line x1="9" y1="8" x2="15" y2="8" /><line x1="17" y1="16" x2="23" y2="16" />
+  </svg>
+);
+
+const SHARE_ICON = (
+  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
+  </svg>
+);
+
 const LOCK_ICON = (
   <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="11" width="18" height="11" rx="2" />
@@ -98,6 +135,18 @@ const MENU_GROUPS: MenuGroup[] = [
       { href: "/stock-search", label: "종목 조회", icon: SEARCH_ICON, capability: "STOCK_VIEW", deny: "LOCK" },
       { href: "/search-filters", label: "필터 관리", icon: FILTER_ICON, capability: "STOCK_SEARCH", deny: "LOCK" },
       { href: "/stock-filters", label: "종목 필터", icon: GRID_ICON, capability: "STOCK_SEARCH", deny: "LOCK" },
+    ],
+  },
+  {
+    key: "ASSET",
+    label: "자산",
+    icon: WALLET_ICON,
+    items: [
+      { href: "/portfolio/analysis", label: "분석", icon: REPORT_ICON, capability: "PORTFOLIO_LEDGER", deny: "LOCK" },
+      { href: "/portfolio/transactions", label: "매매내역", icon: TX_ICON, capability: "PORTFOLIO_LEDGER", deny: "LOCK" },
+      { href: "/portfolio/accounts", label: "계좌관리", icon: ACCOUNTS_ICON, capability: "PORTFOLIO_LEDGER", deny: "LOCK" },
+      { href: "/portfolio/rebalance", label: "리밸런싱", icon: REBALANCE_ICON, capability: "PORTFOLIO_REBALANCE", deny: "LOCK" },
+      { href: "/portfolio/share", label: "공유", icon: SHARE_ICON, capability: "PORTFOLIO_LEDGER", deny: "LOCK" },
     ],
   },
 ];
@@ -230,7 +279,8 @@ export default function Sidebar({ role, capabilities, mobileOpen, onMobileClose 
   const groups: RenderedGroup[] = MENU_GROUPS.map((group) => {
     const items: RenderedItem[] = group.items
       .map((item) => {
-        const accessible = !item.capability || hasCapability(capabilities, item.capability);
+        // ROOT는 모든 capability를 자동 통과(백엔드 AuthorizationAspect와 동일 의미).
+        const accessible = !item.capability || isRoot || hasCapability(capabilities, item.capability);
         return { ...item, accessible, locked: !accessible && item.deny !== "HIDE" };
       })
       .filter((item) => item.accessible || item.deny !== "HIDE");

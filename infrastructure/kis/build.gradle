@@ -10,6 +10,7 @@ dependencies {
     implementation project(':datetime')
     implementation project(':stock')
     implementation project(':stock-collection')
+    implementation project(':portfolio')
 }
 
 dependencyManagement {

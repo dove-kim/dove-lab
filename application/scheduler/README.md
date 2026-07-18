@@ -8,6 +8,7 @@ KRX/KIS/DART에서 종목·주가·투자자동향·재무를 수집하고 지�
 
 | 시각 (KST) | 잡 | 설명 |
 |---|---|---|
+| 07:30 | `PortfolioMarketDataJob` | 미국장 마감 후 — 보유 해외 종목 종가(KIS) + 원통화 환율(Frankfurter) 스냅샷 갱신 (`PORTFOLIO_QUOTE`/`PORTFOLIO_FX_RATE`) |
 | 08:05 | `StockSyncJob` | KRX 당일 종목 스냅샷을 최신 상태로 upsert (신규 종목 포함) |
 | 12:00 | `StockDetailJob` | 전 종목 KIS 상세정보(`STOCK_DETAIL`) + 투자자매매동향(`INVESTOR_DAILY`) + 당일 권리이벤트(`STOCK_EVENT`, KSD) 수집 |
 | 21:00 | `DailyPipelineOrchestrator` | 당일 주가 수집(하드 게이트) → **병렬** {① 지표 → 순위(rank) → 커스텀 지표(custom-metric) ∥ ② DART 공시 폴링 → 상장주식수 → 밸류에이션} → 모델 채점. 각 단계 실패는 시스템 이벤트로 격리(다음 단계 계속). |

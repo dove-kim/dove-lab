@@ -53,6 +53,7 @@ web/.next/
 web/node_modules/
 web/.env.local
 web/.env*.local
+web/*.tsbuildinfo
 
 ### Docker ###
 docker-compose.prod.yml

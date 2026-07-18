@@ -14,5 +14,7 @@ public enum SchedulerJobName {
     MODEL_SCORING,
     FUNDAMENTAL_POLL,
     SHARE_COUNT,
-    VALUATION
+    VALUATION,
+    PORTFOLIO_FX,
+    PORTFOLIO_QUOTE
 }
