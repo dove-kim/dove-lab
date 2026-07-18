@@ -461,11 +461,8 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
   const noMetricAvailable = isMetricCondition && metrics.length === 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60" onClick={onClose}>
-      <div
-        className="bg-slate-800 border border-white/15 rounded-xl shadow-2xl w-full max-w-md mx-4 p-6"
-        onClick={(e) => e.stopPropagation()}
-      >
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
+      <div className="bg-slate-800 border border-white/15 rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
         <div className="flex items-center justify-between mb-5">
           <h3 className="text-white font-semibold">{CONDITION_TYPE_LABELS[conditionType]}</h3>
           <button onClick={onClose} className="text-slate-400 hover:text-white transition">

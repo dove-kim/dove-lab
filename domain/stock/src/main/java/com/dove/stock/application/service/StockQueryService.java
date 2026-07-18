@@ -1,6 +1,7 @@
 package com.dove.stock.application.service;
 
 import com.dove.market.domain.enums.MarketType;
+import com.dove.stock.application.dto.StockSearchHit;
 import com.dove.stock.domain.entity.Stock;
 import com.dove.stock.domain.entity.StockDetail;
 import com.dove.stock.domain.enums.StockExchange;
@@ -15,6 +16,7 @@ import java.util.Collection;
 import java.util.List;
 import java.util.Map;
 import java.util.NoSuchElementException;
+import java.util.Objects;
 import java.util.Optional;
 import java.util.function.Function;
 import java.util.stream.Collectors;
@@ -36,6 +38,25 @@ public class StockQueryService {
      */
     public List<Stock> findAll() {
         return stockRepository.findAll();
+    }
+
+    /**
+     * 이름·티커로 종목을 검색한다(자동완성용, 최대 limit건).
+     */
+    public List<StockSearchHit> search(String query, int limit) {
+        String q = query == null ? "" : query.trim();
+        if (q.isEmpty()) return List.of();
+        List<StockDetail> details = stockDetailRepository
+                .findTop20ByPrdtAbrvNameContainingIgnoreCaseOrPrdtNameContainingIgnoreCaseOrTickerStartingWith(q, q, q);
+        List<String> tickers = details.stream().map(StockDetail::getTicker).toList();
+        Map<String, Stock> stocks = findByTickers(tickers);
+        Map<String, String> names = findNamesByTickers(tickers);
+        return details.stream()
+                .map(d -> stocks.get(d.getTicker()))
+                .filter(Objects::nonNull)
+                .limit(limit)
+                .map(s -> new StockSearchHit(s.getTicker(), names.getOrDefault(s.getTicker(), s.getTicker()), s.getMarket().name()))
+                .toList();
     }
 
     /**

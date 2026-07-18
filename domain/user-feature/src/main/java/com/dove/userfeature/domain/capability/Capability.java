@@ -16,5 +16,9 @@ public enum Capability {
     /** ML 모델 채점 점수 조회·차트(민감 — 권한 없으면 403). */
     MODEL_SCORE,
     /** 커스텀 지표 사용(전역 게이트 — 지표별 접근은 MEMBER_CUSTOM_INDICATOR_GRANT). */
-    CUSTOM_INDICATOR
+    CUSTOM_INDICATOR,
+    /** 포트폴리오 장부 — 계좌·거래·보유·리포트·공유(개인 자산 기록·조회). */
+    PORTFOLIO_LEDGER,
+    /** 리밸런싱 계산기 — 독립 부가기능(장부 없으면 가상, 있으면 보유·시세 연동). */
+    PORTFOLIO_REBALANCE
 }

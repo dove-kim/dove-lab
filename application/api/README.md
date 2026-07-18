@@ -46,6 +46,20 @@
 
 /me/menu                 GET / PATCH  내 메뉴 조회·설정
 
+# 포트폴리오 (PORTFOLIO_LEDGER)
+/portfolio/accounts          CRUD  계좌
+/portfolio/transactions      CRUD  거래 (매수·매도·입출금·배당·이자, 수수료 포함) — 보유·평단·라운드트립은 거래 fold로 파생
+/portfolio/holdings          GET/POST/DELETE  보유종목 식별 매핑 + 배당률(/{id}/dividend)·배당추적(/{id}/tracking) 설정
+/portfolio/summary           GET   요약 (총자산·순납입·누적손익·XIRR·통화별 현금)
+/portfolio/positions         GET   보유 포지션 (평가액·손익·비중, 현재환율 원화 환산)
+/portfolio/roundtrips        GET   청산 성과 (라운드트립: 승률·평균수익·보유일)
+/portfolio/all/{summary|positions|transactions|roundtrips}  GET  전 계좌 합산 뷰
+/portfolio/rebalance-plans   CRUD  리밸런싱 프리셋 (종목·목표비중 저장) — PORTFOLIO_REBALANCE
+/portfolio/stock-search      GET   보유·국내 종목 검색 / /overseas  해외 티커 검증 (KIS 즉시 호출)
+/portfolio/shares            CRUD  계좌 공유 grant (READ)
+/portfolio/shared/{accountId}/{summary|positions|transactions|roundtrips}  GET  공유받은 계좌 열람
+/portfolio/shared/{accountId}/transactions  POST  공유받은 계좌에 거래 추가
+
 /admin/users/{id}/capabilities  GET / PATCH  capability 권한 조회·부여·회수 (ADMIN↑)
 /admin/users/{id}/menu          GET          사용자 메뉴 미리보기 (ADMIN↑)
 /admin/custom-metric-grants     GET / PATCH  사용자별 커스텀 지표 접근 부여·회수 (ADMIN↑)

@@ -9,7 +9,8 @@ spring:
 
   datasource:
     driver-class-name: com.mysql.cj.jdbc.Driver
-    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3307}/DOVE_LAB?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&rewriteBatchedStatements=true&connectTimeout=10000&socketTimeout=120000
+    # socketTimeout=300000: 배치 앱이라 대형 백필 집계(커스텀 지표 전이력 등)가 기본 타임아웃에 걸리지 않도록 여유(무한 대기는 방지).
+    url: jdbc:mysql://${DB_HOST:127.0.0.1}:${DB_PORT:3307}/DOVE_LAB?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&rewriteBatchedStatements=true&connectTimeout=10000&socketTimeout=300000
     username: ${DB_USERNAME:dove_app}
     password: ${DB_PASSWORD:dove1234}
     hikari:

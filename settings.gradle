@@ -64,3 +64,9 @@ project(':fundamental').projectDir = file('domain/fundamental')
 
 include 'dart'
 project(':dart').projectDir = file('infrastructure/dart')
+
+include 'portfolio'
+project(':portfolio').projectDir = file('domain/portfolio')
+
+include 'frankfurter'
+project(':frankfurter').projectDir = file('infrastructure/frankfurter')
