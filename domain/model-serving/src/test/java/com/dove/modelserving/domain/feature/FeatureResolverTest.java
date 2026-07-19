@@ -37,6 +37,20 @@ class FeatureResolverTest {
         }
 
         @Test
+        @DisplayName("원시 거래량은 STOCK_FEATURE_DAILY의 VOLUME 컬럼으로 해석한다")
+        void shouldResolveVolumeToFeatureTable() {
+            assertThat(resolver.resolve("volume"))
+                    .contains(new FeatureSource(FeatureTable.STOCK_FEATURE_DAILY, "VOLUME"));
+        }
+
+        @Test
+        @DisplayName("원시 거래대금은 STOCK_FEATURE_DAILY의 TURNOVER 컬럼으로 해석한다")
+        void shouldResolveTurnoverToFeatureTable() {
+            assertThat(resolver.resolve("turnover"))
+                    .contains(new FeatureSource(FeatureTable.STOCK_FEATURE_DAILY, "TURNOVER"));
+        }
+
+        @Test
         @DisplayName("알 수 없는 이름은 빈 Optional을 반환한다")
         void shouldReturnEmptyWhenUnknown() {
             assertThat(resolver.resolve("made_up_feature")).isEmpty();

@@ -14,8 +14,9 @@ public class FeatureResolver {
 
     /**
      * 피처 이름을 (테이블, 컬럼)으로 해석한다. 이름은 대소문자 무관(내부에서 대문자화).
-     * IndicatorType이면 STOCK_FEATURE_DAILY, RankType이면 STOCK_RANK_DAILY로 해석하고,
-     * 둘 다 아니면 미해석으로 빈 Optional을 반환한다.
+     * IndicatorType이면 STOCK_FEATURE_DAILY, RankType이면 STOCK_RANK_DAILY,
+     * 원시 시세 컬럼(RawFeature: VOLUME·TURNOVER)이면 STOCK_FEATURE_DAILY로 해석하고,
+     * 모두 아니면 미해석으로 빈 Optional을 반환한다.
      */
     public Optional<FeatureSource> resolve(String name) {
         if (name == null) return Optional.empty();
@@ -29,6 +30,11 @@ public class FeatureResolver {
         RankType rank = RankType.parseOrNull(upper);
         if (rank != null) {
             return Optional.of(new FeatureSource(FeatureTable.STOCK_RANK_DAILY, rank.name()));
+        }
+
+        RawFeature raw = RawFeature.parseOrNull(upper);
+        if (raw != null) {
+            return Optional.of(new FeatureSource(FeatureTable.STOCK_FEATURE_DAILY, raw.name()));
         }
 
         return Optional.empty();

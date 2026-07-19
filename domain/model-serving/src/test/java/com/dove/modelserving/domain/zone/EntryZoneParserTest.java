@@ -69,6 +69,17 @@ class EntryZoneParserTest {
         }
 
         @Test
+        @DisplayName("원시 거래량 조건을 해석해 임계 미만 행을 걸러낸다")
+        void shouldParseRawVolumeCondition() {
+            ModelEntryZone zone = new ModelEntryZone("유동성", List.of("volume>=100000"));
+            EntryZone parsed = parser.parse(zone);
+
+            assertThat(parsed.conditions()).isNotEmpty();
+            assertThat(parsed.matches(Map.of("VOLUME", 150000.0), Map.of())).isTrue();
+            assertThat(parsed.matches(Map.of("VOLUME", 50000.0), Map.of())).isFalse();
+        }
+
+        @Test
         @DisplayName("파싱 불가 조건이 있으면 fail-closed로 빈 존을 만든다")
         void shouldFailClosedWhenUnparseableCondition() {
             ModelEntryZone zone = new ModelEntryZone("bad", List.of("rsi_14>=50", "garbage"));
