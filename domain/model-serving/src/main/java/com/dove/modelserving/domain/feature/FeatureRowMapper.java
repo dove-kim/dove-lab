@@ -15,12 +15,14 @@ import java.util.Map;
 public class FeatureRowMapper {
 
     /**
-     * 피처 행의 지표값과 순위 행의 순위값을 컬럼명(대문자) 키 단일 맵으로 합친다.
+     * 피처 행의 지표값·원시 시세(VOLUME·TURNOVER)와 순위 행의 순위값을 컬럼명(대문자) 키 단일 맵으로 합친다.
      * 순위 행이 null이면 지표값만 담는다. 값이 NULL인 컬럼은 제외한다.
      */
     public Map<String, Double> toFeatureMap(StockFeatureDaily feature, StockRankDaily rank) {
         Map<String, Double> map = new HashMap<>();
         feature.toIndicatorMap().forEach((type, value) -> map.put(type.name(), value));
+        putRaw(map, RawFeature.VOLUME, feature.getVolume());
+        putRaw(map, RawFeature.TURNOVER, feature.getTurnover());
         if (rank != null) {
             putRank(map, RankType.RANK_RET_1D, rank.getRankRet1d());
             putRank(map, RankType.RANK_RET_5D, rank.getRankRet5d());
@@ -37,5 +39,9 @@ public class FeatureRowMapper {
 
     private static void putRank(Map<String, Double> map, RankType type, Float value) {
         if (value != null) map.put(type.name(), value.doubleValue());
+    }
+
+    private static void putRaw(Map<String, Double> map, RawFeature feature, Long value) {
+        if (value != null) map.put(feature.name(), value.doubleValue());
     }
 }

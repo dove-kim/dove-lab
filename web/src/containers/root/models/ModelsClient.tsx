@@ -20,19 +20,6 @@ interface MlModel {
   updatedAt: string;
 }
 
-/** 스케줄러 작업 진행 상태. 백엔드 JobStatus 미러. */
-interface JobStatus {
-  name: string;
-  state: string;
-  total: number;
-  processed: number;
-  startedAtEpochMs: number;
-  updatedAtEpochMs: number;
-  message: string | null;
-}
-
-const SCORING_JOB_NAME = "MODEL_SCORING";
-
 const DEFAULT_EXCHANGES = ["KOSPI", "KOSDAQ"];
 // 채점 시세(venue): 통합·NXT는 단일 거래소값, KRX(정규장)는 아래 시장 선택으로 확장된다.
 const VENUES = [
@@ -114,7 +101,6 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
 export default function ModelsClient() {
   const [models, setModels] = useState<MlModel[]>([]);
   const [loading, setLoading] = useState(true);
-  const [scoring, setScoring] = useState<JobStatus | null>(null);
 
   const [showRegister, setShowRegister] = useState(false);
   const [resetTarget, setResetTarget] = useState<MlModel | null>(null);
@@ -128,22 +114,7 @@ export default function ModelsClient() {
     setLoading(false);
   }, []);
 
-  const fetchScoring = useCallback(async () => {
-    const res = await fetch("/api/admin/ops/scheduler-status", { cache: "no-store" });
-    if (res.ok) {
-      const all: JobStatus[] = (await res.json()) ?? [];
-      setScoring(all.find((j) => j.name === SCORING_JOB_NAME) ?? null);
-    }
-  }, []);
-
-  useEffect(() => { fetchModels(); fetchScoring(); }, [fetchModels, fetchScoring]);
-
-  const scoringRunning = scoring?.state === "RUNNING";
-  useEffect(() => {
-    if (!scoringRunning) return;
-    const id = setInterval(fetchScoring, 3000);
-    return () => clearInterval(id);
-  }, [scoringRunning, fetchScoring]);
+  useEffect(() => { fetchModels(); }, [fetchModels]);
 
   async function toggleStatus(model: MlModel) {
     setBusyId(model.id);
@@ -160,10 +131,6 @@ export default function ModelsClient() {
     }
   }
 
-  const scoringPercent = scoring && scoring.total > 0
-    ? Math.min(100, Math.round((scoring.processed / scoring.total) * 100))
-    : 0;
-
   return (
     <div className="flex min-h-full flex-col gap-4 p-6">
       <div className="flex items-center justify-between flex-wrap gap-3">
@@ -172,27 +139,6 @@ export default function ModelsClient() {
           모델 등록
         </button>
       </div>
-
-      {/* 채점 진행률 */}
-      {scoring && (
-        <div className="rounded-xl border border-white/10 bg-white/5 px-4 py-3">
-          <div className="flex items-center justify-between mb-1.5">
-            <span className="text-sm font-medium text-slate-200">
-              채점 진행
-              <span className="ml-2 text-xs text-slate-400">
-                {scoring.state === "RUNNING" ? "실행 중" : scoring.state}
-              </span>
-            </span>
-            <span className="text-xs text-slate-400 tabular-nums">
-              {scoring.processed.toLocaleString()} / {scoring.total.toLocaleString()} ({scoringPercent}%)
-            </span>
-          </div>
-          <div className="h-1.5 w-full overflow-hidden rounded-full bg-white/10">
-            <div className="h-full bg-indigo-500 transition-all" style={{ width: `${scoringPercent}%` }} />
-          </div>
-          {scoring.message && <p className="mt-1.5 text-[11px] text-slate-500">{scoring.message}</p>}
-        </div>
-      )}
 
       {/* 모델 목록 */}
       <div className="overflow-x-auto rounded-lg border border-white/10">

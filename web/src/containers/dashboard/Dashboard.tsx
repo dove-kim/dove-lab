@@ -177,6 +177,8 @@ const JOB_LABEL: Record<string, string> = {
   FUNDAMENTAL_POLL: "재무 수집",
   SHARE_COUNT: "상장주식수",
   VALUATION: "밸류에이션",
+  PORTFOLIO_QUOTE: "포트폴리오 시세",
+  PORTFOLIO_FX: "포트폴리오 환율",
 };
 
 /** 진행 수치 단위 */
@@ -192,6 +194,8 @@ const JOB_UNIT: Record<string, string> = {
   FUNDAMENTAL_POLL: "종목",
   SHARE_COUNT: "종목",
   VALUATION: "종목",
+  PORTFOLIO_QUOTE: "종목",
+  PORTFOLIO_FX: "통화",
 };
 
 function usePolling<T>(url: string, intervalMs: number, reloadToken = 0) {
