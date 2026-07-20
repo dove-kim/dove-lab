@@ -247,6 +247,42 @@ class ModelScoreSweepServiceTest {
         }
 
         @Test
+        @DisplayName("거래일이 청크 크기를 넘으면 청크마다 채점기를 호출하고 전 거래일을 커밋한다(아티팩트는 1회 로드)")
+        void shouldScoreInChunksAcrossManyDates() {
+            int chunk = ModelScoreSweepService.SCORE_CHUNK_TRADE_DATES;
+            int n = chunk + 30; // 청크 경계를 넘겨 2청크
+            Set<StockExchange> members = Set.of(KOSPI);
+            MlModel model = currentZoneModel(1L, members);
+
+            List<LocalDate> dates = new java.util.ArrayList<>();
+            LocalDate d = LocalDate.of(2020, 1, 1);
+            for (int i = 0; i < n; i++) { dates.add(d); d = d.plusDays(1); }
+
+            when(modelRepository.findByStatus(ModelStatus.ACTIVE)).thenReturn(List.of(model));
+            when(rankSourceSupport.findIndicatorFrontier(members, PRICE_TYPE)).thenReturn(YESTERDAY);
+            when(sourceSupport.findScoreTradeDates(members, PRICE_TYPE, null, YESTERDAY)).thenReturn(dates);
+            when(artifactMaterializer.materialize(eq(1L), any())).thenReturn(Path.of("model.pkl"));
+            // 진입존이 당일 조건(rsi_14>=50)뿐이라 직전일은 불필요 — prev 없음으로 스텁
+            when(sourceSupport.findFeatures(eq(KOSPI), eq(PRICE_TYPE), any()))
+                    .thenAnswer(inv -> List.of(feature(KOSPI, "AAA", inv.getArgument(2), 55.0, 0.3)));
+            when(sourceSupport.findRanks(eq(KOSPI), eq(PRICE_TYPE), any()))
+                    .thenAnswer(inv -> List.of(rank(KOSPI, "AAA", inv.getArgument(2), 0.7)));
+            when(sourceSupport.findPreviousTradeDate(eq(KOSPI), eq(PRICE_TYPE), any())).thenReturn(null);
+            when(modelScorer.score(any())).thenAnswer(inv -> {
+                PredictInput in = inv.getArgument(0);
+                return in.rows().stream().map(r -> new ScoredRow(r.ticker(), r.tradeDate(), 0.5)).toList();
+            });
+
+            service.scoreAllActiveModels(TODAY);
+
+            int expectedChunks = (n + chunk - 1) / chunk;
+            verify(modelScorer, times(expectedChunks)).score(any());       // 청크마다 1회
+            verify(commitService, times(n)).commit(eq(1L), any(), any(), any()); // 전 거래일 커밋
+            verify(artifactMaterializer, times(1)).materialize(eq(1L), any());   // 아티팩트 1회 로드
+            verify(artifactMaterializer).cleanup(any());
+        }
+
+        @Test
         @DisplayName("한 모델이 실패해도 다른 모델 채점은 계속한다")
         void shouldIsolateModelFailures() {
             MlModel failing = activeModel(1L, null);
@@ -332,6 +368,26 @@ class ModelScoreSweepServiceTest {
         setField(model, "status", ModelStatus.ACTIVE);
         setField(model, "scoreCursor", cursor);
         return model;
+    }
+
+    /**
+     * 당일 조건(rsi_14>=50)만 있는 진입존 모델 — 직전일 참조 없이 청크 경계 검증용.
+     */
+    private static MlModel currentZoneModel(Long id, Set<StockExchange> exchanges) {
+        MlModel model = new MlModel("swing_entry", "1.0.0", new byte[]{1}, currentZoneMetaJson(),
+                ModelOutputType.PROBABILITY, exchanges, PRICE_TYPE, "42");
+        setField(model, "id", id);
+        setField(model, "status", ModelStatus.ACTIVE);
+        setField(model, "scoreCursor", null);
+        return model;
+    }
+
+    private static String currentZoneMetaJson() {
+        return "{"
+                + "\"name\":\"swing_entry\",\"version\":\"1.0.0\",\"output_type\":\"probability\","
+                + "\"features\":[\"rsi_14\"],\"feature_hash\":\"x\","
+                + "\"entry_zone\":{\"desc\":\"d\",\"conditions\":[\"rsi_14>=50\"]}"
+                + "}";
     }
 
     private static String championMetaJson() {
