@@ -44,6 +44,9 @@ public class ModelScoreSweepService {
     /** 가격 변경·재조정으로 뒤늦게 바뀐 행을 다시 채점하기 위한 재계산 오버랩(거래일 수). */
     static final int OVERLAP_TRADING_DAYS = 30;
 
+    /** 한 번에 수집·채점하는 거래일 수 — peak 메모리를 한 청크치로 고정한다(전이력 일괄 로드로 인한 OOM 방지). */
+    static final int SCORE_CHUNK_TRADE_DATES = 100;
+
     private final MlModelRepository modelRepository;
     private final ModelMetaParser metaParser;
     private final EntryZoneParser entryZoneParser;
@@ -82,8 +85,8 @@ public class ModelScoreSweepService {
     }
 
     /**
-     * 한 모델의 범위 [커서-오버랩, min(프런티어, ceiling)]의 진입존 행을 모아 한 번에 채점하고 거래일별로 저장한다.
-     * 모델(아티팩트)은 한 번만 로드되고(채점기 1회 호출), 커밋·커서 전진은 거래일 단위로 유지한다.
+     * 한 모델의 범위 [커서-오버랩, min(프런티어, ceiling)]의 진입존 행을 거래일 청크 단위로 채점해 거래일별로 저장한다.
+     * 아티팩트는 한 번만 로드해 청크마다 재사용하고, 커밋·커서 전진은 거래일 단위로 유지한다(peak 메모리 = 한 청크치).
      */
     private void scoreModel(MlModel model, LocalDate ceiling) {
         EntryZone zone = entryZoneParser.parse(parseMeta(model).entryZone());
@@ -103,32 +106,39 @@ public class ModelScoreSweepService {
         List<LocalDate> dates = sourceSupport.findScoreTradeDates(members, priceType, from, upperBound);
         if (dates.isEmpty()) return;
 
-        // 1) 전 거래일×member의 진입존 행 수집 + (종목,거래일)→native 거래소 매핑
-        List<PredictRow> rows = new ArrayList<>();
-        Map<String, StockExchange> exchangeByKey = new HashMap<>();
-        for (LocalDate date : dates) {
-            for (StockExchange member : members) {
-                for (PredictRow row : rowAssembler.assemble(zone, member, priceType, date)) {
-                    rows.add(row);
-                    exchangeByKey.put(rowKey(row.ticker(), row.tradeDate()), member);
-                }
-            }
-        }
-
         Path artifactPath = artifactMaterializer.materialize(model.getId(), model.getArtifact());
         try {
-            // 2) 모델 1회 로드로 전 행 채점 → 거래일별로 묶기
-            Map<LocalDate, List<StockModelScore>> scoresByDate =
-                    scoreAll(model, artifactPath, priceType, rows, exchangeByKey);
-            // 3) 거래일별 커밋(커서 CAS 유지). 중간 rewind 감지 시 중단.
-            for (LocalDate date : dates) {
-                try {
-                    commitService.commit(model.getId(), scoresByDate.getOrDefault(date, List.of()), expected, date);
-                } catch (ScoreCursorRewoundException e) {
-                    log.info("[model {}] {} 채점 중단 — 커서 변경 감지", model.getId(), date);
-                    break;
+            // 거래일을 청크로 나눠 (수집→채점→커밋) 스트리밍 — 아티팩트는 위에서 1회 로드해 재사용하고,
+            // 각 청크 종료 시 그 청크의 행·점수만 메모리에 두어 peak를 한 청크치로 고정한다(전이력 백필 OOM 방지).
+            for (int start = 0; start < dates.size(); start += SCORE_CHUNK_TRADE_DATES) {
+                List<LocalDate> chunk = dates.subList(start, Math.min(start + SCORE_CHUNK_TRADE_DATES, dates.size()));
+
+                // 1) 이 청크 거래일×member의 진입존 행 수집 + (종목,거래일)→native 거래소 매핑
+                List<PredictRow> rows = new ArrayList<>();
+                Map<String, StockExchange> exchangeByKey = new HashMap<>();
+                for (LocalDate date : chunk) {
+                    for (StockExchange member : members) {
+                        for (PredictRow row : rowAssembler.assemble(zone, member, priceType, date)) {
+                            rows.add(row);
+                            exchangeByKey.put(rowKey(row.ticker(), row.tradeDate()), member);
+                        }
+                    }
                 }
-                expected = date;
+
+                // 2) 이 청크 행 채점 → 거래일별로 묶기
+                Map<LocalDate, List<StockModelScore>> scoresByDate =
+                        scoreAll(model, artifactPath, priceType, rows, exchangeByKey);
+
+                // 3) 청크 거래일별 커밋(커서 CAS 유지). rewind 감지 시 이 모델 채점 중단(finally에서 정리).
+                for (LocalDate date : chunk) {
+                    try {
+                        commitService.commit(model.getId(), scoresByDate.getOrDefault(date, List.of()), expected, date);
+                    } catch (ScoreCursorRewoundException e) {
+                        log.info("[model {}] {} 채점 중단 — 커서 변경 감지", model.getId(), date);
+                        return;
+                    }
+                    expected = date;
+                }
             }
         } finally {
             artifactMaterializer.cleanup(artifactPath);
@@ -136,7 +146,7 @@ public class ModelScoreSweepService {
     }
 
     /**
-     * 수집한 전 진입존 행을 채점기로 한 번에 채점하고(모델 1회 로드), 결과를 거래일별 점수 행으로 묶는다.
+     * 전달받은 진입존 행을 채점기로 채점하고, 결과를 거래일별 점수 행으로 묶는다.
      */
     private Map<LocalDate, List<StockModelScore>> scoreAll(MlModel model, Path artifactPath, PriceType priceType,
                                                           List<PredictRow> rows,
