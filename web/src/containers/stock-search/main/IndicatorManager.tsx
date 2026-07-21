@@ -321,8 +321,12 @@ export default function IndicatorManager({
   }
 
   async function handleDelete() {
-    if (!activePreset || presets.length <= 1) return;
-    if (!confirm(`"${activePreset.name}" 프리셋을 삭제하시겠습니까?`)) return;
+    if (!activePreset) return;
+    const isLast = presets.length <= 1;
+    const message = isLast
+      ? `마지막 프리셋 "${activePreset.name}"을(를) 삭제하시겠습니까? 삭제 후 새 프리셋을 만들 수 있습니다.`
+      : `"${activePreset.name}" 프리셋을 삭제하시겠습니까?`;
+    if (!confirm(message)) return;
     try {
       await remove(activePreset.id);
     } catch {
@@ -388,8 +392,7 @@ export default function IndicatorManager({
             {!sortingPresets && activePreset && (
               <button
                 onClick={handleDelete}
-                disabled={presets.length <= 1}
-                className="text-slate-400 hover:text-red-400 transition p-2 rounded-lg hover:bg-red-500/10 disabled:opacity-30 disabled:cursor-not-allowed"
+                className="text-slate-400 hover:text-red-400 transition p-2 rounded-lg hover:bg-red-500/10"
                 title="프리셋 삭제"
               >
                 <svg className="w-[18px] h-[18px]" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
