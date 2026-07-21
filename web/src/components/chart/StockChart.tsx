@@ -357,6 +357,7 @@ function StockChart({
   const [visibleCount, setVisibleCount]         = useState(15);
   const [rightIndex, setRightIndex]             = useState(14);
   const [hoverIdx, setHoverIdx]                 = useState<number | null>(null);
+  const [dragSel, setDragSel]                   = useState<[number, number] | null>(null);
 
   const containerRef         = useRef<HTMLDivElement>(null);
   const staticCanvasRef      = useRef<HTMLCanvasElement>(null);
@@ -1175,6 +1176,27 @@ function StockChart({
       ctx.setTransform(dpr, 0, 0, dpr, 0, 0);
       ctx.clearRect(0, 0, width, svgH);
 
+      // 드래그 줌 선택 영역 (크로스헤어 대신 표시). 좌→우=확대(파랑), 우→좌=축소(주황).
+      if (dragSel) {
+        const [x0, x1] = dragSel;
+        const lo = Math.min(x0, x1), hi = Math.max(x0, x1);
+        const zoomOut = x1 < x0;
+        ctx.fillStyle = zoomOut ? "rgba(251,191,36,0.12)" : "rgba(59,130,246,0.14)";
+        ctx.fillRect(lo, PAD.top, hi - lo, PRICE_BOT - PAD.top);
+        ctx.strokeStyle = zoomOut ? "rgba(251,191,36,0.75)" : "rgba(96,165,250,0.85)";
+        ctx.lineWidth = 1;
+        ctx.setLineDash([4, 3]);
+        ctx.strokeRect(lo, PAD.top, hi - lo, PRICE_BOT - PAD.top);
+        ctx.setLineDash([]);
+        if (hi - lo > 32) {
+          ctx.font = "10px sans-serif";
+          ctx.fillStyle = zoomOut ? "#fbbf24" : "#93c5fd";
+          ctx.textAlign = "center"; ctx.textBaseline = "top";
+          ctx.fillText(zoomOut ? "축소" : "확대", (lo + hi) / 2, PAD.top + 3);
+        }
+        return;
+      }
+
       if (hoverIdx === null || hoverIdx < 0) return;
       const L = computeLayout(width, visibleSlots, bars, totalSubPanels, svgH);
       const { plotL, plotR, cTop, xAt, toY, chartBot } = L;
@@ -1265,7 +1287,7 @@ function StockChart({
     });
     return () => cancelAnimationFrame(overlayRafRef.current);
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [hoverIdx, width, expandedBars, visibleCount, rightIndex, indicatorData, subPanels, seriesPanels, totalSubPanels]);
+  }, [hoverIdx, dragSel, width, expandedBars, visibleCount, rightIndex, indicatorData, subPanels, seriesPanels, totalSubPanels]);
 
   // ── 인터랙션 ──────────────────────────────────────────────────────────────────
 
@@ -1273,8 +1295,10 @@ function StockChart({
   const onViewportChangeRef = useRef<() => void>(() => {});
   onViewportChangeRef.current = maybePrefetchOlder;
 
-  const { handleTouchStart, handleTouchMove, handleTouchEnd, handlePointerMove, handlePointerLeave } =
-    useChartInteraction({ containerRef, vcRef, riRef, widthRef, totalRef, setVisibleCount, setRightIndex, setHoverIdx, triggerStaticDrawRef, onViewportChangeRef });
+  const {
+    handleTouchStart, handleTouchMove, handleTouchEnd,
+    handlePointerDown, handlePointerMove, handlePointerUp, handlePointerLeave, handlePointerCancel,
+  } = useChartInteraction({ containerRef, vcRef, riRef, widthRef, totalRef, setVisibleCount, setRightIndex, setHoverIdx, setDragSel, triggerStaticDrawRef, onViewportChangeRef });
 
   const scrollMin      = visibleCount - 1;
   const scrollMax      = expandedBars.length - 1;
@@ -1290,8 +1314,11 @@ function StockChart({
         onTouchStart={handleTouchStart}
         onTouchMove={handleTouchMove}
         onTouchEnd={handleTouchEnd}
+        onPointerDown={handlePointerDown}
         onPointerMove={handlePointerMove}
+        onPointerUp={handlePointerUp}
         onPointerLeave={handlePointerLeave}
+        onPointerCancel={handlePointerCancel}
       >
         {/* 정적 레이어 */}
         <canvas ref={staticCanvasRef} style={{ display: "block" }} />

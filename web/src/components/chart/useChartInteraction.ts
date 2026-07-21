@@ -10,6 +10,8 @@ interface Params {
   setVisibleCount:     (n: number) => void;
   setRightIndex:       (n: number) => void;
   setHoverIdx:         (n: number | null) => void;
+  /** 마우스 드래그 줌 선택 영역(컨테이너 기준 px [x0, x1]). null이면 선택 없음. */
+  setDragSel:          (sel: [number, number] | null) => void;
   /** 스크롤/줌 중 React 리렌더 없이 canvas를 직접 다시 그리는 트리거 */
   triggerStaticDrawRef: React.MutableRefObject<() => void>;
   /** 뷰포트(스크롤/줌)가 바뀔 때마다 호출 — 좌측 가장자리 프리버퍼 lazy-load 트리거 */
@@ -31,9 +33,11 @@ interface TouchState {
 
 export function useChartInteraction({
   containerRef, vcRef, riRef, widthRef, totalRef,
-  setVisibleCount, setRightIndex, setHoverIdx, triggerStaticDrawRef, onViewportChangeRef,
+  setVisibleCount, setRightIndex, setHoverIdx, setDragSel, triggerStaticDrawRef, onViewportChangeRef,
 }: Params) {
   const touchRef   = useRef<TouchState | null>(null);
+  // 마우스 드래그 줌 상태 (좌→우 확대 / 우→좌 축소)
+  const dragRef    = useRef<{ startX: number; startClientX: number; moved: boolean } | null>(null);
   // rAF 핸들 — 스크롤/줌 시 중복 draw 방지
   const drawRafRef = useRef(0);
 
@@ -68,7 +72,7 @@ export function useChartInteraction({
     return idx;
   }
 
-  // 휠: 수평 → 팬, 수직 → 줌
+  // 휠 = 시간선 이동(팬). 줌은 드래그(확대/축소)·터치 핀치가 담당.
   useEffect(() => {
     const el = containerRef.current;
     if (!el) return;
@@ -80,19 +84,12 @@ export function useChartInteraction({
       e.preventDefault();
       const vc = vcRef.current;
       const ri = riRef.current;
-      if (Math.abs(e.deltaX) > Math.abs(e.deltaY)) {
-        const step  = Math.max(1, Math.round(vc * 0.08));
-        const newRi = clamp(ri + Math.sign(e.deltaX) * step, vc - 1, total - 1);
-        riRef.current = newRi;
-      } else {
-        const plotW      = widthRef.current - PAD.left - PAD.right;
-        const minVisible = Math.max(2, Math.ceil(plotW / MAX_BAR_SLOT));
-        const factor     = e.deltaY > 0 ? 1.15 : 0.87;
-        const newVc      = clamp(Math.round(vc * factor), minVisible, Math.min(total, MAX_VISIBLE));
-        if (newVc === vc) return;
-        vcRef.current = newVc;
-        riRef.current = clamp(riRef.current, newVc - 1, total - 1);
-      }
+      // 세로·가로 휠 모두 우세 축 부호로 팬(세로 휠 아래=미래/오른쪽).
+      const delta = Math.abs(e.deltaX) > Math.abs(e.deltaY) ? e.deltaX : e.deltaY;
+      const step  = Math.max(1, Math.round(vc * 0.08));
+      const newRi = clamp(ri + Math.sign(delta) * step, vc - 1, total - 1);
+      if (newRi === ri) return;
+      riRef.current = newRi;
       scheduleDraw();
       // 휠은 터치보다 빈도가 낮으므로 즉시 상태 동기화 (스크롤바 업데이트)
       syncReactState();
@@ -214,18 +211,104 @@ export function useChartInteraction({
     syncReactState();
   }
 
-  // 마우스 / 스타일러스 펜 호버
+  /** 드래그로 클릭을 구분하는 최소 이동 픽셀. */
+  const DRAG_THRESHOLD = 5;
+
+  /** 현재 뷰포트 기준 플롯 지표(픽셀→봉 인덱스 변환용). */
+  function plotMetrics() {
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect) return null;
+    const plotW = widthRef.current - PAD.left - PAD.right;
+    if (plotW <= 0) return null;
+    const vc = vcRef.current, ri = riRef.current;
+    const startIdx = Math.max(0, ri - vc + 1);
+    const n = ri + 1 - startIdx;
+    if (n <= 0) return null;
+    return { rect, plotW, vc, ri, startIdx, n, slot: plotW / n };
+  }
+
+  /** clientX를 [0, total-1] 범위로 클램프한 절대 봉 인덱스로 변환한다(가장자리 밖은 끝봉으로). */
+  function xToClampedAbsIdx(clientX: number, m: NonNullable<ReturnType<typeof plotMetrics>>): number {
+    const x   = clientX - m.rect.left;
+    const vis = clamp(Math.floor((x - PAD.left) / m.slot), 0, m.n - 1);
+    return m.startIdx + vis;
+  }
+
+  // 마우스 드래그 시작 — 가격/거래량 영역에서만 줌 선택 개시
+  function handlePointerDown(e: React.PointerEvent) {
+    if (e.pointerType === "touch" || e.button !== 0) return;
+    if (totalRef.current === 0) return;
+    const rect = containerRef.current?.getBoundingClientRect();
+    if (!rect || e.clientY - rect.top > PRICE_BOT) return;
+    dragRef.current = { startX: e.clientX - rect.left, startClientX: e.clientX, moved: false };
+    containerRef.current?.setPointerCapture(e.pointerId);
+    setHoverIdx(null);
+  }
+
+  // 마우스 / 스타일러스 펜 — 드래그 중이면 선택영역 갱신, 아니면 호버
   function handlePointerMove(e: React.PointerEvent) {
     if (e.pointerType === "touch") return;
     const rect = containerRef.current?.getBoundingClientRect();
     if (!rect) { setHoverIdx(null); return; }
+    const drag = dragRef.current;
+    if (drag) {
+      if (Math.abs(e.clientX - drag.startClientX) > DRAG_THRESHOLD) drag.moved = true;
+      setDragSel([drag.startX, e.clientX - rect.left]);
+      return;
+    }
     setHoverIdx(xToBarIdx(e.clientX));
+  }
+
+  // 마우스 드래그 종료 — 좌→우: 시간범위 확대 / 우→좌: 대칭 축소
+  function handlePointerUp(e: React.PointerEvent) {
+    if (e.pointerType === "touch") return;
+    const drag = dragRef.current;
+    if (!drag) return;
+    dragRef.current = null;
+    containerRef.current?.releasePointerCapture(e.pointerId);
+    setDragSel(null);
+    if (!drag.moved) return; // 클릭 수준 이동 → 무시
+
+    const m = plotMetrics();
+    if (!m) return;
+    const total      = totalRef.current;
+    const minVisible = Math.max(2, Math.ceil(m.plotW / MAX_BAR_SLOT));
+    const a0 = xToClampedAbsIdx(drag.startClientX, m);
+    const a1 = xToClampedAbsIdx(e.clientX, m);
+
+    if (e.clientX >= drag.startClientX) {
+      // 좌→우: 드래그한 봉 구간으로 확대
+      const lo = Math.min(a0, a1), hi = Math.max(a0, a1);
+      const newVc = clamp(hi - lo + 1, minVisible, Math.min(total, MAX_VISIBLE));
+      vcRef.current = newVc;
+      riRef.current = clamp(hi, newVc - 1, total - 1);
+    } else {
+      // 우→좌: 대칭 축소 — 현재 화면이 그 박스 크기로 들어가듯 배율만큼 축소
+      const boxPx  = Math.max(1, drag.startClientX - e.clientX);
+      const newVc  = clamp(Math.round(m.vc * (m.plotW / boxPx)), minVisible, Math.min(total, MAX_VISIBLE));
+      const midAbs = (a0 + a1) / 2;
+      vcRef.current = newVc;
+      riRef.current = clamp(Math.round(midAbs + newVc / 2), newVc - 1, total - 1);
+    }
+    scheduleDraw();
+    syncReactState();
   }
 
   function handlePointerLeave(e: React.PointerEvent) {
     if (e.pointerType === "touch") return;
+    if (dragRef.current) return; // 드래그 중엔 무시(포인터 캡처 미지원 fallback)
     setHoverIdx(null);
   }
 
-  return { handleTouchStart, handleTouchMove, handleTouchEnd, handlePointerMove, handlePointerLeave };
+  // 포인터 취소(창 전환 등) — 진행 중 드래그 선택만 정리
+  function handlePointerCancel() {
+    if (!dragRef.current) return;
+    dragRef.current = null;
+    setDragSel(null);
+  }
+
+  return {
+    handleTouchStart, handleTouchMove, handleTouchEnd,
+    handlePointerDown, handlePointerMove, handlePointerUp, handlePointerLeave, handlePointerCancel,
+  };
 }
