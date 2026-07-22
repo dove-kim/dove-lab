@@ -1,0 +1,6 @@
+# 모델 채점 런타임 핀 — api 드라이런·scheduler 채점 공유. pickle 호환 위해 ml-study 학습 버전과 일치(무핀 금지).
+numpy==2.5.0
+scikit-learn==1.9.0
+lightgbm==4.6.0
+pandas==2.3.3
+joblib==1.5.3
