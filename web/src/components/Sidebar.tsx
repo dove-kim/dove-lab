@@ -145,7 +145,7 @@ const MENU_GROUPS: MenuGroup[] = [
       { href: "/portfolio/analysis", label: "분석", icon: REPORT_ICON, capability: "PORTFOLIO_LEDGER", deny: "LOCK" },
       { href: "/portfolio/transactions", label: "매매내역", icon: TX_ICON, capability: "PORTFOLIO_LEDGER", deny: "LOCK" },
       { href: "/portfolio/accounts", label: "계좌관리", icon: ACCOUNTS_ICON, capability: "PORTFOLIO_LEDGER", deny: "LOCK" },
-      { href: "/portfolio/rebalance", label: "리밸런싱", icon: REBALANCE_ICON, capability: "PORTFOLIO_REBALANCE", deny: "LOCK" },
+      { href: "/portfolio/rebalance", label: "매매 계획", icon: REBALANCE_ICON, capability: "PORTFOLIO_REBALANCE", deny: "LOCK" },
       { href: "/portfolio/share", label: "공유", icon: SHARE_ICON, capability: "PORTFOLIO_LEDGER", deny: "LOCK" },
     ],
   },

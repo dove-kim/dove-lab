@@ -2,12 +2,14 @@ package com.dove.api.portfolio.service;
 
 import com.dove.api.portfolio.dto.PortfolioPositionResponse;
 import com.dove.api.portfolio.dto.PortfolioSummaryResponse;
+import com.dove.portfolio.application.service.PortfolioAccountService;
 import com.dove.portfolio.application.service.PortfolioCashCalculator;
 import com.dove.portfolio.application.service.PortfolioFxConversionService;
 import com.dove.portfolio.application.service.PortfolioFxRateService;
 import com.dove.portfolio.application.service.PortfolioTransactionService;
 import com.dove.portfolio.application.service.Xirr;
 import com.dove.portfolio.application.service.ExternalFlow;
+import com.dove.portfolio.domain.entity.PortfolioAccount;
 import com.dove.portfolio.domain.entity.PortfolioFxConversion;
 import com.dove.portfolio.domain.entity.PortfolioTransaction;
 import com.dove.portfolio.domain.enums.TxType;
@@ -18,6 +20,7 @@ import java.math.BigDecimal;
 import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.LinkedHashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.OptionalDouble;
@@ -34,6 +37,7 @@ public class PortfolioSummaryService {
     private final PortfolioCashCalculator cashCalculator;
     private final PortfolioFxRateService fxRateService;
     private final PortfolioFxConversionService fxConversionService;
+    private final PortfolioAccountService accountService;
 
     /**
      * 소유 회원의 포트폴리오 요약을 계산한다.
@@ -73,6 +77,24 @@ public class PortfolioSummaryService {
         double xirrPct = xirr.isPresent() ? round1(xirr.getAsDouble()) : 0.0;
 
         return new PortfolioSummaryResponse(total, cash, netContrib, growth, evalPnl, evalPnlPct, xirrPct, cashByCurrency);
+    }
+
+    /**
+     * 소유 회원의 계좌별·통화별 현금 잔고(원통화 네이티브)를 계산한다.
+     */
+    public Map<String, Map<String, Long>> cashByAccount(long memberId) {
+        List<PortfolioTransaction> allTx = transactionService.findByOwner(memberId);
+        List<PortfolioFxConversion> allConv = fxConversionService.findByOwner(memberId);
+        Map<String, Map<String, Long>> result = new LinkedHashMap<>();
+        for (PortfolioAccount acc : accountService.findByOwner(memberId)) {
+            List<PortfolioTransaction> txns = allTx.stream().filter(t -> acc.getId().equals(t.getAccountId())).toList();
+            List<PortfolioFxConversion> convs = allConv.stream().filter(c -> acc.getId().equals(c.getAccountId())).toList();
+            Map<String, Long> byCur = new LinkedHashMap<>();
+            cashCalculator.cashByCurrency(txns, convs).forEach((cur, amt) ->
+                    byCur.put(cur, amt.setScale(0, RoundingMode.HALF_UP).longValue()));
+            result.put(acc.getName(), byCur);
+        }
+        return result;
     }
 
     /** 통화별 금액을 현재 환율로 원화 환산·합산한다(KRW=×1). */

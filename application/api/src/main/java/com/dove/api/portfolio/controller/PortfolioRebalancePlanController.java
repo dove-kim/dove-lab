@@ -45,7 +45,7 @@ public class PortfolioRebalancePlanController {
     @ResponseStatus(HttpStatus.CREATED)
     public PortfolioRebalancePlanResponse save(@RequestBody @Valid SavePortfolioRebalancePlanRequest req,
                                                @AuthenticationPrincipal AuthenticatedUser user) {
-        var p = service.save(user.memberId(), req.name().trim(), req.entries(), user.username());
+        var p = service.save(user.memberId(), req.name().trim(), req.config(), user.username());
         return PortfolioRebalancePlanResponse.of(p);
     }
 

@@ -16,6 +16,7 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import java.util.List;
+import java.util.Map;
 
 /**
  * 본인 포트폴리오의 요약·보유 포지션·청산 성과 조회 API.
@@ -43,5 +44,10 @@ public class PortfolioController {
     @GetMapping("/roundtrips")
     public List<PortfolioRoundTripResponse> roundtrips(@AuthenticationPrincipal AuthenticatedUser user) {
         return roundTripService.compute(user.memberId());
+    }
+
+    @GetMapping("/cash-by-account")
+    public Map<String, Map<String, Long>> cashByAccount(@AuthenticationPrincipal AuthenticatedUser user) {
+        return summaryService.cashByAccount(user.memberId());
     }
 }

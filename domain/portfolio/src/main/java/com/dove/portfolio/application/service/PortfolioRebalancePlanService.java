@@ -2,7 +2,7 @@ package com.dove.portfolio.application.service;
 
 import com.dove.portfolio.domain.entity.PortfolioRebalancePlan;
 import com.dove.portfolio.domain.repository.PortfolioRebalancePlanRepository;
-import com.dove.portfolio.domain.value.RebalancePlanEntry;
+import com.dove.portfolio.domain.value.RebalancePlanConfig;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
@@ -31,13 +31,13 @@ public class PortfolioRebalancePlanService {
      * 계획을 저장한다 — 같은 이름이 있으면 목표 배분을 갱신(upsert).
      */
     @Transactional
-    public PortfolioRebalancePlan save(Long ownerMemberId, String name, List<RebalancePlanEntry> entries, String actor) {
+    public PortfolioRebalancePlan save(Long ownerMemberId, String name, RebalancePlanConfig config, String actor) {
         return repository.findByOwnerMemberIdAndName(ownerMemberId, name)
                 .map(p -> {
-                    p.updateEntries(entries, actor);
+                    p.updateConfig(config, actor);
                     return p;
                 })
-                .orElseGet(() -> repository.save(PortfolioRebalancePlan.create(ownerMemberId, name, entries, actor)));
+                .orElseGet(() -> repository.save(PortfolioRebalancePlan.create(ownerMemberId, name, config, actor)));
     }
 
     /**
