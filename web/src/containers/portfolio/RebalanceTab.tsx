@@ -84,7 +84,7 @@ export default function RebalanceTab() {
       .catch(() => {});
     fetch("/api/portfolio/cash-by-account")
       .then((r) => (r.ok ? r.json() : {}))
-      .then((d) => setCashByAcct(d && typeof d === "object" ? d : {}))
+      .then((d) => setCashByAcct(d && typeof d === "object" ? (d as Record<string, Record<string, number>>) : {}))
       .catch(() => {});
     // 검색 권한이 있으면(=목록 200) 그날 후보 사이징 기능 노출. 403이면 조용히 숨김.
     fetch("/api/filters")
