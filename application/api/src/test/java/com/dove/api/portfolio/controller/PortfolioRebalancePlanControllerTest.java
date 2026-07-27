@@ -3,6 +3,7 @@ package com.dove.api.portfolio.controller;
 import com.dove.api.TestApiApplication;
 import com.dove.api.support.WithApiUser;
 import com.dove.portfolio.application.service.PortfolioRebalancePlanService;
+import com.dove.portfolio.domain.value.RebalancePlanConfig;
 import com.dove.portfolio.domain.value.RebalancePlanEntry;
 import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Nested;
@@ -40,7 +41,11 @@ class PortfolioRebalancePlanControllerTest {
     PortfolioRebalancePlanService service;
 
     private static final String BODY =
-            "{\"name\":\"공격형\",\"entries\":[{\"symbol\":\"삼성전자\",\"account\":\"국내\",\"currency\":\"KRW\",\"targetPct\":50}]}";
+            "{\"name\":\"공격형\",\"config\":{\"slots\":8,\"partRate\":10,\"positions\":[{\"symbol\":\"삼성전자\",\"account\":\"국내\",\"currency\":\"KRW\",\"targetPct\":50}],\"cash\":[]}}";
+
+    private static RebalancePlanConfig config(RebalancePlanEntry... positions) {
+        return new RebalancePlanConfig(8, 10, java.util.List.of(positions), java.util.List.of());
+    }
 
     @Nested
     @DisplayName("목록 조회")
@@ -62,8 +67,8 @@ class PortfolioRebalancePlanControllerTest {
         @WithApiUser(memberId = MEMBER_ID, capabilities = {"PORTFOLIO_REBALANCE"})
         @DisplayName("본인 계획만 반환")
         void shouldReturnOwn() throws Exception {
-            service.save(MEMBER_ID, "내계획", java.util.List.of(new RebalancePlanEntry("A", "국내", "KRW", 100)), "tester");
-            service.save(999L, "남계획", java.util.List.of(new RebalancePlanEntry("B", "국내", "KRW", 100)), "other");
+            service.save(MEMBER_ID, "내계획", config(new RebalancePlanEntry("A", "국내", "KRW", 100)), "tester");
+            service.save(999L, "남계획", config(new RebalancePlanEntry("B", "국내", "KRW", 100)), "other");
 
             mockMvc.perform(get("/portfolio/rebalance-plans"))
                     .andExpect(status().isOk())
@@ -82,7 +87,7 @@ class PortfolioRebalancePlanControllerTest {
             mockMvc.perform(post("/portfolio/rebalance-plans").contentType(MediaType.APPLICATION_JSON).content(BODY))
                     .andExpect(status().isCreated())
                     .andExpect(jsonPath("$.name").value("공격형"))
-                    .andExpect(jsonPath("$.entries.length()").value(1));
+                    .andExpect(jsonPath("$.config.positions.length()").value(1));
         }
 
         @Test
@@ -93,11 +98,11 @@ class PortfolioRebalancePlanControllerTest {
                     .andExpect(status().isCreated());
             mockMvc.perform(post("/portfolio/rebalance-plans")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"name\":\"공격형\",\"entries\":[]}"))
+                            .content("{\"name\":\"공격형\",\"config\":{\"slots\":8,\"partRate\":10,\"positions\":[],\"cash\":[]}}"))
                     .andExpect(status().isCreated());
 
             assertThat(service.findByOwner(MEMBER_ID)).singleElement()
-                    .matches(p -> p.getName().equals("공격형") && p.getEntries().isEmpty());
+                    .matches(p -> p.getName().equals("공격형") && p.getConfig().positions().isEmpty());
         }
 
         @Test
@@ -106,7 +111,7 @@ class PortfolioRebalancePlanControllerTest {
         void shouldReturn400WhenNameBlank() throws Exception {
             mockMvc.perform(post("/portfolio/rebalance-plans")
                             .contentType(MediaType.APPLICATION_JSON)
-                            .content("{\"name\":\"\",\"entries\":[]}"))
+                            .content("{\"name\":\"\",\"config\":{\"slots\":8,\"partRate\":10,\"positions\":[],\"cash\":[]}}"))
                     .andExpect(status().isBadRequest());
         }
     }
@@ -118,7 +123,7 @@ class PortfolioRebalancePlanControllerTest {
         @WithApiUser(memberId = MEMBER_ID, capabilities = {"PORTFOLIO_REBALANCE"})
         @DisplayName("삭제 204")
         void shouldDelete() throws Exception {
-            var p = service.save(MEMBER_ID, "삭제대상", java.util.List.of(new RebalancePlanEntry("A", "국내", "KRW", 100)), "tester");
+            var p = service.save(MEMBER_ID, "삭제대상", config(new RebalancePlanEntry("A", "국내", "KRW", 100)), "tester");
             mockMvc.perform(delete("/portfolio/rebalance-plans/" + p.getId())).andExpect(status().isNoContent());
         }
 
@@ -126,7 +131,7 @@ class PortfolioRebalancePlanControllerTest {
         @WithApiUser(memberId = MEMBER_ID, capabilities = {"PORTFOLIO_REBALANCE"})
         @DisplayName("남의 계획 삭제는 404")
         void shouldReturn404WhenDeletingOthers() throws Exception {
-            var p = service.save(999L, "남계획", java.util.List.of(new RebalancePlanEntry("B", "국내", "KRW", 100)), "other");
+            var p = service.save(999L, "남계획", config(new RebalancePlanEntry("B", "국내", "KRW", 100)), "other");
             mockMvc.perform(delete("/portfolio/rebalance-plans/" + p.getId())).andExpect(status().isNotFound());
         }
     }

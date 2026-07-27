@@ -5,7 +5,7 @@ export const CAPABILITY_LABELS: Record<string, string> = {
   MODEL_SCORE: "모델 점수",
   CUSTOM_INDICATOR: "커스텀 지표",
   PORTFOLIO_LEDGER: "포트폴리오(장부)",
-  PORTFOLIO_REBALANCE: "리밸런싱",
+  PORTFOLIO_REBALANCE: "매매 계획",
 };
 
 /** 관리 화면에서 부여 토글할 수 있는 전체 capability 목록(선언 순서). */

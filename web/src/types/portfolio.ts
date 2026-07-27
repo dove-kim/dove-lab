@@ -86,7 +86,7 @@ export interface PortfolioPosition {
   dividendTracked?: boolean;
 }
 
-/** 리밸런싱 계획의 목표 배분 항목. */
+/** 리밸런싱 계획의 종목 배분 항목. */
 export interface RebalancePlanEntry {
   symbol: string;
   account: string | null;
@@ -94,11 +94,26 @@ export interface RebalancePlanEntry {
   targetPct: number;
 }
 
+/** 리밸런싱 계획의 전략 현금 라인. */
+export interface RebalancePlanCash {
+  account: string;
+  currency: string;
+  weightPct: number;
+}
+
+/** 리밸런싱 계획 설정 (슬롯 수·참여율·종목 배분·전략 현금). */
+export interface RebalancePlanConfig {
+  slots: number;
+  partRate: number;
+  positions: RebalancePlanEntry[];
+  cash: RebalancePlanCash[];
+}
+
 /** 저장된 리밸런싱 계획. */
 export interface PortfolioRebalancePlan {
   id: number;
   name: string;
-  entries: RebalancePlanEntry[];
+  config: RebalancePlanConfig;
 }
 
 /** 계좌 (백엔드 응답과 일치). 잔액·평가액은 아직 미집계. */

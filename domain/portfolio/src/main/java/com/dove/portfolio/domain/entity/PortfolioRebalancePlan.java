@@ -1,7 +1,7 @@
 package com.dove.portfolio.domain.entity;
 
-import com.dove.portfolio.domain.converter.RebalancePlanEntryListConverter;
-import com.dove.portfolio.domain.value.RebalancePlanEntry;
+import com.dove.portfolio.domain.converter.RebalancePlanConfigConverter;
+import com.dove.portfolio.domain.value.RebalancePlanConfig;
 import jakarta.persistence.Column;
 import jakarta.persistence.Convert;
 import jakarta.persistence.Entity;
@@ -17,10 +17,9 @@ import lombok.NoArgsConstructor;
 import org.hibernate.annotations.Comment;
 
 import java.time.LocalDateTime;
-import java.util.List;
 
 /**
- * 저장된 리밸런싱 계획 — 이름 + 목표 배분(종목·계좌·통화·목표%) 집합.
+ * 저장된 리밸런싱 계획 — 이름 + 계획 설정(종목 배분·전략 현금·슬롯 수·참여율).
  */
 @Getter
 @Entity
@@ -48,10 +47,10 @@ public class PortfolioRebalancePlan {
     @Comment("계획명")
     private String name;
 
-    @Convert(converter = RebalancePlanEntryListConverter.class)
+    @Convert(converter = RebalancePlanConfigConverter.class)
     @Column(name = "ENTRIES", nullable = false, columnDefinition = "JSON")
-    @Comment("목표 배분 항목 JSON 배열(종목·계좌·통화·목표%)")
-    private List<RebalancePlanEntry> entries;
+    @Comment("계획 설정 JSON(슬롯 수·참여율·종목 배분·전략 현금)")
+    private RebalancePlanConfig config;
 
     @Column(name = "CREATED_AT", nullable = false, updatable = false)
     @Comment("생성 일시")
@@ -72,12 +71,12 @@ public class PortfolioRebalancePlan {
     /**
      * 계획을 생성한다.
      */
-    public static PortfolioRebalancePlan create(Long ownerMemberId, String name, List<RebalancePlanEntry> entries,
+    public static PortfolioRebalancePlan create(Long ownerMemberId, String name, RebalancePlanConfig config,
                                                 String createdBy) {
         PortfolioRebalancePlan p = new PortfolioRebalancePlan();
         p.ownerMemberId = ownerMemberId;
         p.name = name;
-        p.entries = entries;
+        p.config = config;
         p.createdBy = createdBy;
         p.updatedBy = null;
         LocalDateTime now = LocalDateTime.now();
@@ -87,10 +86,10 @@ public class PortfolioRebalancePlan {
     }
 
     /**
-     * 목표 배분 항목을 교체한다.
+     * 계획 설정을 교체한다.
      */
-    public void updateEntries(List<RebalancePlanEntry> entries, String updatedBy) {
-        this.entries = entries;
+    public void updateConfig(RebalancePlanConfig config, String updatedBy) {
+        this.config = config;
         this.updatedBy = updatedBy;
         this.updatedAt = LocalDateTime.now();
     }
