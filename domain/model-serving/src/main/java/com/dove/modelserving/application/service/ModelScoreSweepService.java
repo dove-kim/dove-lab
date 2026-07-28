@@ -165,7 +165,7 @@ public class ModelScoreSweepService {
             LocalDate date = LocalDate.parse(row.tradeDate());
             StockModelScoreId id = new StockModelScoreId(row.ticker(), exchange, priceType, date, model.getId());
             byDate.computeIfAbsent(date, k -> new ArrayList<>())
-                    .add(new StockModelScore(id, score.floatValue(), now));
+                    .add(new StockModelScore(id, score, now));
         }
         return byDate;
     }

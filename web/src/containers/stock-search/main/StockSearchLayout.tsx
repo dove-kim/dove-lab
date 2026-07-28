@@ -530,7 +530,7 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
                           {s.modelScore != null && (
                             <span title="모델 점수"
                               className="flex-shrink-0 text-[10px] px-1 py-0.5 rounded bg-indigo-900/50 text-indigo-300 border border-indigo-700/50 font-mono">
-                              {s.modelScore.toLocaleString("ko-KR", { maximumFractionDigits: 3 })}
+                              {s.modelScore.toLocaleString("ko-KR", { maximumFractionDigits: 4 })}
                             </span>
                           )}
                         </div>

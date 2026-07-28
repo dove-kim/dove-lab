@@ -8,7 +8,7 @@ import com.dove.modelserving.domain.entity.StockModelScore;
  * @param date  거래일
  * @param score 모델 출력값(0~1 보정 확률 또는 연속값)
  */
-public record ModelScoreBar(String date, Float score) {
+public record ModelScoreBar(String date, Double score) {
 
     /**
      * 점수 엔티티를 차트용 봉으로 변환한다.

@@ -30,13 +30,13 @@ public class StockModelScore {
 
     @Column(name = "SCORE", nullable = false)
     @Comment("모델 출력값(0~1 보정 확률 또는 연속값)")
-    private Float score;
+    private Double score;
 
     @Column(name = "SCORED_AT", nullable = false)
     @Comment("채점 일시")
     private LocalDateTime scoredAt;
 
-    public StockModelScore(StockModelScoreId id, Float score, LocalDateTime scoredAt) {
+    public StockModelScore(StockModelScoreId id, Double score, LocalDateTime scoredAt) {
         this.id = id;
         this.score = score;
         this.scoredAt = scoredAt;
