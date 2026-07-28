@@ -116,7 +116,7 @@ class ModelScoreSweepServiceTest {
             ArgumentCaptor<List<StockModelScore>> scoreCaptor = listCaptor();
             verify(commitService).commit(eq(1L), scoreCaptor.capture(), eq(null), eq(LocalDate.of(2026, 6, 20)));
             assertThat(scoreCaptor.getValue()).singleElement()
-                    .satisfies(s -> assertThat(s.getScore()).isEqualTo(0.62f));
+                    .satisfies(s -> assertThat(s.getScore()).isEqualTo(0.62));
             verify(artifactMaterializer).cleanup(any());
 
             // 성공 헬스 기록 + ok outcome

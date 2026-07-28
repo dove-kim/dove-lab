@@ -1420,7 +1420,7 @@ function StockChart({
                 )}
                 {hoverScore != null && (
                   <p className="text-center leading-tight text-emerald-400">
-                    {signalModelName ?? "모델"} {fmtVal(hoverScore)}
+                    {signalModelName ?? "모델"} {hoverScore.toFixed(4)}
                   </p>
                 )}
                 {hoverSeries.map(s => (
@@ -1471,7 +1471,7 @@ function StockChart({
                     {hoverScore != null && (
                       <>
                         <span className="text-emerald-400/80">{signalModelName ?? "모델"}</span>
-                        <span className="text-right text-emerald-400">{fmtVal(hoverScore)}</span>
+                        <span className="text-right text-emerald-400">{hoverScore.toFixed(4)}</span>
                       </>
                     )}
                     {hoverSeries.map(s => [

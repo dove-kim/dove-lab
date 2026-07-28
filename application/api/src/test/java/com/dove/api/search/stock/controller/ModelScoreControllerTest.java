@@ -63,7 +63,7 @@ class ModelScoreControllerTest {
         modelGrantCommandService.grant(1L, modelId, null);
     }
 
-    private void seedScore(LocalDate date, float score) {
+    private void seedScore(LocalDate date, double score) {
         scoreRepository.save(new StockModelScore(
                 new StockModelScoreId(TICKER, StockExchange.INTEGRATED, PriceType.ADJUSTED, date, modelId),
                 score, LocalDateTime.now()));
@@ -110,8 +110,8 @@ class ModelScoreControllerTest {
         @WithApiUser(capabilities = {"MODEL_SCORE"})
         @DisplayName("점수를 거래일 오름차순으로 반환")
         void shouldReturnScoresAscendingByDate() throws Exception {
-            seedScore(LocalDate.of(2024, 1, 2), 0.7f);
-            seedScore(LocalDate.of(2024, 1, 1), 0.3f);
+            seedScore(LocalDate.of(2024, 1, 2), 0.7);
+            seedScore(LocalDate.of(2024, 1, 1), 0.3);
 
             mockMvc.perform(get("/stocks/" + TICKER + "/scores").param("modelId", modelId.toString()))
                     .andExpect(status().isOk())
