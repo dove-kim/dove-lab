@@ -57,7 +57,7 @@ class IndicatorPresetCommandServiceTest {
         @Test
         @DisplayName("오버레이를 함께 저장한다")
         void shouldSaveOverlayWhenProvided() {
-            PresetOverlay overlay = new PresetOverlay(7L, 0.6, List.of(1L, 2L));
+            PresetOverlay overlay = new PresetOverlay(7L, 0.6, 0.5, List.of(1L, 2L));
             given(indicatorPresetRepository.save(any())).willAnswer(inv -> inv.getArgument(0));
 
             IndicatorPreset result = service.create(MEMBER_ID, "기본", List.of(), List.of(), overlay);
@@ -99,7 +99,7 @@ class IndicatorPresetCommandServiceTest {
         @DisplayName("오버레이를 갱신한다")
         void shouldUpdateOverlayWhenFound() {
             IndicatorPreset preset = makePreset("기본");
-            PresetOverlay overlay = new PresetOverlay(3L, 0.75, List.of(9L));
+            PresetOverlay overlay = new PresetOverlay(3L, 0.75, null, List.of(9L));
             given(indicatorPresetRepository.findByIdAndMemberId(PRESET_ID, MEMBER_ID))
                     .willReturn(Optional.of(preset));
 

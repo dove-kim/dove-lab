@@ -41,7 +41,8 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
   const [prevClose, setPrevClose]           = useState<number | null>(null);
 
   // 차트 오버레이(모델 시그널·커스텀 지표) — 저장된 프리셋의 값(activePreset.overlay)에서 파생. 저장해야 반영.
-  const overlay = activePreset?.overlay ?? DEFAULT_CHART_OVERLAY;
+  // 옛 프리셋에 없던 필드(watchThreshold)는 기본값으로 채운다.
+  const overlay = { ...DEFAULT_CHART_OVERLAY, ...(activePreset?.overlay ?? {}) };
   const [signalModels, setSignalModels]     = useState<ModelSummary[]>([]);
   const [customMetrics, setCustomMetrics]   = useState<CustomMetricSummary[]>([]);
 
@@ -331,6 +332,7 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
             signalModelId={overlay.signalModelId}
             signalModelName={signalModel?.name ?? null}
             signalThreshold={overlay.signalThreshold}
+            watchThreshold={overlay.watchThreshold}
             seriesMetrics={selectedMetrics}
             onLatestBar={(bar, prev) => { setLatestBar(bar); setPrevClose(prev ?? null); }}
           />

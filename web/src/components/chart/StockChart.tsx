@@ -119,8 +119,10 @@ interface Props {
   signalModelId?: number | null;
   /** 시그널 레인 툴팁·마커에 표시할 모델 이름. */
   signalModelName?: string | null;
-  /** 시그널 마커를 찍을 점수 임계값 (0~1). */
+  /** 진입 문턱 — 이 값 이상은 초록 세모 (0~1). */
   signalThreshold?: number;
+  /** 관찰 문턱 — 이 값 이상 진입 문턱 미만은 회색 세모. null이면 관찰 미표시. */
+  watchThreshold?: number | null;
   /** 하단 서브패널로 표시할 커스텀 지표(SERIES) 목록. 빈 배열이면 미표시. */
   seriesMetrics?: CustomMetricSummary[];
   /** 최신 일봉(가장 최근 봉)과 그 직전 봉 종가(등락률용)를 부모로 올려준다. 데이터 없으면 null. */
@@ -136,7 +138,8 @@ const MONO_FONT  = "11px ui-monospace, monospace";
 
 // ── 오버레이(모델 시그널 / 커스텀 지표) ──────────────────────────────────────
 const SIGNAL_LANE_H = 15;         // 시그널 레인(▲ 마커 띠) 높이
-const SIGNAL_COLOR  = "#34d399";  // 시그널 마커 기준색(강도에 따라 alpha 가변)
+const SIGNAL_COLOR  = "#34d399";  // 진입(문턱 이상) 세모 색
+const WATCH_COLOR   = "#94a3b8";  // 관찰(관찰 문턱~진입 문턱) 세모 색
 // 커스텀 지표 연속값 선 색 — 지표별로 순환 배정
 const SERIES_COLORS = ["#22d3ee", "#a78bfa", "#f472b6", "#fbbf24", "#4ade80", "#f97316", "#60a5fa"];
 const SERIES_ON_COLOR  = "rgba(52,211,153,0.55)";  // 불리언 ON 색 띠
@@ -314,6 +317,7 @@ function computeLayout(
 function StockChart({
   code, source, adjusted, presetItems, panelOrder, mode,
   signalModelId = null, signalModelName = null, signalThreshold = 0.5,
+  watchThreshold = null,
   seriesMetrics = [],
   onLatestBar,
 }: Props) {
@@ -630,6 +634,9 @@ function StockChart({
     return m;
   }, [scoreData]);
 
+  // 세모를 그릴 하한 점수. 관찰 문턱이 켜져 있으면 그 값, 아니면 진입 문턱.
+  const signalShown = watchThreshold != null ? Math.min(watchThreshold, signalThreshold) : signalThreshold;
+
   // 선택된 커스텀 지표 각각을 하나의 서브패널로. 빈(실패·미부여) 지표는 스킵.
   // 값이 {0,1}만이면 불리언(레짐) → ON/OFF 색 띠, 아니면 연속값 → 선.
   const seriesPanels = useMemo(
@@ -911,23 +918,19 @@ function StockChart({
         ctx.fillStyle = "#64748b";
         ctx.textAlign = "left"; ctx.textBaseline = "middle";
         ctx.fillText("시그널", plotL + 3, laneMid);
-        // 임계값 이상인 거래일에 고정 y로 ▲ (점수 강도로 색 농도)
-        const denom = signalThreshold < 1 ? 1 - signalThreshold : 1;
+        // 거래일별 ▲ — 진입 문턱 이상은 초록, 관찰 문턱~진입 문턱은 회색.
         visibleSlots.forEach((s, i) => {
           if (!s) return;
           const sc = scoreMap.get(s.date);
-          if (sc == null || sc < signalThreshold) return;
-          const strength = Math.max(0, Math.min(1, (sc - signalThreshold) / denom));
+          if (sc == null || sc < signalShown) return;
           const mx = xAt(i);
-          ctx.fillStyle = SIGNAL_COLOR;
-          ctx.globalAlpha = 0.4 + 0.6 * strength;
+          ctx.fillStyle = sc >= signalThreshold ? SIGNAL_COLOR : WATCH_COLOR;
           ctx.beginPath();
           ctx.moveTo(mx, laneMid - 4);
           ctx.lineTo(mx - 4, laneMid + 4);
           ctx.lineTo(mx + 4, laneMid + 4);
           ctx.closePath();
           ctx.fill();
-          ctx.globalAlpha = 1;
         });
       }
 
@@ -1152,7 +1155,7 @@ function StockChart({
   // eslint-disable-next-line react-hooks/exhaustive-deps
   // rightIndex / visibleCount 제거 — refs(riRef/vcRef)로 직접 읽으므로 불필요
   }, [width, expandedBars, indicatorData, mode, presetItems, subPanels, loading,
-      scoreData, seriesPanels, signalModelId, signalThreshold, totalSubPanels]);
+      scoreData, seriesPanels, signalModelId, signalThreshold, watchThreshold, totalSubPanels]);
 
 
   // ── Canvas draw: 오버레이 (크로스헤어만) ─────────────────────────────────────
