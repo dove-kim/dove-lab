@@ -247,7 +247,7 @@ export default function IndicatorManager({
       return;
     }
     setItems(buildMergedItems(activePreset.items));
-    setOverlay(activePreset.overlay ?? DEFAULT_CHART_OVERLAY);
+    setOverlay({ ...DEFAULT_CHART_OVERLAY, ...(activePreset.overlay ?? {}) });
     setPresetName(activePreset.name);
   }, [activePreset]);
 
@@ -259,9 +259,10 @@ export default function IndicatorManager({
       const base = baseline.find(b => b.type === item.type)!;
       if (item.enabled !== base.enabled || item.color !== base.color || item.lineWidth !== base.lineWidth) return true;
     }
-    const baseOverlay = activePreset.overlay ?? DEFAULT_CHART_OVERLAY;
+    const baseOverlay = { ...DEFAULT_CHART_OVERLAY, ...(activePreset.overlay ?? {}) };
     if (overlay.signalModelId !== baseOverlay.signalModelId) return true;
     if (overlay.signalThreshold !== baseOverlay.signalThreshold) return true;
+    if (overlay.watchThreshold !== baseOverlay.watchThreshold) return true;
     if (overlay.seriesMetricIds.length !== baseOverlay.seriesMetricIds.length
       || overlay.seriesMetricIds.some((id, i) => id !== baseOverlay.seriesMetricIds[i])) return true;
     return false;
@@ -572,23 +573,70 @@ export default function IndicatorManager({
                     ))}
                   </select>
                   {overlay.signalModelId != null && (
-                    <div className="flex items-center gap-2">
-                      <span className="text-xs text-slate-500 flex-shrink-0">임계값</span>
-                      <div className="w-24">
-                        <input
-                          type="number"
-                          min={0}
-                          max={100}
-                          step={1}
-                          value={Math.round(overlay.signalThreshold * 100)}
-                          onChange={e => {
-                            const pct = Math.max(0, Math.min(100, Number(e.target.value)));
-                            setOverlay(prev => ({ ...prev, signalThreshold: pct / 100 }));
-                          }}
-                          className={cx.inputNumber}
-                        />
+                    <div className="space-y-2.5 pt-1">
+                      {/* 진입 문턱 — 초록 세모 */}
+                      <div className="flex items-center gap-2">
+                        <span className="text-emerald-400 text-xs flex-shrink-0 w-3 text-center">▲</span>
+                        <span className="text-xs text-slate-400 flex-shrink-0 w-16">진입 문턱</span>
+                        <div className="w-20">
+                          <input
+                            type="number"
+                            min={0}
+                            max={1}
+                            step={0.01}
+                            value={overlay.signalThreshold}
+                            onChange={e => {
+                              const v = Math.max(0, Math.min(1, Number(e.target.value)));
+                              setOverlay(prev => ({ ...prev, signalThreshold: v }));
+                            }}
+                            className={cx.inputNumber}
+                          />
+                        </div>
+                        <span className="text-xs text-slate-500">이상</span>
                       </div>
-                      <span className="text-xs text-slate-500">% 이상에 마커</span>
+
+                      {/* 관찰 문턱 — 회색 세모(진입 문턱 미달). 체크 해제 시 미표시 */}
+                      <div className="flex items-center gap-2">
+                        <button
+                          onClick={() => setOverlay(prev => ({
+                            ...prev,
+                            watchThreshold: prev.watchThreshold == null
+                              ? Math.max(0, Math.round((prev.signalThreshold - 0.06) * 100) / 100)
+                              : null,
+                          }))}
+                          className={`w-5 h-5 rounded border flex-shrink-0 flex items-center justify-center transition ${
+                            overlay.watchThreshold != null ? "bg-slate-500 border-slate-500" : "border-white/20"
+                          }`}
+                        >
+                          {overlay.watchThreshold != null && (
+                            <svg className="w-3 h-3 text-white" viewBox="0 0 12 12" fill="none" stroke="currentColor" strokeWidth="2.5">
+                              <polyline points="2 6 5 9 10 3" />
+                            </svg>
+                          )}
+                        </button>
+                        <span className="text-xs text-slate-400 flex-shrink-0 w-16">관찰 문턱</span>
+                        {overlay.watchThreshold != null ? (
+                          <>
+                            <div className="w-20">
+                              <input
+                                type="number"
+                                min={0}
+                                max={1}
+                                step={0.01}
+                                value={overlay.watchThreshold}
+                                onChange={e => {
+                                  const v = Math.max(0, Math.min(1, Number(e.target.value)));
+                                  setOverlay(prev => ({ ...prev, watchThreshold: v }));
+                                }}
+                                className={cx.inputNumber}
+                              />
+                            </div>
+                            <span className="text-xs text-slate-500">~ 진입 문턱</span>
+                          </>
+                        ) : (
+                          <span className="text-xs text-slate-600">표시 안 함</span>
+                        )}
+                      </div>
                     </div>
                   )}
                 </div>
