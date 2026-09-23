@@ -31,7 +31,7 @@ public record UpdatePortfolioTransactionRequest(
         @PositiveOrZero BigDecimal quantity,
         @PositiveOrZero BigDecimal price,
         @NotNull @PositiveOrZero BigDecimal amount,
-        @PositiveOrZero Long fee,
+        @PositiveOrZero BigDecimal fee,
         @Size(max = 50) String tag,
         @Size(max = 500) String memo
 ) {}

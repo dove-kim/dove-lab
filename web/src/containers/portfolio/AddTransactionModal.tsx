@@ -261,7 +261,7 @@ export default function AddTransactionModal({
         quantity: isTrade && quantity ? parseFloat(quantity) : null,
         price: isTrade && price ? parseFloat(price) : null,
         amount: parseFloat(amount),
-        fee: fee ? parseInt(fee, 10) : 0,
+        fee: fee ? parseFloat(fee) : 0,
         tag: tag.trim() || null,
         memo: memo.trim() || null,
       };
@@ -397,8 +397,8 @@ export default function AddTransactionModal({
                     ))}
                   </select>
                 </Field>
-                <Field label="수수료 (원)">
-                  <CommaInput value={fee} onChange={setFee} placeholder="0" className={cx.inputNumber} />
+                <Field label={`수수료 (${currency})`}>
+                  <CommaInput decimal value={fee} onChange={setFee} placeholder="0" className={cx.inputNumber} />
                 </Field>
               </div>
               <div className="grid grid-cols-2 gap-3">
@@ -537,8 +537,8 @@ export default function AddTransactionModal({
 
           {curKey === "extra" && (
             <div className="flex flex-col gap-4">
-              <Field label="수수료 (원)">
-                <CommaInput value={fee} onChange={setFee} placeholder="0" className={cx.inputNumber} />
+              <Field label={`수수료 (${currency})`}>
+                <CommaInput decimal value={fee} onChange={setFee} placeholder="0" className={cx.inputNumber} />
               </Field>
               <div className="grid grid-cols-2 gap-3">
                 <Field label="태그">

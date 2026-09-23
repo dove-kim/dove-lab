@@ -51,7 +51,7 @@ class PortfolioRoundTripControllerTest {
 
     private void trade(TxType type, long accountId, String qty, String price, long amount, LocalDate date) {
         transactionService.create(MEMBER_ID, accountId, type, date, "삼성전자", "KRW",
-                new BigDecimal(qty), new BigDecimal(price), BigDecimal.valueOf(amount), 0L, null, null, "tester");
+                new BigDecimal(qty), new BigDecimal(price), BigDecimal.valueOf(amount), BigDecimal.ZERO, null, null, "tester");
     }
 
     @Nested

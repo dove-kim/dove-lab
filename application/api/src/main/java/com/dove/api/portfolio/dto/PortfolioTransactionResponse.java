@@ -34,7 +34,7 @@ public record PortfolioTransactionResponse(
         BigDecimal quantity,
         BigDecimal price,
         BigDecimal amount,
-        Long fee,
+        BigDecimal fee,
         String tag,
         String memo
 ) {

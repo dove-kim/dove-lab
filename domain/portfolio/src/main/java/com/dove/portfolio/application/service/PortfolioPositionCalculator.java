@@ -47,7 +47,7 @@ public class PortfolioPositionCalculator {
         PositionState s = states.computeIfAbsent(t.getAccountId() + " " + t.getSymbol(),
                 k -> new PositionState(t.getAccountId(), t.getSymbol(), t.getCurrency()));
         BigDecimal qty = t.getQuantity();
-        BigDecimal fee = BigDecimal.valueOf(t.getFee());
+        BigDecimal fee = t.getFee();
         if (t.getType() == TxType.BUY) {
             s.quantity = s.quantity.add(qty);
             s.costNat = s.costNat.add(qty.multiply(t.getPrice()));

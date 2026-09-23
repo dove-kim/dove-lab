@@ -35,7 +35,7 @@ public class PortfolioCashCalculator {
             add(byCurrency, t.getCurrency(), cashEffect(t));
         }
         for (PortfolioFxConversion c : conversions) {
-            add(byCurrency, c.getFromCurrency(), c.getFromAmount().add(BigDecimal.valueOf(c.getFee())).negate());
+            add(byCurrency, c.getFromCurrency(), c.getFromAmount().add(c.getFee()).negate());
             add(byCurrency, c.getToCurrency(), c.getToAmount());
         }
         return byCurrency;
@@ -70,7 +70,7 @@ public class PortfolioCashCalculator {
      */
     private BigDecimal cashEffect(PortfolioTransaction t) {
         BigDecimal amount = t.getAmount();
-        BigDecimal fee = BigDecimal.valueOf(t.getFee());
+        BigDecimal fee = t.getFee();
         return switch (t.getType()) {
             case DEPOSIT -> amount;
             case WITHDRAW -> amount.negate();

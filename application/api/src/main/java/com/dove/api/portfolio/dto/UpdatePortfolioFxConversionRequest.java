@@ -26,6 +26,6 @@ public record UpdatePortfolioFxConversionRequest(
         @NotNull @Positive BigDecimal fromAmount,
         @NotBlank @Size(max = 10) String toCurrency,
         @NotNull @Positive BigDecimal toAmount,
-        @PositiveOrZero Long fee,
+        @PositiveOrZero BigDecimal fee,
         @Size(max = 500) String memo
 ) {}

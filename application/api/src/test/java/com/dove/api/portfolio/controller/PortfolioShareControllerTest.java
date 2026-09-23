@@ -105,7 +105,7 @@ class PortfolioShareControllerTest {
                     MemberProfile.create("owner@test.com", "주인", MemberRole.USER));
             long accountId = accountService.create(owner.getId(), "미국", null, null, "owner").getId();
             transactionService.create(owner.getId(), accountId, TxType.BUY, LocalDate.of(2026, 7, 1), "삼성전자", "KRW",
-                    new BigDecimal("10"), new BigDecimal("70000"), BigDecimal.valueOf(700_000), 0L, null, null, "owner");
+                    new BigDecimal("10"), new BigDecimal("70000"), BigDecimal.valueOf(700_000), BigDecimal.ZERO, null, null, "owner");
             shareService.grant(owner.getId(), accountId, GRANTEE_ID, PortfolioSharePermission.READ, "owner");
 
             mockMvc.perform(get("/portfolio/shared/" + accountId + "/summary"))

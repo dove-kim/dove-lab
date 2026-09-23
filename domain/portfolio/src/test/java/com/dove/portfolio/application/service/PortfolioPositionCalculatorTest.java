@@ -20,16 +20,16 @@ class PortfolioPositionCalculatorTest {
     private final PortfolioPositionCalculator calculator = new PortfolioPositionCalculator();
 
     private PortfolioTransaction tx(TxType type, long accountId, String symbol, String currency,
-                                    String quantity, String price, long amount, long fee, LocalDate date) {
+                                    String quantity, String price, long amount, String fee, LocalDate date) {
         return PortfolioTransaction.create(1L, accountId, type, date, symbol, currency,
                 quantity == null ? null : new BigDecimal(quantity),
                 price == null ? null : new BigDecimal(price),
-                BigDecimal.valueOf(amount), fee, null, null, "tester");
+                BigDecimal.valueOf(amount), new BigDecimal(fee), null, null, "tester");
     }
 
     private PortfolioTransaction buy(long accountId, String symbol, String currency, String quantity, String price,
                                      long amount, LocalDate date) {
-        return tx(TxType.BUY, accountId, symbol, currency, quantity, price, amount, 0L, date);
+        return tx(TxType.BUY, accountId, symbol, currency, quantity, price, amount, "0", date);
     }
 
     @Nested
@@ -96,7 +96,7 @@ class PortfolioPositionCalculatorTest {
         void shouldReduceCostAndRealizeOnPartialSell() {
             List<PortfolioPositionCost> result = calculator.fold(List.of(
                     buy(10L, "삼성전자", "KRW", "10", "70000", 700_000L, LocalDate.of(2026, 7, 1)),
-                    tx(TxType.SELL, 10L, "삼성전자", "KRW", "4", "80000", 320_000L, 0L, LocalDate.of(2026, 7, 5))));
+                    tx(TxType.SELL, 10L, "삼성전자", "KRW", "4", "80000", 320_000L, "0", LocalDate.of(2026, 7, 5))));
 
             PortfolioPositionCost p = result.get(0);
             assertThat(p.quantity()).isEqualByComparingTo("6");
@@ -110,7 +110,7 @@ class PortfolioPositionCalculatorTest {
         void shouldDropFullySoldPosition() {
             List<PortfolioPositionCost> result = calculator.fold(List.of(
                     buy(10L, "삼성전자", "KRW", "10", "70000", 700_000L, LocalDate.of(2026, 7, 1)),
-                    tx(TxType.SELL, 10L, "삼성전자", "KRW", "10", "75000", 750_000L, 0L, LocalDate.of(2026, 7, 5))));
+                    tx(TxType.SELL, 10L, "삼성전자", "KRW", "10", "75000", 750_000L, "0", LocalDate.of(2026, 7, 5))));
 
             assertThat(result).isEmpty();
         }
@@ -120,7 +120,7 @@ class PortfolioPositionCalculatorTest {
         void shouldSubtractFeeFromRealized() {
             List<PortfolioPositionCost> partial = calculator.fold(List.of(
                     buy(10L, "삼성전자", "KRW", "10", "70000", 700_000L, LocalDate.of(2026, 7, 1)),
-                    tx(TxType.SELL, 10L, "삼성전자", "KRW", "5", "75000", 375_000L, 3_000L,
+                    tx(TxType.SELL, 10L, "삼성전자", "KRW", "5", "75000", 375_000L, "3000",
                             LocalDate.of(2026, 7, 5))));
 
             // 375,000 - 3,000 - (700,000 * 5/10=350,000) = 22,000
@@ -135,8 +135,8 @@ class PortfolioPositionCalculatorTest {
         @DisplayName("입금·배당 등 종목 없는 거래는 포지션을 만들지 않는다")
         void shouldIgnoreNonTradeTransactions() {
             List<PortfolioPositionCost> result = calculator.fold(List.of(
-                    tx(TxType.DEPOSIT, 10L, null, "KRW", null, null, 2_000_000L, 0L, LocalDate.of(2026, 7, 1)),
-                    tx(TxType.DIVIDEND, 10L, "SPY", "USD", null, null, 28_900L, 0L, LocalDate.of(2026, 7, 5)),
+                    tx(TxType.DEPOSIT, 10L, null, "KRW", null, null, 2_000_000L, "0", LocalDate.of(2026, 7, 1)),
+                    tx(TxType.DIVIDEND, 10L, "SPY", "USD", null, null, 28_900L, "0", LocalDate.of(2026, 7, 5)),
                     buy(10L, "삼성전자", "KRW", "10", "70000", 700_000L, LocalDate.of(2026, 7, 6))));
 
             assertThat(result).hasSize(1);

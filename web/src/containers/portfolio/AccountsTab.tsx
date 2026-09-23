@@ -467,7 +467,7 @@ function AddFxConversionModal({
           fromAmount: parseFloat(fromAmount),
           toCurrency,
           toAmount: parseFloat(toAmount),
-          fee: fee ? parseInt(fee, 10) : 0,
+          fee: fee ? parseFloat(fee) : 0,
           memo: memo.trim() || null,
         }),
       });
@@ -543,7 +543,7 @@ function AddFxConversionModal({
         {rate && <div className="text-xs text-slate-500">적용 환율 ≈ {rate.toFixed(2)} {fromCurrency}/{toCurrency}</div>}
         <label className="flex flex-col gap-1">
           <span className="text-xs text-slate-400">수수료 (보낸 통화, 선택)</span>
-          <CommaInput value={fee} onChange={setFee} placeholder="0" className={cx.inputNumber} />
+          <CommaInput decimal value={fee} onChange={setFee} placeholder="0" className={cx.inputNumber} />
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-xs text-slate-400">메모 (선택)</span>

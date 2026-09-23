@@ -66,7 +66,7 @@ class PortfolioPositionControllerTest {
 
     private long buy(long accountId, String symbol, String currency, String qty, String price, long amount) {
         transactionService.create(MEMBER_ID, accountId, TxType.BUY, LocalDate.of(2026, 7, 1), symbol, currency,
-                new BigDecimal(qty), new BigDecimal(price), BigDecimal.valueOf(amount), 0L, null, null, "tester");
+                new BigDecimal(qty), new BigDecimal(price), BigDecimal.valueOf(amount), BigDecimal.ZERO, null, null, "tester");
         return accountId;
     }
 
