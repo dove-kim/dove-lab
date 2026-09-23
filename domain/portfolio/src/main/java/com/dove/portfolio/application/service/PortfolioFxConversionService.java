@@ -38,7 +38,7 @@ public class PortfolioFxConversionService {
     @Transactional
     public PortfolioFxConversion create(Long ownerMemberId, Long accountId, LocalDate convDate,
                                         String fromCurrency, BigDecimal fromAmount,
-                                        String toCurrency, BigDecimal toAmount, Long fee,
+                                        String toCurrency, BigDecimal toAmount, BigDecimal fee,
                                         String memo, String createdBy) {
         requireOwnedAccount(ownerMemberId, accountId);
         return repository.save(PortfolioFxConversion.create(ownerMemberId, accountId, convDate,
@@ -53,7 +53,7 @@ public class PortfolioFxConversionService {
     @Transactional
     public PortfolioFxConversion update(Long ownerMemberId, Long id, LocalDate convDate,
                                         String fromCurrency, BigDecimal fromAmount,
-                                        String toCurrency, BigDecimal toAmount, Long fee,
+                                        String toCurrency, BigDecimal toAmount, BigDecimal fee,
                                         String memo, String updatedBy) {
         PortfolioFxConversion c = repository.findByIdAndOwnerMemberId(id, ownerMemberId)
                 .orElseThrow(() -> new NoSuchElementException("PORTFOLIO_FX_CONVERSION_NOT_FOUND"));

@@ -80,9 +80,9 @@ public class PortfolioTransaction {
     @Comment("거래 금액(거래 통화 기준, 크기)")
     private BigDecimal amount;
 
-    @Column(name = "FEE", nullable = false)
+    @Column(name = "FEE", nullable = false, precision = 24, scale = 8)
     @Comment("수수료(거래 통화)")
-    private Long fee;
+    private BigDecimal fee;
 
     @Column(name = "TAG", length = 50)
     @Comment("자유 태그")
@@ -113,7 +113,7 @@ public class PortfolioTransaction {
      */
     public static PortfolioTransaction create(Long ownerMemberId, Long accountId, TxType type, LocalDate tradeDate,
                                             String symbol, String currency, BigDecimal quantity, BigDecimal price,
-                                            BigDecimal amount, Long fee,
+                                            BigDecimal amount, BigDecimal fee,
                                             String tag, String memo, String createdBy) {
         PortfolioTransaction t = new PortfolioTransaction();
         t.ownerMemberId = ownerMemberId;
@@ -125,7 +125,7 @@ public class PortfolioTransaction {
         t.quantity = quantity;
         t.price = price;
         t.amount = amount;
-        t.fee = fee != null ? fee : 0L;
+        t.fee = fee != null ? fee : BigDecimal.ZERO;
         t.tag = tag;
         t.memo = memo;
         t.createdBy = createdBy;
@@ -140,7 +140,7 @@ public class PortfolioTransaction {
      * 거래 내용을 갱신한다.
      */
     public void update(TxType type, LocalDate tradeDate, String symbol, String currency, BigDecimal quantity,
-                       BigDecimal price, BigDecimal amount, Long fee,
+                       BigDecimal price, BigDecimal amount, BigDecimal fee,
                        String tag, String memo, String updatedBy) {
         this.type = type;
         this.tradeDate = tradeDate;
@@ -149,7 +149,7 @@ public class PortfolioTransaction {
         this.quantity = quantity;
         this.price = price;
         this.amount = amount;
-        this.fee = fee != null ? fee : 0L;
+        this.fee = fee != null ? fee : BigDecimal.ZERO;
         this.tag = tag;
         this.memo = memo;
         this.updatedBy = updatedBy;

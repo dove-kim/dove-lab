@@ -1,5 +1,6 @@
 package com.dove.portfolio.application.service;
 
+import com.dove.portfolio.domain.entity.PortfolioFxConversion;
 import com.dove.portfolio.domain.entity.PortfolioTransaction;
 import com.dove.portfolio.domain.enums.TxType;
 import org.junit.jupiter.api.DisplayName;
@@ -22,10 +23,10 @@ class PortfolioCashCalculatorTest {
     private final PortfolioCashCalculator calculator = new PortfolioCashCalculator();
     private static final LocalDate D = LocalDate.of(2026, 7, 1);
 
-    private PortfolioTransaction tx(TxType type, String currency, long amount, long fee) {
+    private PortfolioTransaction tx(TxType type, String currency, long amount, String fee) {
         boolean hasSymbol = type == TxType.BUY || type == TxType.SELL;
         return PortfolioTransaction.create(1L, 10L, type, D, hasSymbol ? "종목" : null,
-                currency, null, null, BigDecimal.valueOf(amount), fee, null, null, "tester");
+                currency, null, null, BigDecimal.valueOf(amount), new BigDecimal(fee), null, null, "tester");
     }
 
     @Nested
@@ -35,23 +36,49 @@ class PortfolioCashCalculatorTest {
         @DisplayName("외화 매수하면 그 통화 현금이 음수가 된다(환전 개념 없음)")
         void shouldGoNegativeOnForeignBuy() {
             Map<String, BigDecimal> cash = calculator.cashByCurrency(List.of(
-                    tx(TxType.DEPOSIT, "KRW", 1_000_000, 0),
-                    tx(TxType.BUY, "KRW", 300_000, 500),
-                    tx(TxType.BUY, "USD", 1_456, 1)));
+                    tx(TxType.DEPOSIT, "KRW", 1_000_000, "0"),
+                    tx(TxType.BUY, "KRW", 300_000, "500"),
+                    tx(TxType.BUY, "USD", 1_456, "1")));
 
             assertThat(cash.get("KRW")).isEqualByComparingTo("699500"); // 1,000,000 - (300,000+500)
             assertThat(cash.get("USD")).isEqualByComparingTo("-1457");
         }
 
         @Test
+        @DisplayName("소수 수수료는 반올림 없이 그대로 차감된다")
+        void shouldKeepFractionalFee() {
+            Map<String, BigDecimal> cash = calculator.cashByCurrency(List.of(
+                    tx(TxType.BUY, "USD", 1_072, "2.68")));
+
+            assertThat(cash.get("USD")).isEqualByComparingTo("-1074.68");
+        }
+
+        @Test
         @DisplayName("배당·이자는 현금을 늘린다(세후 금액으로 기록)")
         void shouldAddIncome() {
             Map<String, BigDecimal> cash = calculator.cashByCurrency(List.of(
-                    tx(TxType.INTEREST, "KRW", 4_230, 0),
-                    tx(TxType.DIVIDEND, "USD", 85, 0)));
+                    tx(TxType.INTEREST, "KRW", 4_230, "0"),
+                    tx(TxType.DIVIDEND, "USD", 85, "0")));
 
             assertThat(cash.get("KRW")).isEqualByComparingTo("4230");
             assertThat(cash.get("USD")).isEqualByComparingTo("85");
+        }
+    }
+
+    @Nested
+    @DisplayName("환전")
+    class Conversions {
+        @Test
+        @DisplayName("보낸 통화에서 금액과 소수 수수료를 함께 빼고, 받은 통화에 더한다")
+        void shouldMoveCashBetweenCurrencies() {
+            PortfolioFxConversion conv = PortfolioFxConversion.create(1L, 10L, D,
+                    "KRW", new BigDecimal("1499988"), "USD", new BigDecimal("1065"),
+                    new BigDecimal("12.34"), null, "tester");
+
+            Map<String, BigDecimal> cash = calculator.cashByCurrency(List.of(), List.of(conv));
+
+            assertThat(cash.get("KRW")).isEqualByComparingTo("-1500000.34");
+            assertThat(cash.get("USD")).isEqualByComparingTo("1065");
         }
     }
 
@@ -62,9 +89,9 @@ class PortfolioCashCalculatorTest {
         @DisplayName("통화별 입금·출금 합계")
         void shouldSumByCurrency() {
             List<PortfolioTransaction> txns = List.of(
-                    tx(TxType.DEPOSIT, "KRW", 1_000_000, 0),
-                    tx(TxType.DEPOSIT, "USD", 500, 0),
-                    tx(TxType.WITHDRAW, "KRW", 200_000, 0));
+                    tx(TxType.DEPOSIT, "KRW", 1_000_000, "0"),
+                    tx(TxType.DEPOSIT, "USD", 500, "0"),
+                    tx(TxType.WITHDRAW, "KRW", 200_000, "0"));
 
             assertThat(calculator.depositsByCurrency(txns).get("KRW")).isEqualByComparingTo("1000000");
             assertThat(calculator.depositsByCurrency(txns).get("USD")).isEqualByComparingTo("500");

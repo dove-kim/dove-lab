@@ -53,7 +53,7 @@ public class PortfolioRoundTripCalculator {
         RoundTripState s = states.computeIfAbsent(t.getAccountId() + " " + t.getSymbol(),
                 k -> new RoundTripState(t.getAccountId(), t.getSymbol(), t.getCurrency()));
         BigDecimal qty = t.getQuantity();
-        BigDecimal fee = BigDecimal.valueOf(t.getFee());
+        BigDecimal fee = t.getFee();
         if (t.getType() == TxType.BUY) {
             if (!s.cycleOpen) {
                 s.openCycle(t.getTradeDate());

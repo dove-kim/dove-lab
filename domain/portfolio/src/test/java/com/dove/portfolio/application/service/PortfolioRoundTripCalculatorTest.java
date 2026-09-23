@@ -21,21 +21,21 @@ class PortfolioRoundTripCalculatorTest {
     private static final LocalDate AS_OF = LocalDate.of(2026, 7, 15);
 
     private PortfolioTransaction tx(TxType type, long accountId, String symbol, String currency,
-                                    String quantity, String price, long amount, long fee, LocalDate date) {
+                                    String quantity, String price, long amount, String fee, LocalDate date) {
         return PortfolioTransaction.create(1L, accountId, type, date, symbol, currency,
                 quantity == null ? null : new BigDecimal(quantity),
                 price == null ? null : new BigDecimal(price),
-                BigDecimal.valueOf(amount), fee, null, null, "tester");
+                BigDecimal.valueOf(amount), new BigDecimal(fee), null, null, "tester");
     }
 
     private PortfolioTransaction buy(long accountId, String symbol, String quantity, String price,
                                      long amount, LocalDate date) {
-        return tx(TxType.BUY, accountId, symbol, "KRW", quantity, price, amount, 0L, date);
+        return tx(TxType.BUY, accountId, symbol, "KRW", quantity, price, amount, "0", date);
     }
 
     private PortfolioTransaction sell(long accountId, String symbol, String quantity, String price,
                                       long amount, LocalDate date) {
-        return tx(TxType.SELL, accountId, symbol, "KRW", quantity, price, amount, 0L, date);
+        return tx(TxType.SELL, accountId, symbol, "KRW", quantity, price, amount, "0", date);
     }
 
     @Nested
@@ -84,7 +84,7 @@ class PortfolioRoundTripCalculatorTest {
         void shouldSubtractFee() {
             List<PortfolioRoundTrip> result = calculator.fold(List.of(
                     buy(10L, "삼성전자", "10", "70000", 700_000L, LocalDate.of(2026, 7, 1)),
-                    tx(TxType.SELL, 10L, "삼성전자", "KRW", "10", "80000", 800_000L, 3_000L,
+                    tx(TxType.SELL, 10L, "삼성전자", "KRW", "10", "80000", 800_000L, "3000",
                             LocalDate.of(2026, 7, 5))), AS_OF);
 
             // 800,000 - 3,000 - 700,000 = 97,000

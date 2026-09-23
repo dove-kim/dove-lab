@@ -67,9 +67,9 @@ public class PortfolioFxConversion {
     @Comment("받은 금액(받은 통화 기준)")
     private BigDecimal toAmount;
 
-    @Column(name = "FEE", nullable = false)
+    @Column(name = "FEE", nullable = false, precision = 24, scale = 8)
     @Comment("수수료(보낸 통화 기준)")
-    private Long fee;
+    private BigDecimal fee;
 
     @Column(name = "MEMO", length = 500)
     @Comment("메모")
@@ -96,7 +96,7 @@ public class PortfolioFxConversion {
      */
     public static PortfolioFxConversion create(Long ownerMemberId, Long accountId, LocalDate convDate,
                                                String fromCurrency, BigDecimal fromAmount,
-                                               String toCurrency, BigDecimal toAmount, Long fee,
+                                               String toCurrency, BigDecimal toAmount, BigDecimal fee,
                                                String memo, String createdBy) {
         PortfolioFxConversion c = new PortfolioFxConversion();
         c.ownerMemberId = ownerMemberId;
@@ -106,7 +106,7 @@ public class PortfolioFxConversion {
         c.fromAmount = fromAmount;
         c.toCurrency = toCurrency;
         c.toAmount = toAmount;
-        c.fee = fee != null ? fee : 0L;
+        c.fee = fee != null ? fee : BigDecimal.ZERO;
         c.memo = memo;
         c.createdBy = createdBy;
         c.updatedBy = null;
@@ -120,13 +120,13 @@ public class PortfolioFxConversion {
      * 환전 내용을 갱신한다.
      */
     public void update(LocalDate convDate, String fromCurrency, BigDecimal fromAmount,
-                       String toCurrency, BigDecimal toAmount, Long fee, String memo, String updatedBy) {
+                       String toCurrency, BigDecimal toAmount, BigDecimal fee, String memo, String updatedBy) {
         this.convDate = convDate;
         this.fromCurrency = fromCurrency;
         this.fromAmount = fromAmount;
         this.toCurrency = toCurrency;
         this.toAmount = toAmount;
-        this.fee = fee != null ? fee : 0L;
+        this.fee = fee != null ? fee : BigDecimal.ZERO;
         this.memo = memo;
         this.updatedBy = updatedBy;
         this.updatedAt = LocalDateTime.now();

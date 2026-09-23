@@ -28,7 +28,7 @@ public record PortfolioFxConversionResponse(
         BigDecimal fromAmount,
         String toCurrency,
         BigDecimal toAmount,
-        Long fee,
+        BigDecimal fee,
         String memo
 ) {
     public static PortfolioFxConversionResponse of(PortfolioFxConversion c, String accountName) {

@@ -39,7 +39,7 @@ public class PortfolioTransactionService {
     @Transactional
     public PortfolioTransaction create(Long ownerMemberId, Long accountId, TxType type, LocalDate tradeDate,
                                      String symbol, String currency, BigDecimal quantity, BigDecimal price,
-                                     BigDecimal amount, Long fee,
+                                     BigDecimal amount, BigDecimal fee,
                                      String tag, String memo, String createdBy) {
         requireOwnedAccount(ownerMemberId, accountId);
         return repository.save(PortfolioTransaction.create(ownerMemberId, accountId, type, tradeDate, symbol, currency,
@@ -54,7 +54,7 @@ public class PortfolioTransactionService {
     @Transactional
     public PortfolioTransaction update(Long ownerMemberId, Long id, TxType type, LocalDate tradeDate, String symbol,
                                      String currency, BigDecimal quantity, BigDecimal price,
-                                     BigDecimal amount, Long fee, String tag, String memo, String updatedBy) {
+                                     BigDecimal amount, BigDecimal fee, String tag, String memo, String updatedBy) {
         PortfolioTransaction tx = repository.findByIdAndOwnerMemberId(id, ownerMemberId)
                 .orElseThrow(() -> new NoSuchElementException("PORTFOLIO_TRANSACTION_NOT_FOUND"));
         tx.update(type, tradeDate, symbol, currency, quantity, price, amount, fee, tag, memo, updatedBy);

@@ -52,7 +52,7 @@ class PortfolioTransactionControllerTest {
 
     private PortfolioTransaction seedBuy(long memberId, long accountId, String symbol) {
         return transactionService.create(memberId, accountId, TxType.BUY, LocalDate.of(2026, 7, 12), symbol, "KRW",
-                new BigDecimal("10"), new BigDecimal("70000"), new BigDecimal("700000"), 0L, "추세돌파", null, "tester");
+                new BigDecimal("10"), new BigDecimal("70000"), new BigDecimal("700000"), BigDecimal.ZERO, "추세돌파", null, "tester");
     }
 
     @Nested
