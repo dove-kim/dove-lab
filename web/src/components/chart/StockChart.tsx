@@ -396,6 +396,10 @@ function StockChart({
   const loadingOlderRef = useRef(false);               // 과거 fetch 인플라이트 가드
   // loadOlder가 항상 최신 의존성을 읽도록 ref로 미러 (effect 재구성 회피)
   const loadOlderRef    = useRef<() => void>(() => {});
+  // 인플라이트 가드는 리렌더 전에 풀리므로, 직전 청크를 잃지 않도록 데이터도 동기 미러로 읽는다
+  const barsRef          = useRef<PriceBar[]>([]);
+  const expandedBarsRef  = useRef<(PriceBar | null)[]>([]);
+  const indicatorDataRef = useRef<IndicatorBar[]>([]);
 
   useEffect(() => { vcRef.current    = visibleCount;        }, [visibleCount]);
   useEffect(() => { riRef.current    = rightIndex;          }, [rightIndex]);
@@ -417,6 +421,8 @@ function StockChart({
       const defaultVc = Math.max(10, Math.round(plotW / 14));
       const vc        = Math.max(2, Math.min(defaultVc, expanded.length, MAX_VISIBLE));
       if (widthRef.current === 0 && measuredW > 0) { widthRef.current = measuredW; setWidth(measuredW); }
+      barsRef.current         = arr;
+      expandedBarsRef.current = expanded;
       setBars(arr);
       setExpandedBars(expanded);
       totalRef.current  = expanded.length;
@@ -465,12 +471,13 @@ function StockChart({
   }, [code, source, adjusted]);
 
   useEffect(() => {
-    if (selectedIndicatorsKey === "") { setIndicatorData([]); return; }
+    if (selectedIndicatorsKey === "") { indicatorDataRef.current = []; setIndicatorData([]); return; }
 
     // 캐시 HIT(본조회로 채워진 경우만). 미리보기 캐시는 본조회로 갱신한다.
     const ik     = _iCacheKey(code, source, adjusted, selectedIndicatorsKey);
     const cached = _indicatorCache.get(ik);
     if (cached && _indicatorFull.has(ik)) {
+      indicatorDataRef.current = cached;
       setIndicatorData(cached);
       setIndicatorLoading(false);
       return;
@@ -487,12 +494,13 @@ function StockChart({
         const arr = Array.isArray(data) ? data : [];
         _lruSet(_indicatorCache, ik, arr);
         _indicatorFull.add(ik);
+        indicatorDataRef.current = arr;
         setIndicatorData(arr);
         setIndicatorLoading(false);
       })
       .catch((e: unknown) => {
         if (e instanceof Error && e.name === "AbortError") return;
-        setIndicatorData([]); setIndicatorLoading(false);
+        indicatorDataRef.current = []; setIndicatorData([]); setIndicatorLoading(false);
       });
     return () => controller.abort();
   }, [code, source, adjusted, selectedIndicatorsKey]);
@@ -552,11 +560,13 @@ function StockChart({
         if (older.length === 0) { hasMoreRef.current = false; return; }
 
         // 합쳐 재확장 — older(과거) + 기존 bars(최근)
-        const rawNew      = [...older, ...bars];
+        const rawNew      = [...older, ...barsRef.current];
         const expandedNew = expandBarsWithGaps(rawNew);
-        const prepended   = expandedNew.length - expandedBars.length;
+        const prepended   = expandedNew.length - expandedBarsRef.current.length;
 
         // 위치 보존: 좌측에 prepended 만큼 늘었으므로 rightIndex를 그만큼 밀어 동일 봉을 가리키게 함
+        barsRef.current         = rawNew;
+        expandedBarsRef.current = expandedNew;
         setBars(rawNew);
         setExpandedBars(expandedNew);
         totalRef.current = expandedNew.length;
@@ -568,7 +578,8 @@ function StockChart({
           const olderInd = Array.isArray(indicatorRaw) ? indicatorRaw : [];
           if (olderInd.length > 0) {
             const ik     = _iCacheKey(code, source, adjusted, selectedIndicatorsKey);
-            const merged = [...olderInd, ...indicatorData];
+            const merged = [...olderInd, ...indicatorDataRef.current];
+            indicatorDataRef.current = merged;
             setIndicatorData(merged);
             _lruSet(_indicatorCache, ik, merged);
             _indicatorFull.add(ik);

@@ -18,6 +18,14 @@ public record DailyCandle(
         String adjustmentCode
 ) {
     /**
+     * 저장 가능한 가격인지 여부. 외부 API가 과거 구간에 음수 가격을 내려주는 경우가 있어 저장 전에 거른다.
+     * 거래정지일은 시·고·저가가 0으로 오므로 0은 허용하고 종가만 양수를 요구한다.
+     */
+    public boolean hasValidPrices() {
+        return closePrice > 0 && openPrice >= 0 && highPrice >= 0 && lowPrice >= 0;
+    }
+
+    /**
      * 거래정지 여부: 거래량=0 + 시가=고가=저가=종가.
      */
     public boolean isHalt() {

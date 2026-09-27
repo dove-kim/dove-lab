@@ -80,6 +80,20 @@ class PriceCollectionServiceTest {
         return new DailyCandle(date, 1000L, 1100L, 900L, 1050L, 5000L, 5_250_000L, adjustmentCode);
     }
 
+    /**
+     * 외부 API가 내려주는 비정상 가격(음수·0) 캔들.
+     */
+    private DailyCandle invalidCandle(LocalDate date, long price) {
+        return new DailyCandle(date, price, price, price, price, 0L, 0L, "00");
+    }
+
+    /**
+     * 거래정지일 캔들: 시·고·저가는 0이고 종가만 기준가로 내려온다.
+     */
+    private DailyCandle haltedCandle(LocalDate date, long closePrice) {
+        return new DailyCandle(date, 0L, 0L, 0L, closePrice, 0L, 0L, "00");
+    }
+
     @Nested
     @DisplayName("collect: 대상 종목 없음")
     class NoTickers {
@@ -130,6 +144,44 @@ class PriceCollectionServiceTest {
             // 수정주가 이벤트 없음 → 역방향 재조회·커서 삭제 없음
             then(fetcher).should(never()).fetchAdjustedBackward(any(), any(), any(), any(), any());
             then(cursorService).should(never()).clearAdjusted(any(), any());
+        }
+    }
+
+    @Nested
+    @DisplayName("collect: 비정상 가격 응답")
+    class InvalidPrices {
+
+        @Test
+        @DisplayName("거래정지일처럼 시·고·저가만 0이고 종가가 양수면 저장한다")
+        void shouldKeepCandleWhenOnlyOpenHighLowAreZero() {
+            given(stockQueryService.findTickersByExchange(EXCHANGE)).willReturn(List.of("005930"));
+            stubFetchInWindows(List.of(haltedCandle(LocalDate.of(2012, 7, 17), 3300L)));
+            CollectionProgress progress = org.mockito.Mockito.mock(CollectionProgress.class);
+
+            service.collect(EXCHANGE, FROM, TO, progress, ADJUSTED_FROM);
+
+            ArgumentCaptor<List<StockPrice>> captor = ArgumentCaptor.forClass(List.class);
+            then(priceCommandService).should(atLeastOnce()).upsertAll(captor.capture());
+            assertThat(captor.getValue()).singleElement()
+                    .satisfies(p -> assertThat(p.getClosePrice()).isEqualTo(3300L));
+        }
+
+        @Test
+        @DisplayName("종가가 양수가 아닌 캔들은 저장하지 않는다")
+        void shouldSkipCandleWhenClosePriceNotPositive() {
+            given(stockQueryService.findTickersByExchange(EXCHANGE)).willReturn(List.of("005930"));
+            stubFetchInWindows(List.of(
+                    invalidCandle(LocalDate.of(1996, 7, 1), -669L),
+                    invalidCandle(LocalDate.of(1996, 7, 2), 0L),
+                    candle(LocalDate.of(1996, 7, 3), "00")));
+            CollectionProgress progress = org.mockito.Mockito.mock(CollectionProgress.class);
+
+            service.collect(EXCHANGE, FROM, TO, progress, ADJUSTED_FROM);
+
+            ArgumentCaptor<List<StockPrice>> captor = ArgumentCaptor.forClass(List.class);
+            then(priceCommandService).should(atLeastOnce()).upsertAll(captor.capture());
+            assertThat(captor.getValue()).singleElement()
+                    .satisfies(p -> assertThat(p.getTradeDate()).isEqualTo(LocalDate.of(1996, 7, 3)));
         }
     }
 
