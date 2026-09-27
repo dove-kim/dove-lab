@@ -79,6 +79,7 @@ public class PriceCollectionService {
                     chunk -> {
                         List<StockPrice> prices = new ArrayList<>(chunk.size());
                         for (DailyCandle c : chunk) {
+                            if (!c.hasValidPrices()) continue; // 외부 응답의 음수·0 가격은 저장하지 않음
                             prices.add(toPrice(unit.ticker(), exchange, unit.priceType(), c));
                             // 수정주가 이벤트 감지 → ADJUSTED 재조회 트리거
                             if (unit.priceType() == PriceType.RAW && isAdjustmentEvent(c.adjustmentCode())) {
@@ -119,6 +120,7 @@ public class PriceCollectionService {
         List<String> failed = Parallel.runResilient(tickers, concurrency, maxFailures, ticker -> {
             fetcher.fetchAdjustedBackward(exchange, ticker, from, upTo, (List<DailyCandle> chunk) -> {
                 List<StockPrice> prices = chunk.stream()
+                        .filter(DailyCandle::hasValidPrices)
                         .map(c -> toPrice(ticker, exchange, PriceType.ADJUSTED, c))
                         .toList();
                 priceCommandService.upsertAll(prices);

@@ -63,14 +63,13 @@ public class ModelScoreSweepService {
 
     /**
      * 모든 ACTIVE 모델을 채점하고 모델별 결과를 반환한다. 한 모델 실패는 다른 모델을 막지 않으며, 실패 모델은 커서를 전진하지 않는다.
-     * 채점 상한은 호출일 전일(어제)로 캡한다(당일은 일일 잡 전담).
+     * 채점 상한은 호출일이며, 실질 상한은 지표 프런티어(계산이 끝난 최신 거래일)다.
      */
     public List<ModelScoringOutcome> scoreAllActiveModels(LocalDate today) {
-        LocalDate yesterday = today.minusDays(1);
         List<ModelScoringOutcome> outcomes = new ArrayList<>();
         for (MlModel model : modelRepository.findByStatus(ModelStatus.ACTIVE)) {
             try {
-                scoreModel(model, yesterday);
+                scoreModel(model, today);
                 healthService.recordSuccess(model.getId());
                 outcomes.add(ModelScoringOutcome.ok(model.getId(), model.getName()));
             } catch (Exception e) {

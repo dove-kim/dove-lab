@@ -219,6 +219,21 @@ class ModelScoreSweepServiceTest {
         }
 
         @Test
+        @DisplayName("지표 프런티어가 당일이면 당일까지 채점한다")
+        void shouldScoreUpToTodayWhenFrontierIsToday() {
+            MlModel model = activeModel(1L, null);
+            when(modelRepository.findByStatus(ModelStatus.ACTIVE)).thenReturn(List.of(model));
+            when(rankSourceSupport.findIndicatorFrontier(MEMBERS, PRICE_TYPE)).thenReturn(TODAY);
+            when(sourceSupport.findScoreTradeDates(MEMBERS, PRICE_TYPE, null, TODAY))
+                    .thenReturn(List.of());
+
+            service.scoreAllActiveModels(TODAY);
+
+            verify(sourceSupport).findScoreTradeDates(MEMBERS, PRICE_TYPE, null, TODAY);
+            verifyNoInteractions(modelScorer);
+        }
+
+        @Test
         @DisplayName("rank 프런티어가 없으면 채점하지 않는다")
         void shouldSkipWhenNoFrontier() {
             MlModel model = activeModel(1L, null);
