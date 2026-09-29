@@ -18,6 +18,7 @@ import com.dove.stock.application.service.StockEventService;
 import com.dove.stock.application.service.StockPriceQueryService;
 import com.dove.stock.application.service.StockQueryService;
 import com.dove.stock.domain.entity.Stock;
+import com.dove.stock.domain.entity.StockPrice;
 import com.dove.stock.domain.enums.PriceType;
 import com.dove.stock.domain.enums.StockExchange;
 import com.dove.userfeature.domain.capability.Capability;
@@ -129,13 +130,42 @@ public class StockController {
                                     @RequestParam(defaultValue = "120") int limit,
                                     @RequestParam(required = false) String before) {
         PriceType priceType = adjusted ? PriceType.ADJUSTED : PriceType.RAW;
-        StockExchange exchange = resolveChartExchange(source, ticker, priceType);
-        var prices = (before != null && !before.isBlank())
-                ? priceQueryService.findBefore(ticker, exchange, priceType, LocalDate.parse(before), limit)
-                : priceQueryService.findRecent(ticker, exchange, priceType, limit);
-        return prices.stream()
+        StockExchange exchange = resolveExchange(source, ticker);
+        LocalDate beforeExclusive = (before != null && !before.isBlank()) ? LocalDate.parse(before) : null;
+        return spliceWithHomeMarket(ticker, exchange, priceType, beforeExclusive, limit).stream()
                 .map(p -> PriceBar.of(p.getTradeDate(), p))
                 .toList();
+    }
+
+    /**
+     * 통합(INTEGRATED) 봉을 요청 개수만큼 채우고, 모자란 과거 구간은 홈마켓(KOSPI/KOSDAQ) 봉으로 앞에 잇는다.
+     * KIS가 통합시세 개시일 이후만 내려주므로 늦게 편입된 종목은 그 이전 통합 봉이 존재하지 않는다.
+     */
+    private List<StockPrice> spliceWithHomeMarket(String ticker, StockExchange exchange, PriceType priceType,
+                                                  LocalDate beforeExclusive, int limit) {
+        List<StockPrice> bars = findBars(ticker, exchange, priceType, beforeExclusive, limit);
+        if (exchange != StockExchange.INTEGRATED || bars.size() >= limit) {
+            return bars;
+        }
+        LocalDate cutoff = bars.isEmpty() ? beforeExclusive : bars.get(0).getTradeDate();
+        List<StockPrice> older = findBars(ticker, resolveExchange("KRX", ticker), priceType,
+                cutoff, limit - bars.size());
+        if (older.isEmpty()) {
+            return bars;
+        }
+        List<StockPrice> spliced = new ArrayList<>(older);
+        spliced.addAll(bars);
+        return spliced;
+    }
+
+    /**
+     * beforeExclusive가 있으면 그 직전 과거 구간을, 없으면 최근 구간을 거래일 오름차순으로 반환한다.
+     */
+    private List<StockPrice> findBars(String ticker, StockExchange exchange, PriceType priceType,
+                                      LocalDate beforeExclusive, int limit) {
+        return beforeExclusive != null
+                ? priceQueryService.findBefore(ticker, exchange, priceType, beforeExclusive, limit)
+                : priceQueryService.findRecent(ticker, exchange, priceType, limit);
     }
 
     /**
@@ -159,7 +189,7 @@ public class StockController {
         if (indicatorTypes.isEmpty()) return List.of();
 
         PriceType priceType = adjusted ? PriceType.ADJUSTED : PriceType.RAW;
-        // 가격 차트와 동일 규칙으로 거래소 결정(통합 없으면 홈마켓) → 가격·지표 소스 일관
+        // 통합 이력이 짧으면 지표가 워밍업 미달로 전부 NULL이라, 가격처럼 잇지 않고 전 구간을 홈마켓에서 읽는다
         StockExchange exchange = resolveChartExchange(source, ticker, priceType);
         Map<LocalDate, Map<IndicatorType, Double>> bars =
                 (before != null && !before.isBlank())
@@ -258,16 +288,19 @@ public class StockController {
     }
 
     /**
-     * 차트용 거래소 결정 — 통합(INTEGRATED) 소스인데 그 종목에 통합 데이터가 없으면(NXT 미거래)
-     * 홈마켓(KOSPI/KOSDAQ)으로 폴백한다. 유무는 최신 1건 조회로만 확인해 본조회는 한 번만 돈다.
+     * 지표용 거래소 결정 — 통합(INTEGRATED) 이력이 홈마켓보다 짧으면 홈마켓(KOSPI/KOSDAQ)으로 폴백한다.
+     * 지표는 워밍업이 필요해 통합 이력이 짧으면 값이 전부 NULL이므로, 가격처럼 이어붙이지 않고 전 구간을 홈마켓에서 읽는다.
      */
     private StockExchange resolveChartExchange(String source, String ticker, PriceType priceType) {
         StockExchange exchange = resolveExchange(source, ticker);
-        if (exchange == StockExchange.INTEGRATED
-                && priceQueryService.findRecent(ticker, exchange, priceType, 1).isEmpty()) {
-            return resolveExchange("KRX", ticker);
+        if (exchange != StockExchange.INTEGRATED) {
+            return exchange;
         }
-        return exchange;
+        StockExchange home = resolveExchange("KRX", ticker);
+        LocalDate upperBound = LocalDate.now().plusDays(1);
+        long integrated = priceQueryService.countBefore(ticker, exchange, priceType, upperBound);
+        long homeMarket = priceQueryService.countBefore(ticker, home, priceType, upperBound);
+        return integrated < homeMarket ? home : exchange;
     }
 
     /**

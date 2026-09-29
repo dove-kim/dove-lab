@@ -19,7 +19,8 @@ public class RedissonRateLimiter implements RateLimiter {
         this.rateLimiter = redisson.getRateLimiter(key);
         // 버스트 방지: "1초당 N건"이 아니라 "intervalMs당 1건"으로 균등 분산
         long intervalMs = Math.max(1, 1000L / maxPerSecond);
-        this.rateLimiter.trySetRate(RateType.OVERALL, 1, intervalMs, RateIntervalUnit.MILLISECONDS);
+        // trySetRate는 Redis에 설정이 이미 있으면 무시되어 설정 변경이 반영되지 않는다.
+        this.rateLimiter.setRate(RateType.OVERALL, 1, intervalMs, RateIntervalUnit.MILLISECONDS);
     }
 
     @Override

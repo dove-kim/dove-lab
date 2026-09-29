@@ -6,6 +6,7 @@ import com.dove.indicator.application.service.IndicatorCursorService;
 import com.dove.stockcollection.application.port.DailyPriceFetcher;
 import com.dove.stockcollection.domain.model.DailyCandle;
 import com.dove.stock.application.service.StockPriceCommandService;
+import com.dove.stock.application.service.StockPriceQueryService;
 import com.dove.stock.application.service.StockQueryService;
 import com.dove.stock.domain.entity.StockPrice;
 import com.dove.stock.domain.enums.PriceType;
@@ -39,13 +40,25 @@ public class PriceCollectionService {
     private final DailyPriceFetcher fetcher;
     private final StockQueryService stockQueryService;
     private final StockPriceCommandService priceCommandService;
+    private final StockPriceQueryService priceQueryService;
     private final IndicatorCursorService cursorService;
+
+    /** 가격제한폭(±30%)에 여유를 둔 비율. 이보다 큰 수정주가 변동은 시장 변동이 아니라 미반영 권리이벤트로 본다. */
+    private static final double PRICE_LIMIT_RATIO = 0.35;
 
     /**
      * KIS 일봉 변동구분코드가 수정주가 이벤트(배당락·분할 등)인지 여부.
      */
     private static boolean isAdjustmentEvent(String kisCode) {
         return kisCode != null && !kisCode.isBlank() && !"00".equals(kisCode);
+    }
+
+    /**
+     * 수정주가가 가격제한폭을 넘게 움직였는지 여부. 액면변경·감자는 KIS 락 구분 코드에 잡히지 않으므로
+     * 가격 자체로 감지한다.
+     */
+    private static boolean exceedsPriceLimit(long prevClose, long closePrice) {
+        return prevClose > 0 && Math.abs(closePrice - prevClose) > prevClose * PRICE_LIMIT_RATIO;
     }
 
     /**
@@ -75,6 +88,8 @@ public class PriceCollectionService {
         // 한 종목 실패는 건너뛰고 계속, 실패가 임계(10%·최소 20)에 달하면 체계적 장애로 보고 중단.
         int maxFailures = Math.max(20, units.size() / 10);
         List<CollectionUnit> failedUnits = Parallel.runResilient(units, concurrency, maxFailures, unit -> {
+            // ADJUSTED는 직전 저장 종가에서 이어 붙여 가격 점프를 판단한다 (청크 경계에서도 끊기지 않게 유지)
+            long[] prevClose = {unit.priceType() == PriceType.ADJUSTED ? lastStoredClose(unit, exchange) : 0L};
             fetcher.fetchInWindows(exchange, unit.ticker(), unit.from(), unit.to(), unit.priceType(),
                     chunk -> {
                         List<StockPrice> prices = new ArrayList<>(chunk.size());
@@ -84,6 +99,11 @@ public class PriceCollectionService {
                             // 수정주가 이벤트 감지 → ADJUSTED 재조회 트리거
                             if (unit.priceType() == PriceType.RAW && isAdjustmentEvent(c.adjustmentCode())) {
                                 adjEventTickers.add(unit.ticker());
+                            } else if (unit.priceType() == PriceType.ADJUSTED) {
+                                if (exceedsPriceLimit(prevClose[0], c.closePrice())) {
+                                    adjEventTickers.add(unit.ticker());
+                                }
+                                prevClose[0] = c.closePrice();
                             }
                         }
                         priceCommandService.upsertAll(prices);
@@ -132,6 +152,17 @@ public class PriceCollectionService {
             log.warn("[{}] ADJUSTED 재조회 {}종목 중 {}건 실패(건너뜀): {}", exchange, tickers.size(), failed.size(),
                     failed.stream().distinct().limit(10).toList());
         }
+    }
+
+    /**
+     * 수집 구간 직전에 저장돼 있던 수정주가 종가. 없으면 0.
+     */
+    private long lastStoredClose(CollectionUnit unit, StockExchange exchange) {
+        return priceQueryService.findBefore(unit.ticker(), exchange, PriceType.ADJUSTED, unit.from(), 1)
+                .stream()
+                .map(StockPrice::getClosePrice)
+                .findFirst()
+                .orElse(0L);
     }
 
     private StockPrice toPrice(String ticker, StockExchange exchange, PriceType type, DailyCandle c) {
