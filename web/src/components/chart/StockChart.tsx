@@ -180,6 +180,11 @@ function countWeekdaysBetween(from: Date, to: Date): number {
 function isHaltBar(bar: PriceBar): boolean    { return bar.status === "HALTED"; }
 function isDelistedBar(bar: PriceBar): boolean { return bar.status === "DELISTED"; }
 
+// 거래일이 없는 구간은 휴장이므로 붙여 그린다. 명절 연휴가 최대 1~2주라 그보다 긴 공백만
+// 거래정지·상장폐지로 보고 빈 칸으로 드러낸다. 그 경우에도 슬롯 수를 고정해 수천 칸이 생기지 않게 한다.
+const GAP_MIN_WEEKDAYS = 20;
+const GAP_MAX_SLOTS    = 10;
+
 function expandBarsWithGaps(rawBars: PriceBar[]): (PriceBar | null)[] {
   const result: (PriceBar | null)[] = [];
   for (let i = 0; i < rawBars.length; i++) {
@@ -187,8 +192,9 @@ function expandBarsWithGaps(rawBars: PriceBar[]): (PriceBar | null)[] {
       const prev = new Date(rawBars[i - 1].date);
       const curr = new Date(rawBars[i].date);
       const missing = countWeekdaysBetween(prev, curr);
-      if (missing > 5) {
-        for (let j = 0; j < missing; j++) result.push(null);
+      if (missing >= GAP_MIN_WEEKDAYS) {
+        const slots = Math.min(missing, GAP_MAX_SLOTS);
+        for (let j = 0; j < slots; j++) result.push(null);
       }
     }
     result.push(rawBars[i]);

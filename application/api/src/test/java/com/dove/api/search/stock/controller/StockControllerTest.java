@@ -6,7 +6,11 @@ import com.dove.investorflow.application.service.InvestorDailyService;
 import com.dove.investorflow.domain.entity.InvestorDaily;
 import com.dove.market.domain.enums.MarketType;
 import com.dove.stock.application.service.StockCommandService;
+import com.dove.stock.application.service.StockPriceCommandService;
 import com.dove.stock.domain.entity.Stock;
+import com.dove.stock.domain.entity.StockPrice;
+import com.dove.stock.domain.enums.PriceType;
+import com.dove.stock.domain.enums.StockExchange;
 
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.DisplayName;
@@ -34,6 +38,7 @@ class StockControllerTest {
 
     @Autowired MockMvc mockMvc;
     @Autowired StockCommandService stockCommandService;
+    @Autowired StockPriceCommandService priceCommandService;
     @Autowired InvestorDailyService investorDailyService;
 
     @BeforeEach
@@ -41,6 +46,11 @@ class StockControllerTest {
         stockCommandService.insertIfAbsent(List.of(
                 new Stock(TICKER, "KR7005930003", MarketType.KOSPI,
                         LocalDate.of(1975, 6, 11), "주권", "보통주")));
+    }
+
+    private static StockPrice adjustedPrice(StockExchange exchange, LocalDate tradeDate, long closePrice) {
+        return new StockPrice(TICKER, exchange, PriceType.ADJUSTED, tradeDate,
+                closePrice, closePrice, closePrice, closePrice, 10_000L, 10_500_000L);
     }
 
     @Nested
@@ -115,6 +125,60 @@ class StockControllerTest {
                     .andExpect(status().isOk())
                     .andExpect(jsonPath("$").isArray())
                     .andExpect(jsonPath("$").isEmpty());
+        }
+
+        @Test
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
+        @DisplayName("통합 봉이 시작되기 전 구간은 홈마켓 봉으로 이어붙인다")
+        void shouldPrependHomeMarketBarsBeforeIntegratedStarts() throws Exception {
+            priceCommandService.upsertAll(List.of(
+                    adjustedPrice(StockExchange.KOSPI, LocalDate.of(2026, 9, 23), 1000L),
+                    adjustedPrice(StockExchange.KOSPI, LocalDate.of(2026, 9, 24), 1001L),
+                    adjustedPrice(StockExchange.KOSPI, LocalDate.of(2026, 9, 25), 1002L),
+                    adjustedPrice(StockExchange.INTEGRATED, LocalDate.of(2026, 9, 25), 2002L)));
+
+            mockMvc.perform(get("/stocks/" + TICKER + "/prices")
+                            .param("source", "INTEGRATED").param("limit", "3"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(3))
+                    .andExpect(jsonPath("$[0].close").value(1000))   // KRX
+                    .andExpect(jsonPath("$[1].close").value(1001))   // KRX
+                    .andExpect(jsonPath("$[2].close").value(2002));  // 통합 값 보존
+        }
+
+        @Test
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
+        @DisplayName("통합 봉만으로 요청 개수가 차면 이어붙이지 않는다")
+        void shouldNotPrependWhenIntegratedFillsTheLimit() throws Exception {
+            priceCommandService.upsertAll(List.of(
+                    adjustedPrice(StockExchange.KOSPI, LocalDate.of(2026, 9, 24), 1001L),
+                    adjustedPrice(StockExchange.INTEGRATED, LocalDate.of(2026, 9, 24), 2001L),
+                    adjustedPrice(StockExchange.INTEGRATED, LocalDate.of(2026, 9, 25), 2002L)));
+
+            mockMvc.perform(get("/stocks/" + TICKER + "/prices")
+                            .param("source", "INTEGRATED").param("limit", "2"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(2))
+                    .andExpect(jsonPath("$[0].close").value(2001))
+                    .andExpect(jsonPath("$[1].close").value(2002));
+        }
+
+        @Test
+        @WithApiUser(capabilities = {"STOCK_VIEW"})
+        @DisplayName("통합 시작일 이전으로 페이지를 넘기면 홈마켓 봉을 반환한다")
+        void shouldReturnHomeMarketBarsWhenPagingBeforeIntegratedStart() throws Exception {
+            priceCommandService.upsertAll(List.of(
+                    adjustedPrice(StockExchange.KOSPI, LocalDate.of(2026, 9, 23), 1000L),
+                    adjustedPrice(StockExchange.KOSPI, LocalDate.of(2026, 9, 24), 1001L),
+                    adjustedPrice(StockExchange.INTEGRATED, LocalDate.of(2026, 9, 25), 2002L)));
+
+            mockMvc.perform(get("/stocks/" + TICKER + "/prices")
+                            .param("source", "INTEGRATED")
+                            .param("before", "2026-09-25").param("limit", "5"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$.length()").value(2))
+                    .andExpect(jsonPath("$[0].close").value(1000))
+                    .andExpect(jsonPath("$[1].close").value(1001));
         }
 
         @Test

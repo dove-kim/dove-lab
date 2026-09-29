@@ -28,8 +28,11 @@ public class KisProperties {
     /** KIS 일봉 데이터 기산일. 미설정 시 KIS 시스템 최초 제공일(1985-10-05) 사용. */
     private LocalDate dataStartDate = LocalDate.of(1985, 10, 5);
 
-    /** KIS 주식 API 초당 최대 시작 수. (20 = 50ms 간격) */
-    private int stockPerSecond = 20;
+    /**
+     * KIS 주식 API 초당 최대 시작 수. KIS 한도(초당 20건)에 딱 맞추면 초 경계에서 EGW00201이 나므로
+     * 여유를 둔다. (18 = 55ms 간격)
+     */
+    private int stockPerSecond = 18;
 
     /** EGW00201(초당 한도) 발생 시 최대 재시도 횟수. throttle 지속 시간을 커버할 만큼 설정. */
     private int stockMaxRetries = 5;

@@ -128,9 +128,8 @@ docker compose -f docker-compose.local.yml up -d
 |---|---|---|
 | `scripts/init.sql` | 스키마 DDL | ✅ |
 | `scripts/init_data.sql` | 로컬 개발용 사용자 계정 (비밀번호: `1234`) | ✅ |
-| `scripts/init_stock_data.sql` | 종목·주가·기술지표 mock 데이터 | 주석 처리 시 제외 가능 |
 
-종목 데이터가 불필요하면 `docker-compose.local.yml`에서 `init_stock_data.sql` 마운트 줄을 주석 처리한다.
+종목·주가 데이터는 시드하지 않는다. 로컬에서 화면을 확인하려면 운영에서 필요한 구간만 복제한다.
 
 **로컬 개발 계정 (비밀번호 공통: `1234`)**
 
@@ -204,7 +203,7 @@ docker compose -f docker-compose.prod.yml up -d
 |---|---|
 | `init.sql` | 스키마 DDL (단일 진실 원천) |
 | `init_data.sql` | 로컬 개발용 사용자 시드 |
-| `init_stock_data.sql` | 로컬 개발용 종목·주가·기술지표 mock |
+| `scoring/score.py` | 모델 채점 스코어러 — 서버가 stdin/stdout JSON으로 호출 |
 
 ### 신규 지표 추가 절차
 

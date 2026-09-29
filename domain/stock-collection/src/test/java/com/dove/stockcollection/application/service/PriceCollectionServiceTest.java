@@ -2,6 +2,7 @@ package com.dove.stockcollection.application.service;
 
 import com.dove.indicator.application.service.IndicatorCursorService;
 import com.dove.stock.application.service.StockPriceCommandService;
+import com.dove.stock.application.service.StockPriceQueryService;
 import com.dove.stock.application.service.StockQueryService;
 import com.dove.stock.domain.entity.StockPrice;
 import com.dove.stock.domain.enums.PriceType;
@@ -52,6 +53,8 @@ class PriceCollectionServiceTest {
     @Mock
     private StockPriceCommandService priceCommandService;
     @Mock
+    private StockPriceQueryService priceQueryService;
+    @Mock
     private IndicatorCursorService cursorService;
 
     @InjectMocks
@@ -92,6 +95,21 @@ class PriceCollectionServiceTest {
      */
     private DailyCandle haltedCandle(LocalDate date, long closePrice) {
         return new DailyCandle(date, 0L, 0L, 0L, closePrice, 0L, 0L, "00");
+    }
+
+    /**
+     * 락 구분 코드 없이 종가만 지정하는 캔들.
+     */
+    private DailyCandle closeCandle(LocalDate date, long closePrice) {
+        return new DailyCandle(date, closePrice, closePrice, closePrice, closePrice, 5000L, 5_250_000L, "00");
+    }
+
+    /**
+     * 직전 거래일까지 저장돼 있던 수정주가.
+     */
+    private StockPrice storedPrice(long closePrice) {
+        return new StockPrice("005930", EXCHANGE, PriceType.ADJUSTED, FROM.minusDays(1),
+                closePrice, closePrice, closePrice, closePrice, 5000L, 5_250_000L);
     }
 
     @Nested
@@ -207,6 +225,53 @@ class PriceCollectionServiceTest {
             then(cursorService).should().rewindExchangeBefore(EXCHANGE, FROM);
             then(fetcher).should().fetchAdjustedBackward(eq(EXCHANGE), eq("005930"), eq(ADJUSTED_FROM), eq(TO), any());
             then(cursorService).should().clearAdjusted("005930", EXCHANGE);
+        }
+
+        @Test
+        @DisplayName("락 구분 코드가 없어도 수정주가가 가격제한폭을 넘게 뛰면 ADJUSTED를 재조회한다")
+        void shouldRefetchAdjustedWhenAdjustedCloseJumpsBeyondPriceLimit() {
+            given(stockQueryService.findTickersByExchange(EXCHANGE)).willReturn(List.of("011330"));
+            given(priceQueryService.findBefore("011330", EXCHANGE, PriceType.ADJUSTED, FROM, 1))
+                    .willReturn(List.of(storedPrice(396L)));
+            // 액면병합 — KIS 락 구분 코드는 "00"이라 기존 트리거로는 감지되지 않는다
+            stubFetchInWindows(List.of(closeCandle(LocalDate.of(2024, 6, 30), 3850L)));
+            willAnswer(invocation -> {
+                Consumer<List<DailyCandle>> consumer = invocation.getArgument(4);
+                consumer.accept(List.of(closeCandle(LocalDate.of(2024, 6, 30), 3850L)));
+                return null;
+            }).given(fetcher).fetchAdjustedBackward(eq(EXCHANGE), eq("011330"), eq(ADJUSTED_FROM), eq(TO), any());
+
+            service.collect(EXCHANGE, FROM, TO, CollectionProgress.NOOP, ADJUSTED_FROM);
+
+            then(fetcher).should().fetchAdjustedBackward(eq(EXCHANGE), eq("011330"), eq(ADJUSTED_FROM), eq(TO), any());
+            then(cursorService).should().clearAdjusted("011330", EXCHANGE);
+        }
+
+        @Test
+        @DisplayName("수정주가 변동이 가격제한폭 이내면 재조회하지 않는다")
+        void shouldNotRefetchWhenAdjustedCloseMoveWithinPriceLimit() {
+            given(stockQueryService.findTickersByExchange(EXCHANGE)).willReturn(List.of("005930"));
+            given(priceQueryService.findBefore("005930", EXCHANGE, PriceType.ADJUSTED, FROM, 1))
+                    .willReturn(List.of(storedPrice(1000L)));
+            stubFetchInWindows(List.of(closeCandle(LocalDate.of(2024, 3, 4), 1200L)));
+
+            service.collect(EXCHANGE, FROM, TO, CollectionProgress.NOOP, ADJUSTED_FROM);
+
+            then(fetcher).should(never()).fetchAdjustedBackward(any(), any(), any(), any(), any());
+            then(cursorService).should(never()).clearAdjusted(any(), any());
+        }
+
+        @Test
+        @DisplayName("직전 저장 종가가 없으면(신규 상장) 재조회하지 않는다")
+        void shouldNotRefetchWhenNoPreviousStoredClose() {
+            given(stockQueryService.findTickersByExchange(EXCHANGE)).willReturn(List.of("005930"));
+            given(priceQueryService.findBefore("005930", EXCHANGE, PriceType.ADJUSTED, FROM, 1))
+                    .willReturn(List.of());
+            stubFetchInWindows(List.of(closeCandle(LocalDate.of(2024, 3, 4), 3850L)));
+
+            service.collect(EXCHANGE, FROM, TO, CollectionProgress.NOOP, ADJUSTED_FROM);
+
+            then(fetcher).should(never()).fetchAdjustedBackward(any(), any(), any(), any(), any());
         }
 
         @Test
