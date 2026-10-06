@@ -248,6 +248,44 @@ class PriceCollectionServiceTest {
         }
 
         @Test
+        @DisplayName("KIS가 최신순으로 내려줘도 연속 거래일끼리 비교해 오탐하지 않는다")
+        void shouldNotRefetchWhenDescendingChunkHasNoConsecutiveJump() {
+            given(stockQueryService.findTickersByExchange(EXCHANGE)).willReturn(List.of("005930"));
+            given(priceQueryService.findBefore("005930", EXCHANGE, PriceType.ADJUSTED, FROM, 1))
+                    .willReturn(List.of(storedPrice(1000L)));
+            // 최신순 — 날짜 순서대로 보면 하루 변동은 10~14%지만, 뒤집힌 채로 보면 1,000 -> 1,400(+40%)이 된다
+            stubFetchInWindows(List.of(
+                    closeCandle(LocalDate.of(2024, 3, 6), 1400L),
+                    closeCandle(LocalDate.of(2024, 3, 5), 1250L),
+                    closeCandle(LocalDate.of(2024, 3, 4), 1100L)));
+
+            service.collect(EXCHANGE, FROM, TO, CollectionProgress.NOOP, ADJUSTED_FROM);
+
+            then(fetcher).should(never()).fetchAdjustedBackward(any(), any(), any(), any(), any());
+        }
+
+        @Test
+        @DisplayName("최신순 청크 안의 실제 액면변경 점프는 감지한다")
+        void shouldRefetchWhenDescendingChunkContainsRealJump() {
+            given(stockQueryService.findTickersByExchange(EXCHANGE)).willReturn(List.of("011330"));
+            given(priceQueryService.findBefore("011330", EXCHANGE, PriceType.ADJUSTED, FROM, 1))
+                    .willReturn(List.of(storedPrice(390L)));
+            stubFetchInWindows(List.of(
+                    closeCandle(LocalDate.of(2024, 6, 30), 3850L),
+                    closeCandle(LocalDate.of(2024, 6, 29), 400L),
+                    closeCandle(LocalDate.of(2024, 6, 26), 396L)));
+            willAnswer(invocation -> {
+                Consumer<List<DailyCandle>> consumer = invocation.getArgument(4);
+                consumer.accept(List.of(closeCandle(LocalDate.of(2024, 6, 30), 3850L)));
+                return null;
+            }).given(fetcher).fetchAdjustedBackward(eq(EXCHANGE), eq("011330"), eq(ADJUSTED_FROM), eq(TO), any());
+
+            service.collect(EXCHANGE, FROM, TO, CollectionProgress.NOOP, ADJUSTED_FROM);
+
+            then(cursorService).should().clearAdjusted("011330", EXCHANGE);
+        }
+
+        @Test
         @DisplayName("수정주가 변동이 가격제한폭 이내면 재조회하지 않는다")
         void shouldNotRefetchWhenAdjustedCloseMoveWithinPriceLimit() {
             given(stockQueryService.findTickersByExchange(EXCHANGE)).willReturn(List.of("005930"));

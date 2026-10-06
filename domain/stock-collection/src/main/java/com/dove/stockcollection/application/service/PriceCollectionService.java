@@ -20,6 +20,7 @@ import org.springframework.stereotype.Service;
 
 import java.time.LocalDate;
 import java.util.ArrayList;
+import java.util.Comparator;
 import java.util.List;
 import java.util.Set;
 import java.util.concurrent.ConcurrentHashMap;
@@ -92,9 +93,13 @@ public class PriceCollectionService {
             long[] prevClose = {unit.priceType() == PriceType.ADJUSTED ? lastStoredClose(unit, exchange) : 0L};
             fetcher.fetchInWindows(exchange, unit.ticker(), unit.from(), unit.to(), unit.priceType(),
                     chunk -> {
-                        List<StockPrice> prices = new ArrayList<>(chunk.size());
-                        for (DailyCandle c : chunk) {
-                            if (!c.hasValidPrices()) continue; // 외부 응답의 음수·0 가격은 저장하지 않음
+                        // KIS는 최신순으로 내려준다 — 전일 대비 판정을 위해 거래일 오름차순으로 세운다
+                        List<DailyCandle> ordered = chunk.stream()
+                                .filter(DailyCandle::hasValidPrices) // 외부 응답의 음수·0 가격은 저장하지 않음
+                                .sorted(Comparator.comparing(DailyCandle::tradingDate))
+                                .toList();
+                        List<StockPrice> prices = new ArrayList<>(ordered.size());
+                        for (DailyCandle c : ordered) {
                             prices.add(toPrice(unit.ticker(), exchange, unit.priceType(), c));
                             // 수정주가 이벤트 감지 → ADJUSTED 재조회 트리거
                             if (unit.priceType() == PriceType.RAW && isAdjustmentEvent(c.adjustmentCode())) {
