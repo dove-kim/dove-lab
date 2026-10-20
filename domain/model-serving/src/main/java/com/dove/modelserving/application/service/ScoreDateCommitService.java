@@ -22,7 +22,7 @@ public class ScoreDateCommitService {
     private final MlModelRepositorySupport modelRepositorySupport;
 
     /**
-     * 한 거래일의 점수를 저장하고 그 거래일로 모델 커서를 CAS 전진한다.
+     * 한 거래일의 점수를 그 거래일 기존 점수와 바꿔치고 그 거래일로 모델 커서를 CAS 전진한다.
      * 커서가 기대값과 다르면 저장과 함께 롤백하고 예외를 던진다(멱등 중단).
      *
      * @param modelId   채점 모델 ID
@@ -33,6 +33,8 @@ public class ScoreDateCommitService {
      */
     @Transactional
     public void commit(Long modelId, List<StockModelScore> scores, LocalDate expected, LocalDate tradeDate) {
+        // 덮어쓰기가 아니라 교체 — 수정주가 재조정으로 진입존에서 빠진 종목의 옛 점수를 남기지 않는다.
+        scoreRepository.deleteByIdModelIdAndIdTradeDate(modelId, tradeDate);
         if (!scores.isEmpty()) {
             scoreRepository.saveAll(scores);
         }
