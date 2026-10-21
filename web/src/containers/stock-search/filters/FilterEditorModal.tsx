@@ -1,6 +1,8 @@
 "use client";
 
 import { useState, useCallback } from "react";
+import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/utils/cn";
 import { cx } from "@/utils/cx";
 import {
   GroupNode,
@@ -34,16 +36,21 @@ export default function FilterEditorModal({ open, onClose, onSaved, initial, sto
   if (!open) return null;
 
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
-      <div className="bg-slate-900 border border-white/10 rounded-2xl w-full max-w-4xl max-h-[90vh] flex flex-col">
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        aria-describedby={undefined}
+        onInteractOutside={(e) => e.preventDefault()}
+        className={cn(cx.dialogSheet, "max-h-[90vh] sm:max-w-4xl")}
+      >
         <FilterEditorContent
           onClose={onClose}
           onSaved={onSaved}
           initial={initial}
           stockFilters={stockFilters}
         />
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 
@@ -155,14 +162,14 @@ function FilterEditorContent({
     <div className="flex flex-col h-full min-h-0">
       {/* 헤더 */}
       <div className="flex items-center justify-between px-6 py-4 border-b border-white/10 flex-shrink-0">
-        <h1 className="text-lg font-semibold text-white">
+        <DialogTitle className="text-lg font-semibold text-white">
           {initial ? "필터 수정" : "새 필터 만들기"}
-        </h1>
-        <button onClick={onClose} className="text-slate-400 hover:text-white transition">
+        </DialogTitle>
+        <DialogClose className="text-slate-400 hover:text-white transition" aria-label="닫기">
           <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
             <path d="M18 6 6 18M6 6l12 12" />
           </svg>
-        </button>
+        </DialogClose>
       </div>
 
       {/* 기본 설정 */}

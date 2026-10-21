@@ -10,12 +10,16 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { INDICATOR_META, PANEL_LABELS, SELECTOR_GROUPS, type PanelId } from "@/components/chart/indicatorMeta";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/utils/cn";
+import Select from "@/components/Select";
+import { cx } from "@/utils/cx";
+import { useConfirm } from "@/components/ConfirmProvider";
 import type { IndicatorType } from "@/types/filter";
 import type { IndicatorPreset, IndicatorPresetItem } from "@/types/indicator-preset";
 import { COLOR_PALETTE, LINE_WIDTHS } from "@/types/indicator-preset";
 import type { ModelSummary, CustomMetricSummary, ChartOverlayConfig } from "@/types/chart-overlay";
 import { DEFAULT_CHART_OVERLAY } from "@/types/chart-overlay";
-import { cx } from "@/utils/cx";
 
 const DEFAULT_PANEL_ORDER: PanelId[] = [
   "RSI", "MACD", "STOCH", "ADX", "OSCILLATOR", "VOLUME_IND", "OBV", "VOLATILITY", "BB_MISC",
@@ -103,7 +107,7 @@ function ColorPicker({ color, onChange }: { color: string; onChange: (c: string)
         <>
           <div className="fixed inset-0 z-[60]" onClick={() => setOpen(false)} />
           <div
-            className="fixed z-[61] grid grid-cols-5 gap-2 p-3 bg-slate-800 rounded-xl border border-white/10 shadow-2xl"
+            className="fixed z-[61] grid grid-cols-5 gap-2 rounded-xl border border-border bg-popover p-3 shadow-2xl"
             style={{ top: pos.top, left: pos.left }}
           >
             {COLOR_PALETTE.map(c => (
@@ -121,6 +125,15 @@ function ColorPicker({ color, onChange }: { color: string; onChange: (c: string)
       )}
     </div>
   );
+}
+
+/**
+ * 선 굵기 선택지 — 저장된 값이 목록에 없으면 그 값도 함께 보여준다.
+ */
+function lineWidthOptions(current: number): { value: string; label: string }[] {
+  const options = LINE_WIDTHS.map(lw => ({ value: String(lw.value), label: lw.label }));
+  if (options.some(o => o.value === String(current))) return options;
+  return [{ value: String(current), label: `${current}px` }, ...options];
 }
 
 function IndicatorRow({
@@ -151,15 +164,12 @@ function IndicatorRow({
         {meta.label}
         {meta.params && <span className="ml-1 text-xs text-slate-600">({meta.params})</span>}
       </span>
-      <select
-        value={item.lineWidth}
-        onChange={e => onChange({ lineWidth: Number(e.target.value) })}
-        className="bg-slate-700 border border-white/10 rounded px-1.5 py-1.5 text-sm text-white"
-      >
-        {LINE_WIDTHS.map(lw => (
-          <option key={lw.value} value={lw.value}>{lw.label}</option>
-        ))}
-      </select>
+      <Select
+        value={String(item.lineWidth)}
+        onChange={v => onChange({ lineWidth: Number(v) })}
+        className="w-auto min-w-20 px-2 py-1.5"
+        items={lineWidthOptions(item.lineWidth)}
+      />
     </div>
   );
 }
@@ -222,6 +232,7 @@ export default function IndicatorManager({
   open, onClose, presets, activePreset, loading, create, update, remove, reorder,
   signalModels, customMetrics,
 }: Props) {
+  const confirm = useConfirm();
   const [items, setItems]           = useState<IndicatorPresetItem[]>(buildDefaultItems());
   const [overlay, setOverlay]       = useState<ChartOverlayConfig>(DEFAULT_CHART_OVERLAY);
   const [presetName, setPresetName] = useState("");
@@ -327,7 +338,13 @@ export default function IndicatorManager({
     const message = isLast
       ? `마지막 프리셋 "${activePreset.name}"을(를) 삭제하시겠습니까? 삭제 후 새 프리셋을 만들 수 있습니다.`
       : `"${activePreset.name}" 프리셋을 삭제하시겠습니까?`;
-    if (!confirm(message)) return;
+    const ok = await confirm({
+      title: "프리셋 삭제",
+      description: message,
+      confirmText: "삭제",
+      danger: true,
+    });
+    if (!ok) return;
     try {
       await remove(activePreset.id);
     } catch {
@@ -344,19 +361,15 @@ export default function IndicatorManager({
   if (!open) return null;
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
-      onMouseDown={onClose}
-    >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-
-      <div
-        className="relative w-full sm:max-w-lg max-h-[92dvh] sm:max-h-[85vh] bg-slate-900 sm:rounded-2xl rounded-t-2xl border border-white/10 flex flex-col shadow-2xl"
-        onMouseDown={e => e.stopPropagation()}
+    <Dialog open onOpenChange={o => !o && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        aria-describedby={undefined}
+        className={cn(cx.dialogSheet, "max-h-[92dvh] sm:max-h-[85vh] sm:max-w-lg")}
       >
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/10 flex-shrink-0">
           <div className="flex items-center gap-2.5 min-w-0">
-            <span className="text-base text-white font-semibold flex-shrink-0">지표 관리</span>
+            <DialogTitle className="text-base text-white font-semibold flex-shrink-0">지표 관리</DialogTitle>
             {activePreset && !creating && (
               <span className="text-xs text-slate-500 truncate">— {activePreset.name}</span>
             )}
@@ -401,7 +414,7 @@ export default function IndicatorManager({
                 </svg>
               </button>
             )}
-            <button onClick={onClose} className="text-slate-400 hover:text-white transition p-2 rounded-lg hover:bg-white/8">
+            <button onClick={onClose} className={cx.btnIcon}>
               <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                 <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
               </svg>
@@ -417,7 +430,7 @@ export default function IndicatorManager({
                 <input
                   value={presetName}
                   onChange={e => { setPresetName(e.target.value); setSavedOk(false); }}
-                  className="flex-1 bg-slate-800 border border-white/10 rounded-lg px-3 py-2 text-sm text-white placeholder-slate-500 focus:outline-none focus:border-violet-500"
+                  className={cx.input + " flex-1 bg-popover placeholder:text-slate-500 dark:bg-popover"}
                   placeholder="프리셋 이름"
                 />
               </div>
@@ -447,7 +460,7 @@ export default function IndicatorManager({
                   </button>
                   <button
                     onClick={() => { setCreating(false); setNewName(""); setError(""); }}
-                    className="text-sm px-3 py-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/8 flex-shrink-0"
+                    className={cx.btnSm + " shrink-0 border-transparent px-3 py-2 text-sm"}
                   >취소</button>
                 </div>
               </div>
@@ -562,16 +575,12 @@ export default function IndicatorManager({
                     <span className="w-2.5 h-2.5 rounded-sm bg-emerald-400 flex-shrink-0" />
                     <span className="text-sm text-slate-300 font-medium">모델 시그널 (▲)</span>
                   </div>
-                  <select
-                    value={overlay.signalModelId ?? ""}
-                    onChange={e => setOverlay(prev => ({ ...prev, signalModelId: e.target.value ? Number(e.target.value) : null }))}
-                    className={cx.select + " w-full"}
-                  >
-                    <option value="">표시 안 함</option>
-                    {signalModels.map(m => (
-                      <option key={m.id} value={m.id}>{m.name} v{m.version}</option>
-                    ))}
-                  </select>
+                  <Select
+                    value={overlay.signalModelId != null ? String(overlay.signalModelId) : null}
+                    onChange={v => setOverlay(prev => ({ ...prev, signalModelId: v ? Number(v) : null }))}
+                    placeholder="표시 안 함"
+                    items={signalModels.map(m => ({ value: String(m.id), label: `${m.name} v${m.version}` }))}
+                  />
                   {overlay.signalModelId != null && (
                     <div className="space-y-2.5 pt-1">
                       {/* 진입 문턱 — 초록 세모 */}
@@ -691,8 +700,8 @@ export default function IndicatorManager({
             </button>
           </div>
         )}
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

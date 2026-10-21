@@ -9,6 +9,10 @@ import {
 } from "@dnd-kit/sortable";
 import { CSS } from "@dnd-kit/utilities";
 import { PANEL_LABELS, type PanelId } from "@/components/chart/indicatorMeta";
+import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/utils/cn";
+import { cx } from "@/utils/cx";
+
 
 function SortablePanelItem({ panelId, index }: { panelId: PanelId; index: number }) {
   const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
@@ -72,25 +76,22 @@ export default function PanelOrderModal({ open, onClose, activePanelIds, onReord
   }
 
   return (
-    <div
-      className="fixed inset-0 z-50 flex items-end sm:items-center justify-center sm:p-4"
-      onMouseDown={onClose}
-    >
-      <div className="absolute inset-0 bg-black/60 backdrop-blur-sm" />
-      <div
-        className="relative w-full sm:max-w-xs bg-slate-800 sm:rounded-2xl rounded-t-2xl border border-white/10 shadow-2xl"
-        onMouseDown={e => e.stopPropagation()}
+    <Dialog open onOpenChange={o => !o && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        aria-describedby={undefined}
+        className={cn(cx.dialogSheet, "bg-popover sm:max-w-xs")}
       >
         <div className="flex items-center justify-between px-4 py-4 border-b border-white/10">
           <div className="flex items-center gap-2">
-            <span className="text-base text-white font-semibold">보조지표 순서 변경</span>
+            <DialogTitle className="text-base text-white font-semibold">보조지표 순서 변경</DialogTitle>
             {saving && <span className="text-xs text-slate-500">저장 중...</span>}
           </div>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition p-2 rounded-lg hover:bg-white/8">
+          <DialogClose className={cx.btnIcon} aria-label="닫기">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <line x1="18" y1="6" x2="6" y2="18" /><line x1="6" y1="6" x2="18" y2="18" />
             </svg>
-          </button>
+          </DialogClose>
         </div>
 
         <div className="p-4">
@@ -111,8 +112,8 @@ export default function PanelOrderModal({ open, onClose, activePanelIds, onReord
             </>
           )}
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

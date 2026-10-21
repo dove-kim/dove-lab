@@ -2,9 +2,12 @@
 
 import { useMemo, useState } from "react";
 import { clientFetch } from "@/services/client";
+import Modal from "@/components/Modal";
+import Select from "@/components/Select";
 import { cx } from "@/utils/cx";
 import { usePaged, Pagination } from "@/components/Pagination";
 import type { UserSummary } from "@/types/user";
+import Panel from "@/components/Panel";
 
 type Role = "USER" | "ADMIN" | "ROOT";
 type StatusFilter = "ACTIVE" | "DELETED" | "ALL";
@@ -147,107 +150,109 @@ export default function RootUsersClient({ users: initialUsers }: Props) {
     <div className="flex-1 overflow-y-auto p-6">
       <h2 className="text-white text-lg font-semibold mb-6">사용자 관리</h2>
 
-      {/* 역할 변경 확인 모달 */}
       {confirmChange && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 border border-white/15 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h3 className="text-white font-semibold text-base mb-2">역할 변경 확인</h3>
-            <p className="text-slate-300 text-sm mb-5">
-              이 사용자의 역할을{" "}
-              <span className="text-white font-medium">{ROLE_LABELS[confirmChange.role]}</span>
-              (으)로 변경하시겠습니까?
-            </p>
-            <div className="flex gap-3">
+        <Modal
+          title="역할 변경 확인"
+          onClose={() => setConfirmChange(null)}
+          footer={
+            <>
+              <button onClick={() => setConfirmChange(null)} className={cx.btnSecondary}>
+                취소
+              </button>
               <button
                 onClick={() => applyRoleChange(confirmChange.id, confirmChange.role)}
                 disabled={pendingId === confirmChange.id}
-                className={`flex-1 ${cx.btnPrimary}`}
+                className={cx.btnPrimary}
               >
                 {pendingId === confirmChange.id ? "변경 중..." : "확인"}
               </button>
-              <button onClick={() => setConfirmChange(null)} className={`flex-1 ${cx.btnSecondary}`}>
-                취소
-              </button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        >
+          <p className="text-sm text-slate-300">
+            이 사용자의 역할을{" "}
+            <span className="font-medium text-white">{ROLE_LABELS[confirmChange.role]}</span>
+            (으)로 변경하시겠습니까?
+          </p>
+        </Modal>
       )}
 
-      {/* 비밀번호 초기화 확인 모달 */}
       {confirmReset && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 border border-white/15 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h3 className="text-white font-semibold text-base mb-2">비밀번호 초기화</h3>
-            <p className="text-slate-300 text-sm mb-5">
-              <span className="text-white font-medium">{confirmReset.name}</span>
-              ({confirmReset.username}) 의 비밀번호를 초기화하시겠습니까?
-              <br />
-              <span className="text-amber-400 text-xs mt-1 block">
-                초기화 후 임시 비밀번호가 발급되며, 해당 사용자는 다음 로그인 시 비밀번호를 변경해야 합니다.
-              </span>
-            </p>
-            <div className="flex gap-3">
+        <Modal
+          title="비밀번호 초기화"
+          onClose={() => setConfirmReset(null)}
+          footer={
+            <>
+              <button onClick={() => setConfirmReset(null)} className={cx.btnSecondary}>
+                취소
+              </button>
               <button
                 onClick={() => applyPasswordReset(confirmReset.id)}
                 disabled={pendingId === confirmReset.id}
-                className={`flex-1 ${cx.btnPrimary}`}
+                className={cx.btnPrimary}
               >
                 {pendingId === confirmReset.id ? "초기화 중..." : "초기화"}
               </button>
-              <button onClick={() => setConfirmReset(null)} className={`flex-1 ${cx.btnSecondary}`}>
-                취소
-              </button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        >
+          <p className="text-sm text-slate-300">
+            <span className="font-medium text-white">{confirmReset.name}</span>
+            ({confirmReset.username}) 의 비밀번호를 초기화하시겠습니까?
+            <span className="mt-1 block text-xs text-amber-400">
+              초기화 후 임시 비밀번호가 발급되며, 해당 사용자는 다음 로그인 시 비밀번호를 변경해야 합니다.
+            </span>
+          </p>
+        </Modal>
       )}
 
-      {/* 회원 삭제 확인 모달 */}
       {confirmDelete && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 border border-white/15 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h3 className="text-white font-semibold text-base mb-2">회원 삭제</h3>
-            <p className="text-slate-300 text-sm mb-5">
-              <span className="text-white font-medium">{confirmDelete.name}</span>
-              ({confirmDelete.username}) 을(를) 삭제하시겠습니까?
-              <br />
-              <span className="text-rose-400 text-xs mt-1 block">
-                즉시 로그아웃되고 로그인이 차단됩니다. 거래·권한 등 기존 데이터는 보존됩니다(soft delete).
-              </span>
-            </p>
-            <div className="flex gap-3">
+        <Modal
+          title="회원 삭제"
+          onClose={() => setConfirmDelete(null)}
+          footer={
+            <>
+              <button onClick={() => setConfirmDelete(null)} className={cx.btnSecondary}>
+                취소
+              </button>
               <button
                 onClick={() => applyDelete(confirmDelete.id)}
                 disabled={pendingId === confirmDelete.id}
-                className={`flex-1 ${cx.btnDanger}`}
+                className={cx.btnDanger}
               >
                 {pendingId === confirmDelete.id ? "삭제 중..." : "삭제"}
               </button>
-              <button onClick={() => setConfirmDelete(null)} className={`flex-1 ${cx.btnSecondary}`}>
-                취소
-              </button>
-            </div>
-          </div>
-        </div>
+            </>
+          }
+        >
+          <p className="text-sm text-slate-300">
+            <span className="font-medium text-white">{confirmDelete.name}</span>
+            ({confirmDelete.username}) 을(를) 삭제하시겠습니까?
+            <span className="mt-1 block text-xs text-rose-400">
+              즉시 로그아웃되고 로그인이 차단됩니다. 거래·권한 등 기존 데이터는 보존됩니다(soft delete).
+            </span>
+          </p>
+        </Modal>
       )}
 
-      {/* 임시 비밀번호 표시 모달 */}
       {tempPassword && (
-        <div className="fixed inset-0 bg-black/60 backdrop-blur-sm z-50 flex items-center justify-center p-4">
-          <div className="bg-slate-800 border border-white/15 rounded-2xl p-6 w-full max-w-sm shadow-2xl">
-            <h3 className="text-white font-semibold text-base mb-2">임시 비밀번호 발급 완료</h3>
-            <p className="text-slate-400 text-sm mb-4">
-              아래 임시 비밀번호를 사용자에게 전달하세요.
-              <br />사용자는 로그인 후 즉시 비밀번호를 변경해야 합니다.
-            </p>
-            <div className="bg-slate-900 border border-white/10 rounded-xl px-4 py-3 text-center mb-5">
-              <p className="text-white text-xl font-mono tracking-widest">{tempPassword}</p>
-            </div>
-            <button onClick={() => setTempPassword(null)} className={`w-full ${cx.btnPrimary}`}>
+        <Modal
+          title="임시 비밀번호 발급 완료"
+          onClose={() => setTempPassword(null)}
+          footer={
+            <button onClick={() => setTempPassword(null)} className={cx.btnPrimary}>
               확인
             </button>
-          </div>
-        </div>
+          }
+        >
+          <p className="mb-4 text-sm text-slate-400">
+            아래 임시 비밀번호를 사용자에게 전달하세요.
+            <br />사용자는 로그인 후 즉시 비밀번호를 변경해야 합니다.
+          </p>
+          <Panel className="rounded-xl bg-slate-900 px-4 py-3 text-center">
+            <p className="font-mono text-xl tracking-widest text-white">{tempPassword}</p>
+          </Panel>
+        </Modal>
       )}
 
       {/* 필터 */}
@@ -260,11 +265,16 @@ export default function RootUsersClient({ users: initialUsers }: Props) {
       >
         <label className="flex flex-col gap-1">
           <span className="text-xs text-slate-400">삭제 여부</span>
-          <select value={draftStatus} onChange={(e) => setDraftStatus(e.target.value as StatusFilter)} className={cx.select}>
-            <option value="ACTIVE">활성</option>
-            <option value="DELETED">삭제됨</option>
-            <option value="ALL">전체</option>
-          </select>
+          <Select
+            value={draftStatus}
+            onChange={(v) => setDraftStatus(v as StatusFilter)}
+            className="w-auto min-w-28"
+            items={[
+              { value: "ACTIVE", label: "활성" },
+              { value: "DELETED", label: "삭제됨" },
+              { value: "ALL", label: "전체" },
+            ]}
+          />
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-xs text-slate-400">가입일 시작</span>
@@ -285,7 +295,7 @@ export default function RootUsersClient({ users: initialUsers }: Props) {
         </button>
       </form>
 
-      <div className="bg-white/5 border border-white/10 rounded-xl overflow-x-auto">
+      <Panel className="overflow-x-auto">
         <table className="w-full text-sm">
           <thead className={cx.table.head}>
             <tr>
@@ -367,7 +377,7 @@ export default function RootUsersClient({ users: initialUsers }: Props) {
                           <button
                             disabled={pendingId === user.id}
                             onClick={() => setConfirmDelete(user)}
-                            className="text-xs px-2.5 py-1 rounded-lg border border-rose-500/30 text-rose-400 hover:bg-rose-500/10 transition disabled:opacity-40"
+                            className={cx.btnDangerSm + " px-2.5 py-1 disabled:opacity-40"}
                           >
                             삭제
                           </button>
@@ -380,7 +390,7 @@ export default function RootUsersClient({ users: initialUsers }: Props) {
             )}
           </tbody>
         </table>
-      </div>
+      </Panel>
 
       <div className="mt-3">
         <Pagination

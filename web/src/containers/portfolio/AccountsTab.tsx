@@ -4,6 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
 import Modal from "@/components/Modal";
 import CommaInput from "@/components/CommaInput";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Select from "@/components/Select";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { cx } from "@/utils/cx";
 import {
   type PortfolioAccount,
@@ -17,6 +20,7 @@ import { won, fxRateOf } from "./usePortfolioData";
 import AddTransactionModal from "./AddTransactionModal";
 import { usePaged, Pagination } from "@/components/Pagination";
 import { useDateRange, DateRangeFilter } from "./DateRange";
+import Panel from "@/components/Panel";
 
 /** 거래 1건이 자기 통화 현금에 미치는 영향(백엔드 PortfolioCashCalculator와 동일 규칙). */
 function cashEffect(t: PortfolioTx): number {
@@ -42,6 +46,7 @@ function cashEffect(t: PortfolioTx): number {
  * 계좌 탭 — 계좌 목록·생성·삭제 + 입출금(거래) 내역. 잔액 집계는 별도 단계(현재 미표시).
  */
 export default function AccountsTab() {
+  const confirm = useConfirm();
   const [accounts, setAccounts] = useState<PortfolioAccount[] | null>(null);
   const [txns, setTxns] = useState<PortfolioTx[]>([]);
   const [positions, setPositions] = useState<PortfolioPosition[]>([]);
@@ -89,7 +94,13 @@ export default function AccountsTab() {
   }, []);
 
   async function remove(id: number, name: string) {
-    if (!confirm(`'${name}' 계좌를 삭제할까요?`)) return;
+    const ok = await confirm({
+      title: "계좌 삭제",
+      description: `'${name}' 계좌를 삭제할까요?`,
+      confirmText: "삭제",
+      danger: true,
+    });
+    if (!ok) return;
     await fetch(`/api/portfolio/accounts/${id}`, { method: "DELETE" });
     reload();
   }
@@ -149,23 +160,20 @@ export default function AccountsTab() {
   if (!accounts) return <p className="text-sm text-slate-500 py-8 text-center">불러오는 중…</p>;
 
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex gap-1 border-b border-white/10">
+    <Tabs
+      value={tab}
+      onValueChange={(v) => setTab(v as "accounts" | "flows" | "conversions")}
+      className="flex flex-col gap-4"
+    >
+      <TabsList variant="line" className={cx.tab.list}>
         {([["accounts", "계좌"], ["flows", "입출금"], ["conversions", "환전"]] as const).map(([k, label]) => (
-          <button
-            key={k}
-            onClick={() => setTab(k)}
-            className={
-              "px-4 py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer " +
-              (tab === k ? "border-indigo-400 text-indigo-300" : "border-transparent text-slate-400 hover:text-white")
-            }
-          >
+          <TabsTrigger key={k} value={k} className={cx.tab.trigger}>
             {label}
-          </button>
+          </TabsTrigger>
         ))}
-      </div>
+      </TabsList>
 
-      {tab === "accounts" && (
+      <TabsContent value="accounts" className={cx.tab.content}>
       <div className="flex flex-col gap-6">
       <section>
         <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
@@ -191,11 +199,11 @@ export default function AccountsTab() {
           </div>
         </div>
         {accounts.length === 0 ? (
-          <p className="text-sm text-slate-500 py-8 text-center rounded-xl border border-white/10 bg-slate-900/40">
+          <p className={cx.emptyState}>
             계좌가 없습니다. 먼저 계좌를 추가하세요.
           </p>
         ) : (
-          <div className="rounded-xl border border-white/10 bg-slate-900/40 overflow-x-auto">
+          <Panel className="rounded-xl bg-slate-900/40 overflow-x-auto">
             <table className={cx.table.root}>
               <thead className={cx.table.head}>
                 <tr>
@@ -242,13 +250,13 @@ export default function AccountsTab() {
                 })}
               </tbody>
             </table>
-          </div>
+          </Panel>
         )}
       </section>
       </div>
-      )}
+      </TabsContent>
 
-      {tab === "flows" && (
+      <TabsContent value="flows" className={cx.tab.content}>
       <section>
         <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
           <h2 className="text-sm font-medium text-slate-300">입출금 내역</h2>
@@ -259,7 +267,7 @@ export default function AccountsTab() {
             </button>
           </div>
         </div>
-        <div className="rounded-xl border border-white/10 bg-slate-900/40 overflow-x-auto">
+        <Panel className="rounded-xl bg-slate-900/40 overflow-x-auto">
           <table className={cx.table.root}>
             <thead className={cx.table.head}>
               <tr>
@@ -298,14 +306,14 @@ export default function AccountsTab() {
               )}
             </tbody>
           </table>
-        </div>
+        </Panel>
         <div className="mt-2">
           <Pagination page={pagedFlows.page} pageCount={pagedFlows.pageCount} from={pagedFlows.from} to={pagedFlows.to} total={pagedFlows.total} onPage={pagedFlows.setPage} />
         </div>
       </section>
-      )}
+      </TabsContent>
 
-      {tab === "conversions" && (
+      <TabsContent value="conversions" className={cx.tab.content}>
       <section>
         <div className="flex items-center justify-between mb-3 gap-2 flex-wrap">
           <div>
@@ -316,7 +324,7 @@ export default function AccountsTab() {
             ＋ 환전
           </button>
         </div>
-        <div className="rounded-xl border border-white/10 bg-slate-900/40 overflow-x-auto">
+        <Panel className="rounded-xl bg-slate-900/40 overflow-x-auto">
           <table className={cx.table.root}>
             <thead className={cx.table.head}>
               <tr>
@@ -345,7 +353,13 @@ export default function AccountsTab() {
                   <td className={cx.table.td + " text-right"}>
                     <button
                       onClick={async () => {
-                        if (!confirm("이 환전을 삭제할까요?")) return;
+                        const ok = await confirm({
+                          title: "환전 삭제",
+                          description: "이 환전 기록을 삭제할까요?",
+                          confirmText: "삭제",
+                          danger: true,
+                        });
+                        if (!ok) return;
                         await fetch(`/api/portfolio/fx-conversions/${c.id}`, { method: "DELETE" });
                         reload();
                       }}
@@ -365,12 +379,12 @@ export default function AccountsTab() {
               )}
             </tbody>
           </table>
-        </div>
+        </Panel>
         <div className="mt-2">
           <Pagination page={pagedConvs.page} pageCount={pagedConvs.pageCount} from={pagedConvs.from} to={pagedConvs.to} total={pagedConvs.total} onPage={pagedConvs.setPage} />
         </div>
       </section>
-      )}
+      </TabsContent>
 
       {showAddAccount && (
         <AddAccountModal
@@ -412,7 +426,7 @@ export default function AccountsTab() {
           }}
         />
       )}
-    </div>
+    </Tabs>
   );
 }
 
@@ -498,13 +512,11 @@ function AddFxConversionModal({
       <div className="flex flex-col gap-3">
         <label className="flex flex-col gap-1">
           <span className="text-xs text-slate-400">계좌</span>
-          <select value={accountId} onChange={(e) => setAccountId(Number(e.target.value))} className={cx.select}>
-            {accounts.map((a) => (
-              <option key={a.id} value={a.id}>
-                {a.name}
-              </option>
-            ))}
-          </select>
+          <Select
+            value={String(accountId)}
+            onChange={(v) => setAccountId(Number(v))}
+            items={accounts.map((a) => ({ value: String(a.id), label: a.name }))}
+          />
         </label>
         <label className="flex flex-col gap-1">
           <span className="text-xs text-slate-400">환전 일자</span>
@@ -513,13 +525,11 @@ function AddFxConversionModal({
         <div className="grid grid-cols-2 gap-3">
           <label className="flex flex-col gap-1">
             <span className="text-xs text-slate-400">보낸 통화</span>
-            <select value={fromCurrency} onChange={(e) => setFromCurrency(e.target.value)} className={cx.select}>
-              {CURRENCIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={fromCurrency}
+              onChange={setFromCurrency}
+              items={CURRENCIES.map((c) => ({ value: c, label: c }))}
+            />
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-xs text-slate-400">보낸 금액</span>
@@ -527,13 +537,11 @@ function AddFxConversionModal({
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-xs text-slate-400">받은 통화</span>
-            <select value={toCurrency} onChange={(e) => setToCurrency(e.target.value)} className={cx.select}>
-              {CURRENCIES.map((c) => (
-                <option key={c} value={c}>
-                  {c}
-                </option>
-              ))}
-            </select>
+            <Select
+              value={toCurrency}
+              onChange={setToCurrency}
+              items={CURRENCIES.map((c) => ({ value: c, label: c }))}
+            />
           </label>
           <label className="flex flex-col gap-1">
             <span className="text-xs text-slate-400">받은 금액</span>

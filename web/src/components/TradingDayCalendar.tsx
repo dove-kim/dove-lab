@@ -1,6 +1,7 @@
 ﻿"use client";
 
 import { useState, useRef, useEffect, useMemo } from "react";
+import { cx } from "@/utils/cx";
 
 interface Props {
   value: string;         // "YYYY-MM-DD"
@@ -88,7 +89,7 @@ export default function TradingDayCalendar({ value, tradingDays, onChange }: Pro
       <button
         type="button"
         onClick={() => setOpen(o => !o)}
-        className="flex items-center gap-2 bg-slate-800 border border-white/15 rounded-lg px-3 py-2 text-white text-sm hover:bg-slate-700 focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition min-w-[148px]"
+        className={cx.select + " flex min-w-[148px] items-center gap-2 hover:bg-popover-hover"}
       >
         <svg className="w-3.5 h-3.5 text-slate-400 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2" />
@@ -101,16 +102,16 @@ export default function TradingDayCalendar({ value, tradingDays, onChange }: Pro
 
       {/* 달력 패널 */}
       {open && (
-        <div className="absolute top-full mt-1.5 left-0 z-50 bg-slate-800 border border-white/15 rounded-xl shadow-2xl p-3 w-64 select-none">
+        <div className="absolute top-full mt-1.5 left-0 z-50 w-64 select-none rounded-xl border border-border bg-popover p-3 shadow-2xl">
           {/* 월 네비게이션 */}
           <div className="flex items-center justify-between mb-2">
-            <button onClick={prevMonth} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-white/10 transition">
+            <button onClick={prevMonth} className={cx.btnIcon}>
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="15 18 9 12 15 6" />
               </svg>
             </button>
             <span className="text-sm font-medium text-white">{viewYear}년 {viewMonth}월</span>
-            <button onClick={nextMonth} className="w-7 h-7 flex items-center justify-center rounded text-slate-400 hover:text-white hover:bg-white/10 transition">
+            <button onClick={nextMonth} className={cx.btnIcon}>
               <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <polyline points="9 18 15 12 9 6" />
               </svg>

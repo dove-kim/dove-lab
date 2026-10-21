@@ -1,7 +1,13 @@
 "use client";
 
 import { useState, useEffect, useCallback, useMemo } from "react";
+import Modal from "@/components/Modal";
+import Select from "@/components/Select";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cx } from "@/utils/cx";
+import Panel from "@/components/Panel";
 
 /** 커스텀 지표 정의·상태·계산 진행 정보. 백엔드 CustomMetricResponse 미러. */
 interface CustomMetric {
@@ -65,30 +71,7 @@ function statusChip(active: boolean) {
   const cfg = active
     ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
     : "bg-slate-500/20 text-slate-400 border-slate-500/30";
-  return <span className={`px-2 py-0.5 rounded text-xs border ${cfg}`}>{active ? "활성" : "비활성"}</span>;
-}
-
-/** 화면 중앙 고정 크기 모달 셸. */
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-          <h3 className="text-base font-semibold text-white">{title}</h3>
-          <button
-            onClick={onClose}
-            aria-label="닫기"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-white/8 hover:text-white transition"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <div className="p-5">{children}</div>
-      </div>
-    </div>
-  );
+  return <Badge variant="outline" className={`rounded ${cfg}`}>{active ? "활성" : "비활성"}</Badge>;
 }
 
 export default function CustomMetricsClient() {
@@ -115,7 +98,7 @@ export default function CustomMetricsClient() {
       const action = metric.active ? "deactivate" : "activate";
       const res = await fetch(`/api/admin/ops/custom-metrics/${metric.id}/${action}`, { method: "POST" });
       if (!res.ok) {
-        alert(await readError(res));
+        toast.error(await readError(res));
         return;
       }
       await fetchMetrics();
@@ -192,19 +175,19 @@ export default function CustomMetricsClient() {
                     </button>
                     <button
                       onClick={() => setRecomputeTarget(m)}
-                      className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/5 transition whitespace-nowrap"
+                      className={cx.btnSm}
                     >
                       재계산
                     </button>
                     <button
                       onClick={() => setEditTarget(m)}
-                      className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/5 transition whitespace-nowrap"
+                      className={cx.btnSm}
                     >
                       수정
                     </button>
                     <button
                       onClick={() => setDeleteTarget(m)}
-                      className="rounded-lg border border-rose-500/30 px-3 py-1.5 text-xs text-rose-300 hover:bg-rose-500/10 transition whitespace-nowrap"
+                      className={cx.btnDangerSm}
                     >
                       삭제
                     </button>
@@ -268,7 +251,7 @@ function PreviewChart({ points }: { points: MetricPoint[] }) {
   });
 
   return (
-    <svg viewBox={`0 0 ${w} ${h}`} className="w-full rounded-lg border border-white/10 bg-white/5" preserveAspectRatio="none">
+    <svg viewBox={`0 0 ${w} ${h}`} className={cx.panel + " w-full rounded-lg"} preserveAspectRatio="none">
       <polyline points={coords.join(" ")} fill="none" stroke="#818cf8" strokeWidth="1.5" vectorEffect="non-scaling-stroke" />
     </svg>
   );
@@ -485,28 +468,33 @@ function columnOptions(current: string): string[] {
 function NodeEditor({ node, onChange, letNames, universes, firstUniverseId }: NodeEditorProps) {
   return (
     <div className="flex flex-col gap-2">
-      <select
+      <Select
         value={node.op}
-        onChange={(e) => onChange(defaultNode(e.target.value, firstUniverseId))}
-        className={cx.select + " w-full"}
-      >
-        <optgroup label="값">
-          <option value="const">상수 (const)</option>
-          <option value="ref">중간값 참조 (ref)</option>
-          <option value="agg">유니버스 집계 (agg)</option>
-        </optgroup>
-        <optgroup label="변환">
-          <option value="roll_mean">이동평균 (roll_mean)</option>
-          <option value="ema">지수이동평균 (ema)</option>
-          <option value="cumprod1p">누적곱 (cumprod1p)</option>
-          <option value="lag">지연 (lag)</option>
-        </optgroup>
-        <optgroup label="이항연산">
-          {BINARY_OPS.map((o) => (
-            <option key={o.value} value={o.value}>{o.label} ({o.value})</option>
-          ))}
-        </optgroup>
-      </select>
+        onChange={(v) => onChange(defaultNode(v, firstUniverseId))}
+        items={[
+          {
+            group: "값",
+            options: [
+              { value: "const", label: "상수 (const)" },
+              { value: "ref", label: "중간값 참조 (ref)" },
+              { value: "agg", label: "유니버스 집계 (agg)" },
+            ],
+          },
+          {
+            group: "변환",
+            options: [
+              { value: "roll_mean", label: "이동평균 (roll_mean)" },
+              { value: "ema", label: "지수이동평균 (ema)" },
+              { value: "cumprod1p", label: "누적곱 (cumprod1p)" },
+              { value: "lag", label: "지연 (lag)" },
+            ],
+          },
+          {
+            group: "이항연산",
+            options: BINARY_OPS.map((o) => ({ value: o.value, label: `${o.label} (${o.value})` })),
+          },
+        ]}
+      />
 
       {node.op === "const" && (
         <label className="block">
@@ -524,16 +512,12 @@ function NodeEditor({ node, onChange, letNames, universes, firstUniverseId }: No
         <label className="block">
           <span className="mb-1 block text-xs text-slate-400">중간값 이름</span>
           {letNames.length > 0 ? (
-            <select
+            <Select
               value={node.name}
-              onChange={(e) => onChange({ op: "ref", name: e.target.value })}
-              className={cx.select + " w-full"}
-            >
-              <option value="">선택</option>
-              {(letNames.includes(node.name) || node.name === "" ? letNames : [node.name, ...letNames]).map((n) => (
-                <option key={n} value={n}>{n}</option>
-              ))}
-            </select>
+              onChange={(v) => onChange({ op: "ref", name: v })}
+              items={(letNames.includes(node.name) || node.name === "" ? letNames : [node.name, ...letNames])
+                .map((n) => ({ value: n, label: n }))}
+            />
           ) : (
             <input
               value={node.name}
@@ -549,10 +533,10 @@ function NodeEditor({ node, onChange, letNames, universes, firstUniverseId }: No
         <div className="flex flex-col gap-2">
           <label className="block">
             <span className="mb-1 block text-xs text-slate-400">집계</span>
-            <select
+            <Select
               value={node.agg}
-              onChange={(e) => {
-                const agg = e.target.value as "MEAN" | "RATIO_GT" | "RATIO_POS";
+              onChange={(v) => {
+                const agg = v as "MEAN" | "RATIO_GT" | "RATIO_POS";
                 if (agg === "RATIO_GT") {
                   onChange({ ...node, agg, colB: node.colB ?? "CLOSE" });
                 } else {
@@ -561,45 +545,38 @@ function NodeEditor({ node, onChange, letNames, universes, firstUniverseId }: No
                   onChange({ ...rest, agg });
                 }
               }}
-              className={cx.select + " w-full"}
-            >
-              {AGG_OPTIONS.map((a) => <option key={a.value} value={a.value}>{a.label}</option>)}
-            </select>
+              items={AGG_OPTIONS.map((a) => ({ value: a.value, label: a.label }))}
+            />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs text-slate-400">colA</span>
-            <select
+            <Select
               value={node.colA}
-              onChange={(e) => onChange({ ...node, colA: e.target.value })}
-              className={cx.select + " w-full"}
-            >
-              {columnOptions(node.colA).map((c) => <option key={c} value={c}>{c}</option>)}
-            </select>
+              onChange={(v) => onChange({ ...node, colA: v })}
+              items={columnOptions(node.colA).map((c) => ({ value: c, label: c }))}
+            />
           </label>
           {node.agg === "RATIO_GT" && (
             <label className="block">
               <span className="mb-1 block text-xs text-slate-400">colB</span>
-              <select
+              <Select
                 value={node.colB ?? ""}
-                onChange={(e) => onChange({ ...node, colB: e.target.value })}
-                className={cx.select + " w-full"}
-              >
-                {columnOptions(node.colB ?? "").map((c) => <option key={c} value={c}>{c}</option>)}
-              </select>
+                onChange={(v) => onChange({ ...node, colB: v })}
+                items={columnOptions(node.colB ?? "").map((c) => ({ value: c, label: c }))}
+              />
             </label>
           )}
           <div className="block">
             <span className="mb-1 block text-xs text-slate-400">유니버스 (종목 필터)</span>
             <div className="flex flex-col gap-1.5 sm:flex-row sm:items-center">
-              <select
-                value={universes.some((u) => u.id === node.universeFilterId) ? String(node.universeFilterId) : ""}
-                onChange={(e) => onChange({ ...node, universeFilterId: toNum(e.target.value) })}
+              <Select
+                value={universes.some((u) => u.id === node.universeFilterId) ? String(node.universeFilterId) : null}
+                onChange={(v) => onChange({ ...node, universeFilterId: toNum(v) })}
                 disabled={universes.length === 0}
-                className={cx.select + " w-full sm:flex-1 disabled:opacity-50"}
-              >
-                <option value="">{universes.length === 0 ? "시스템 종목 필터 없음" : "종목 필터 선택"}</option>
-                {universes.map((u) => <option key={u.id} value={u.id}>{u.name} (#{u.id})</option>)}
-              </select>
+                placeholder={universes.length === 0 ? "시스템 종목 필터 없음" : "종목 필터 선택"}
+                className="sm:flex-1"
+                items={universes.map((u) => ({ value: String(u.id), label: `${u.name} (#${u.id})` }))}
+              />
               <input
                 type="number"
                 value={node.universeFilterId}
@@ -841,41 +818,39 @@ function MetricFormModal(
         <div className="grid grid-cols-2 gap-3">
           <label className="block">
             <span className="mb-1 block text-xs text-slate-400">모양</span>
-            <select value={shape} onChange={(e) => setShape(e.target.value)} className={cx.select + " w-full"}>
-              {SHAPES.map((s) => <option key={s.value} value={s.value}>{s.label}</option>)}
-            </select>
+            <Select
+              value={shape}
+              onChange={setShape}
+              items={SHAPES.map((s) => ({ value: s.value, label: s.label }))}
+            />
           </label>
           <label className="block">
             <span className="mb-1 block text-xs text-slate-400">주가유형</span>
-            <select value={priceType} onChange={(e) => setPriceType(e.target.value)} className={cx.select + " w-full"}>
-              {PRICE_TYPES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-            </select>
+            <Select
+              value={priceType}
+              onChange={setPriceType}
+              items={PRICE_TYPES.map((p) => ({ value: p.value, label: p.label }))}
+            />
           </label>
         </div>
-        <div className="flex flex-col gap-2">
+        <Tabs
+          value={tab}
+          onValueChange={(v) => (v === "builder" ? goBuilder() : setTab("json"))}
+          className="flex flex-col gap-2"
+        >
           <div className="flex items-center justify-between gap-2 flex-wrap">
             <span className="text-xs text-slate-400">계산식 spec (DSL)</span>
-            <div className="flex gap-2">
-              <button
-                type="button"
-                onClick={goBuilder}
-                disabled={!canUseBuilder}
-                className={(tab === "builder" ? cx.btnToggleOn : cx.btnToggleOff) + " !py-1.5 !px-3 text-xs disabled:opacity-40 disabled:cursor-not-allowed"}
-              >
+            <TabsList className="h-auto">
+              <TabsTrigger value="builder" disabled={!canUseBuilder} className="px-3 py-1.5 text-xs">
                 UI 빌더
-              </button>
-              <button
-                type="button"
-                onClick={() => setTab("json")}
-                className={(tab === "json" ? cx.btnToggleOn : cx.btnToggleOff) + " !py-1.5 !px-3 text-xs"}
-              >
+              </TabsTrigger>
+              <TabsTrigger value="json" className="px-3 py-1.5 text-xs">
                 JSON
-              </button>
-            </div>
+              </TabsTrigger>
+            </TabsList>
           </div>
 
-          {tab === "json" && (
-            <>
+          <TabsContent value="json" className={`flex flex-col gap-2 ${cx.tab.content}`}>
               <textarea
                 value={spec}
                 onChange={(e) => setSpec(e.target.value)}
@@ -886,10 +861,9 @@ function MetricFormModal(
               {!canUseBuilder && (
                 <p className="text-xs text-amber-400">이 스펙은 UI로 표현할 수 없습니다. JSON 탭에서 편집하세요.</p>
               )}
-            </>
-          )}
+          </TabsContent>
 
-          {tab === "builder" && (
+          <TabsContent value="builder" className={cx.tab.content}>
             <div className="flex flex-col gap-3">
               <p className="text-xs text-slate-500">
                 예: agg(RATIO_POS, RET_1D, 보통주) = 상승비율. 지수 레짐 = cumprod1p(agg MEAN RET_1D) &gt; roll_mean(...).
@@ -901,14 +875,14 @@ function MetricFormModal(
                   <button
                     type="button"
                     onClick={addLet}
-                    className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/5 transition"
+                    className={cx.btnSm}
                   >
                     중간값 추가
                   </button>
                 </div>
                 {lets.length === 0 && <p className="text-xs text-slate-500">중간값 없음. 필요하면 추가하세요.</p>}
                 {lets.map((entry, i) => (
-                  <div key={i} className="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 p-2.5">
+                  <div key={i} className={cx.panel + " flex flex-col gap-2 rounded-lg p-2.5"}>
                     <div className="flex items-center gap-2">
                       <input
                         value={entry.name}
@@ -919,7 +893,7 @@ function MetricFormModal(
                       <button
                         type="button"
                         onClick={() => removeLet(i)}
-                        className="rounded-lg border border-rose-500/30 px-3 py-2 text-xs text-rose-300 hover:bg-rose-500/10 transition whitespace-nowrap"
+                        className={cx.btnDangerSm + " py-2"}
                       >
                         삭제
                       </button>
@@ -936,8 +910,8 @@ function MetricFormModal(
                 <NodeEditor node={rootNode} onChange={syncRoot} letNames={letNames} universes={universes} firstUniverseId={firstUniverseId} />
               </div>
             </div>
-          )}
-        </div>
+          </TabsContent>
+        </Tabs>
 
         <div className="flex items-center gap-2">
           <button onClick={preview} disabled={previewing || !spec.trim()} className={cx.btnSecondary}>
@@ -949,7 +923,7 @@ function MetricFormModal(
         {previewError && <p className="text-sm text-rose-400">{previewError}</p>}
 
         {points && (
-          <div className="flex flex-col gap-2 rounded-lg border border-white/10 bg-white/5 p-3">
+          <Panel className="flex flex-col gap-2 rounded-lg p-3">
             {recent.length === 0 ? (
               <p className="text-xs text-slate-400">표시할 값이 없습니다.</p>
             ) : (
@@ -965,7 +939,7 @@ function MetricFormModal(
                 </ul>
               </>
             )}
-          </div>
+          </Panel>
         )}
 
         {error && <p className="text-sm text-rose-400">{error}</p>}
@@ -1054,7 +1028,7 @@ function DeleteMetricModal({ metric, onClose, onDone }: { metric: CustomMetric; 
           <button
             onClick={submit}
             disabled={submitting || confirmText !== metric.name}
-            className="rounded-lg bg-rose-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-rose-500 disabled:opacity-50"
+            className={cx.btnDanger}
           >
             {submitting ? "삭제 중..." : "삭제"}
           </button>

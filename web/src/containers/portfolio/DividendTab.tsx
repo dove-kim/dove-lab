@@ -7,6 +7,7 @@ import { type PortfolioPosition, type PortfolioTx, natMoney } from "@/types/port
 import { usePortfolioData, won, fxRateOf } from "./usePortfolioData";
 import { usePaged, Pagination } from "@/components/Pagination";
 import { useScope, scopeBase, ScopeSelector } from "./scopeView";
+import Panel from "@/components/Panel";
 
 /** 종목별 실수령 배당 집계 — 세후 합계와 개별 배당 거래 목록. */
 interface Received {
@@ -323,7 +324,7 @@ export default function DividendTab() {
           );
         })()}
 
-      <div className="rounded-xl border border-white/10 bg-slate-900/40 overflow-x-auto">
+      <Panel className="rounded-xl bg-slate-900/40 overflow-x-auto">
         <table className={cx.table.root}>
           <thead className={cx.table.head}>
             <tr>
@@ -402,7 +403,7 @@ export default function DividendTab() {
             )}
           </tbody>
         </table>
-      </div>
+      </Panel>
 
       <Pagination page={paged.page} pageCount={paged.pageCount} from={paged.from} to={paged.to} total={paged.total} onPage={paged.setPage} />
 

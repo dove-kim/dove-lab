@@ -1,6 +1,8 @@
 import type { Metadata, Viewport } from "next";
 import "@/styles/globals.css";
 import ScrollWatcher from "@/components/ScrollWatcher";
+import ConfirmProvider from "@/components/ConfirmProvider";
+import { Toaster } from "@/components/ui/sonner";
 
 export const metadata: Metadata = {
   title: "Dove Lab",
@@ -19,10 +21,11 @@ export const viewport: Viewport = {
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
-    <html lang="ko">
+    <html lang="ko" className="dark">
       <body className="touch-pan-x touch-pan-y">
         <ScrollWatcher />
-        {children}
+        <ConfirmProvider>{children}</ConfirmProvider>
+        <Toaster position="bottom-right" />
       </body>
     </html>
   );

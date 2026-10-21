@@ -305,14 +305,14 @@ export default function InvestorFlowTab({ code }: { code: string }) {
               type="date"
               value={customFrom}
               onChange={e => setCustomFrom(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white w-32 focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
+              className={cx.inputSm + " w-32"}
             />
             <span className="text-slate-500">~</span>
             <input
               type="date"
               value={customTo}
               onChange={e => setCustomTo(e.target.value)}
-              className="bg-white/5 border border-white/10 rounded px-2 py-1 text-xs text-white w-32 focus:outline-none focus:ring-1 focus:ring-indigo-400/50"
+              className={cx.inputSm + " w-32"}
             />
             <button onClick={handleCustomApply} className={cx.btnSecondary}>
               조회

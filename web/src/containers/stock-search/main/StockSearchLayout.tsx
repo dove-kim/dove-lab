@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { useHideOnScroll } from "@/hooks/useHideOnScroll";
 import { perf } from "@/utils/perf";
 import { useIndicatorPresets } from "@/hooks/useIndicatorPresets";
 import { cx } from "@/utils/cx";
@@ -139,6 +140,14 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
   const [searchOpen, setSearchOpen] = useState(true);
   const [selected, setSelected] = useState<StockMatchResult | null>(null);
   const listRef = useRef<HTMLDivElement>(null);
+  const topRef = useRef<HTMLDivElement>(null);
+  const { hidden: topHidden, onScrollCapture, setCollapsed } = useHideOnScroll(topRef);
+
+  // 목록으로 돌아오면 접혀 있던 상단을 다시 펼친다
+  useEffect(() => {
+    if (selected === null) setCollapsed(false);
+  }, [selected, setCollapsed]);
+
   const [listST, setListST] = useState(0);
   const [listH, setListH] = useState(600);
 
@@ -323,7 +332,17 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
   );
 
   return (
-    <div className="flex flex-col flex-1 overflow-hidden min-w-0">
+    <div className="flex flex-col flex-1 overflow-hidden min-w-0" onScrollCapture={onScrollCapture}>
+      {/* ── 상단 영역 — 모바일 상세에선 숨기고, 목록에선 아래로 스크롤하면 접힌다 ───── */}
+      <div
+        ref={topRef}
+        className={
+          "flex-shrink-0 overflow-hidden transition-[max-height,opacity] duration-200 md:block md:max-h-none md:opacity-100 " +
+          (selected
+            ? "hidden"
+            : topHidden ? "max-h-0 opacity-0" : "max-h-[70vh] opacity-100")
+        }
+      >
       {/* ── 검색/필터 영역 토글 바 (모바일·웹 공통) ───────────────────────────── */}
       <div className="flex-shrink-0 flex items-center justify-between px-5 py-1.5 border-b border-white/10 bg-slate-900/40">
         <span className="text-xs text-slate-400">
@@ -346,14 +365,14 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
         {/* 모드 토글 */}
         <div className="flex flex-col gap-1">
           <label className="text-xs text-slate-400">보기</label>
-          <div className="flex rounded-lg border border-white/15 overflow-hidden text-sm h-9">
+          <div className={cx.segment.root}>
             <button type="button" onClick={() => switchMode("all")}
-              className={`px-3 ${mode === "all" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}>전체</button>
+              className={mode === "all" ? cx.segment.on : cx.segment.off}>전체</button>
             <button type="button" onClick={() => switchMode("filter")} disabled={!canSearch}
               title={canSearch ? undefined : "검색 권한이 없습니다"}
-              className={`px-3 flex items-center gap-1 ${
-                !canSearch ? "text-slate-600 cursor-not-allowed"
-                : mode === "filter" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}>
+              className={"flex items-center gap-1 " + (
+                !canSearch ? cx.segment.disabled
+                : mode === "filter" ? cx.segment.on : cx.segment.off)}>
               필터
               {!canSearch && (
                 <svg className="w-3 h-3" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -411,13 +430,13 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
               <label className="text-xs text-slate-400">기준일</label>
               <div className="flex items-center gap-1">
                 <button onClick={handlePrev} disabled={!hasPrev} title="이전 거래일"
-                  className="flex items-center justify-center w-8 h-9 rounded-lg border border-white/15 text-slate-400 hover:text-white hover:bg-white/5 transition disabled:opacity-30 disabled:cursor-not-allowed">
+                  className={cx.btnSm + " h-9 w-8 px-0 disabled:opacity-30"}>
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="15 18 9 12 15 6" /></svg>
                 </button>
                 <TradingDayCalendar value={date} tradingDays={tradingDays}
                   onChange={(d) => { setDate(d); setResult(null); setFilterError(null); }} />
                 <button onClick={handleNext} disabled={!hasNext} title="다음 거래일"
-                  className="flex items-center justify-center w-8 h-9 rounded-lg border border-white/15 text-slate-400 hover:text-white hover:bg-white/5 transition disabled:opacity-30 disabled:cursor-not-allowed">
+                  className={cx.btnSm + " h-9 w-8 px-0 disabled:opacity-30"}>
                   <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="9 18 15 12 9 6" /></svg>
                 </button>
               </div>
@@ -451,6 +470,7 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
         )}
       </div>
       )}
+      </div>
 
       {/* ── 결과 목록 + 상세 영역 ─────────────────────────────────────────────── */}
       <div className="flex flex-1 overflow-hidden">
@@ -468,7 +488,7 @@ export default function StockSearchLayout({ filters, tradingDays, latestDate, in
               </svg>
               <input type="text" value={searchQuery} onChange={(e) => setSearchQuery(e.target.value)}
                 placeholder="종목명 · 티커 검색"
-                className="w-full bg-white/5 border border-white/10 rounded pl-8 pr-7 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-indigo-400/50 transition" />
+                className={cx.inputSm + " pl-8 pr-7 py-1.5 placeholder:text-slate-500"} />
               {searchQuery && (
                 <button onClick={() => setSearchQuery("")}
                   className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-500 hover:text-slate-300 transition">

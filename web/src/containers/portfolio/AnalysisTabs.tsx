@@ -5,6 +5,8 @@ import ReportTab from "./ReportTab";
 import PositionsTab from "./PositionsTab";
 import RoundTripsTab from "./RoundTripsTab";
 import DividendTab from "./DividendTab";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { cx } from "@/utils/cx";
 
 type Tab = "overview" | "positions" | "roundtrips" | "dividend";
 
@@ -21,27 +23,18 @@ const TABS: { key: Tab; label: string }[] = [
 export default function AnalysisTabs() {
   const [tab, setTab] = useState<Tab>("overview");
   return (
-    <div className="flex flex-col gap-4">
-      <div className="flex gap-1 border-b border-white/10">
+    <Tabs value={tab} onValueChange={(v) => setTab(v as Tab)} className="flex flex-col gap-4">
+      <TabsList variant="line" className={cx.tab.list}>
         {TABS.map((t) => (
-          <button
-            key={t.key}
-            onClick={() => setTab(t.key)}
-            className={
-              "px-4 py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer " +
-              (tab === t.key
-                ? "border-indigo-400 text-indigo-300"
-                : "border-transparent text-slate-400 hover:text-white")
-            }
-          >
+          <TabsTrigger key={t.key} value={t.key} className={cx.tab.trigger}>
             {t.label}
-          </button>
+          </TabsTrigger>
         ))}
-      </div>
-      {tab === "overview" && <ReportTab />}
-      {tab === "positions" && <PositionsTab />}
-      {tab === "roundtrips" && <RoundTripsTab />}
-      {tab === "dividend" && <DividendTab />}
-    </div>
+      </TabsList>
+      <TabsContent value="overview" className={cx.tab.content}><ReportTab /></TabsContent>
+      <TabsContent value="positions" className={cx.tab.content}><PositionsTab /></TabsContent>
+      <TabsContent value="roundtrips" className={cx.tab.content}><RoundTripsTab /></TabsContent>
+      <TabsContent value="dividend" className={cx.tab.content}><DividendTab /></TabsContent>
+    </Tabs>
   );
 }

@@ -19,6 +19,7 @@ import {
 import { createRankStage, createFilterStage, summarizeRankStage } from "@/utils/filter";
 import ExpressionTree from "./ExpressionTree";
 import ConditionPalette from "./ConditionPalette";
+import Panel from "@/components/Panel";
 
 interface Props {
   stages: PipelineStageState[];
@@ -132,7 +133,7 @@ function StageCard({
     stage.type === "RANK" ? summarizeRankStage(stage.sort, stage.limit, names) : "추가 조건 그룹";
 
   return (
-    <div className="rounded-xl border border-white/10 bg-slate-800/50">
+    <Panel className="rounded-xl bg-slate-800/50">
       <div className="flex items-center gap-2 px-3 py-2 border-b border-white/5">
         <span className="flex items-center justify-center w-6 h-6 rounded-md bg-white/5 text-xs text-slate-300 font-semibold flex-shrink-0">
           {index + 1}
@@ -145,7 +146,7 @@ function StageCard({
             onClick={() => onMove(-1)}
             disabled={index === 0}
             title="위로"
-            className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-white/10 transition disabled:opacity-30 disabled:hover:bg-transparent"
+            className={cx.btnIcon + " disabled:opacity-30"}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="m18 15-6-6-6 6" />
@@ -156,7 +157,7 @@ function StageCard({
             onClick={() => onMove(1)}
             disabled={index === total - 1}
             title="아래로"
-            className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-white/10 transition disabled:opacity-30 disabled:hover:bg-transparent"
+            className={cx.btnIcon + " disabled:opacity-30"}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="m6 9 6 6 6-6" />
@@ -166,7 +167,7 @@ function StageCard({
             type="button"
             onClick={onRemove}
             title="단계 삭제"
-            className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition"
+            className={cx.btnIconDanger}
           >
             <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6 6 18M6 6l12 12" />
@@ -191,7 +192,7 @@ function StageCard({
           />
         )}
       </div>
-    </div>
+    </Panel>
   );
 }
 
@@ -302,7 +303,7 @@ function RankStageEditor({
                     onClick={() => moveKey(i, -1)}
                     disabled={i === 0}
                     title="위로"
-                    className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-white/10 transition disabled:opacity-30 disabled:hover:bg-transparent"
+                    className={cx.btnIcon + " disabled:opacity-30"}
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="m18 15-6-6-6 6" />
@@ -313,7 +314,7 @@ function RankStageEditor({
                     onClick={() => moveKey(i, 1)}
                     disabled={i === sort.length - 1}
                     title="아래로"
-                    className="p-1.5 rounded text-slate-400 hover:text-white hover:bg-white/10 transition disabled:opacity-30 disabled:hover:bg-transparent"
+                    className={cx.btnIcon + " disabled:opacity-30"}
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="m6 9 6 6 6-6" />
@@ -323,7 +324,7 @@ function RankStageEditor({
                     type="button"
                     onClick={() => removeKey(i)}
                     title="정렬 키 삭제"
-                    className="p-1.5 rounded text-slate-400 hover:text-red-400 hover:bg-red-900/20 transition"
+                    className={cx.btnIconDanger}
                   >
                     <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
                       <path d="M18 6 6 18M6 6l12 12" />

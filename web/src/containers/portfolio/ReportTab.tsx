@@ -5,6 +5,7 @@ import { type PortfolioPosition, type PortfolioSummary } from "@/types/portfolio
 import { usePortfolioData, won, signed, pnlColor, fxRateOf } from "./usePortfolioData";
 import { useScope, scopeBase, ScopeSelector } from "./scopeView";
 import { StatTile } from "./StatTile";
+import { cx } from "@/utils/cx";
 
 // 카테고리 팔레트(다크 서피스 검증 완료, 고정 순서). 식별은 범례로 보강한다.
 const DONUT_PALETTE = ["#3987e5", "#199e70", "#c98500", "#008300", "#9085e9", "#e66767", "#d55181", "#d95926"];
@@ -149,7 +150,7 @@ export default function ReportTab() {
           </div>
         </div>
       ) : (
-        <p className="text-sm text-slate-500 py-6 text-center rounded-xl border border-white/10 bg-slate-900/40">
+        <p className={cx.emptyState + " py-6"}>
           보유 종목이 없습니다. 상세·배당은 보유종목 탭에서.
         </p>
       )}

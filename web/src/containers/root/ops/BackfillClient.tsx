@@ -1,7 +1,11 @@
 "use client";
 
 import { useState, useEffect, useCallback } from "react";
+import Select from "@/components/Select";
+import { Badge } from "@/components/ui/badge";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { cx } from "@/utils/cx";
+import Panel from "@/components/Panel";
 
 interface CollectionTask {
   id: number;
@@ -84,20 +88,12 @@ function statusChip(status: CollectionTask["status"]) {
     FAILED: "bg-rose-500/20 text-rose-300 border-rose-500/30",
   };
   const label = { PENDING: "대기", RUNNING: "실행 중", DONE: "완료", FAILED: "실패" };
-  return (
-    <span className={`px-2 py-0.5 rounded text-xs border ${map[status]}`}>
-      {label[status]}
-    </span>
-  );
+  return <Badge variant="outline" className={`rounded ${map[status]}`}>{label[status]}</Badge>;
 }
 
 function typeChip(type: string) {
   const cfg = TYPE_CONFIG[type] ?? { label: type, color: "bg-slate-500/20 text-slate-300 border-slate-500/30" };
-  return (
-    <span className={`text-xs px-2 py-0.5 rounded border ${cfg.color}`}>
-      {cfg.label}
-    </span>
-  );
+  return <Badge variant="outline" className={`rounded ${cfg.color}`}>{cfg.label}</Badge>;
 }
 
 function formatDt(iso: string | null) {
@@ -126,25 +122,34 @@ function YearSelector({
 }) {
   return (
     <div className="flex items-center gap-2">
-      <div className="flex rounded-lg border border-white/15 overflow-hidden text-xs h-9">
+      <div className={cx.segment.root + " text-xs"}>
         <button type="button" onClick={() => setMode("year")}
-          className={`px-2.5 ${mode === "year" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}>연도</button>
+          className={(mode === "year" ? cx.segment.on : cx.segment.off) + " px-2.5"}>연도</button>
         <button type="button" onClick={() => setMode("range")}
-          className={`px-2.5 ${mode === "range" ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white"}`}>범위</button>
+          className={(mode === "range" ? cx.segment.on : cx.segment.off) + " px-2.5"}>범위</button>
       </div>
       {mode === "year" ? (
-        <select value={year} onChange={e => setYear(Number(e.target.value))} className={cx.select + " w-24"}>
-          {years.map(y => <option key={y} value={y}>{y}년</option>)}
-        </select>
+        <Select
+          value={String(year)}
+          onChange={v => setYear(Number(v))}
+          className="w-24"
+          items={years.map(y => ({ value: String(y), label: `${y}년` }))}
+        />
       ) : (
         <div className="flex items-center gap-1.5">
-          <select value={fromYear} onChange={e => setFromYear(Number(e.target.value))} className={cx.select + " w-24"}>
-            {years.map(y => <option key={y} value={y}>{y}년</option>)}
-          </select>
+          <Select
+            value={String(fromYear)}
+            onChange={v => setFromYear(Number(v))}
+            className="w-24"
+            items={years.map(y => ({ value: String(y), label: `${y}년` }))}
+          />
           <span className="text-slate-500">~</span>
-          <select value={toYear} onChange={e => setToYear(Number(e.target.value))} className={cx.select + " w-24"}>
-            {years.map(y => <option key={y} value={y}>{y}년</option>)}
-          </select>
+          <Select
+            value={String(toYear)}
+            onChange={v => setToYear(Number(v))}
+            className="w-24"
+            items={years.map(y => ({ value: String(y), label: `${y}년` }))}
+          />
         </div>
       )}
     </div>
@@ -328,41 +333,42 @@ export default function BackfillClient() {
   const valRangeInvalid = valMode === "range" && valFromYear > valToYear;
 
   return (
-    <div className="flex flex-col min-h-full p-6 gap-4">
-      {/* 탭 */}
-      <div className="flex items-center gap-1 border-b border-white/10 pb-0">
+    <Tabs
+      value={activeTab}
+      onValueChange={(v) => setActiveTab(v as "수집" | "이력")}
+      className="flex min-h-full flex-col gap-4 p-6"
+    >
+      <TabsList variant="line" className={cx.tab.list}>
         {(["수집", "이력"] as const).map(tab => (
-          <button
+          <TabsTrigger
             key={tab}
-            type="button"
-            onClick={() => setActiveTab(tab)}
-            className={`relative flex items-center gap-1.5 px-4 py-2.5 text-sm font-medium transition border-b-2 -mb-px
-              ${activeTab === tab
-                ? "border-indigo-400 text-white"
-                : "border-transparent text-slate-400 hover:text-slate-200"}`}
+            value={tab}
+            className={cx.tab.trigger}
           >
             {tab}
             {tab === "이력" && runningCount > 0 && (
-              <span className="bg-emerald-500 text-white text-[10px] font-bold rounded-full min-w-[18px] h-[18px] flex items-center justify-center px-1 tabular-nums">
+              <Badge className="h-[18px] min-w-[18px] bg-emerald-500 px-1 text-[10px] font-bold tabular-nums text-white">
                 {runningCount}
-              </span>
+              </Badge>
             )}
-          </button>
+          </TabsTrigger>
         ))}
-      </div>
+      </TabsList>
 
-      {/* 수집 탭 */}
-      {activeTab === "수집" && (
+      <TabsContent value="수집" className={cx.tab.content}>
         <div className="flex flex-col gap-2">
 
           {/* 주가 */}
-          <div className="flex flex-wrap items-end gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+          <Panel className="flex flex-wrap items-end gap-3 px-4 py-3">
             <span className="text-sm font-semibold text-slate-200 w-16 self-center">주가</span>
             <label className="block">
               <span className="text-[11px] text-slate-500 mb-0.5 block">거래소</span>
-              <select value={priceExchange} onChange={e => setPriceExchange(e.target.value)} className={cx.select + " w-40"}>
-                {EXCHANGES.map(e => <option key={e.value} value={e.value}>{e.label}</option>)}
-              </select>
+              <Select
+                value={priceExchange}
+                onChange={setPriceExchange}
+                className="w-40"
+                items={EXCHANGES.map(e => ({ value: e.value, label: e.label }))}
+              />
             </label>
             <div className="block">
               <span className="text-[11px] text-slate-500 mb-0.5 block">기간</span>
@@ -383,18 +389,21 @@ export default function BackfillClient() {
             {refetchAdjusted && (
               <label className="block">
                 <span className="text-[11px] text-slate-500 mb-0.5 block">시작 연도</span>
-                <select value={adjustedFromYear} onChange={e => setAdjustedFromYear(Number(e.target.value))} className={cx.select + " w-32"}>
-                  {ADJ_YEARS.map(y => <option key={y} value={y}>{y === 1985 ? "전체(1985~)" : `${y}년~`}</option>)}
-                </select>
+                <Select
+                  value={String(adjustedFromYear)}
+                  onChange={v => setAdjustedFromYear(Number(v))}
+                  className="w-32"
+                  items={ADJ_YEARS.map(y => ({ value: String(y), label: y === 1985 ? "전체(1985~)" : `${y}년~` }))}
+                />
               </label>
             )}
             <button onClick={startPriceCollection} disabled={priceLoading || priceRangeInvalid} className={cx.btnPrimary + " ml-auto"}>
               {priceLoading ? "요청 중..." : "재조회 시작"}
             </button>
-          </div>
+          </Panel>
 
           {/* 종목 목록 (KRX) */}
-          <div className="flex flex-wrap items-end gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+          <Panel className="flex flex-wrap items-end gap-3 px-4 py-3">
             <span className="text-sm font-semibold text-slate-200 w-16 self-center">종목 목록</span>
             <div className="block">
               <span className="text-[11px] text-slate-500 mb-0.5 block">기간</span>
@@ -411,19 +420,19 @@ export default function BackfillClient() {
             <button onClick={startStockSyncCollection} disabled={stockSyncLoading || stockSyncRangeInvalid} className={cx.btnPrimary + " ml-auto"}>
               {stockSyncLoading ? "요청 중..." : "재조회 시작"}
             </button>
-          </div>
+          </Panel>
 
           {/* 종목 상세 (KIS) */}
-          <div className="flex flex-wrap items-center gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+          <Panel className="flex flex-wrap items-center gap-3 px-4 py-3">
             <span className="text-sm font-semibold text-slate-200 w-16">종목 상세</span>
             <span className="flex-1 text-[11px] text-slate-500">전 종목 KIS 상세 정보 upsert (날짜 무관)</span>
             <button onClick={startStockDetailCollection} disabled={stockDetailLoading} className={cx.btnPrimary}>
               {stockDetailLoading ? "요청 중..." : "재수집 시작"}
             </button>
-          </div>
+          </Panel>
 
           {/* 이벤트 */}
-          <div className="flex flex-wrap items-end gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+          <Panel className="flex flex-wrap items-end gap-3 px-4 py-3">
             <span className="text-sm font-semibold text-slate-200 w-16 self-center">이벤트</span>
             <div className="block">
               <span className="text-[11px] text-slate-500 mb-0.5 block">기간</span>
@@ -440,10 +449,10 @@ export default function BackfillClient() {
             <button onClick={startEventCollection} disabled={eventLoading || eventRangeInvalid} className={cx.btnPrimary + " ml-auto"}>
               {eventLoading ? "요청 중..." : "재조회 시작"}
             </button>
-          </div>
+          </Panel>
 
           {/* 재무제표 (DART) */}
-          <div className="flex flex-wrap items-end gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+          <Panel className="flex flex-wrap items-end gap-3 px-4 py-3">
             <span className="text-sm font-semibold text-slate-200 w-16 self-center">재무제표</span>
             <div className="block">
               <span className="text-[11px] text-slate-500 mb-0.5 block">기간(연도)</span>
@@ -460,10 +469,10 @@ export default function BackfillClient() {
             <button onClick={startFundamentalCollection} disabled={fundLoading || fundRangeInvalid} className={cx.btnPrimary + " ml-auto"}>
               {fundLoading ? "요청 중..." : "재조회 시작"}
             </button>
-          </div>
+          </Panel>
 
           {/* 밸류에이션 재계산 (DB 전용) */}
-          <div className="flex flex-wrap items-end gap-3 bg-white/5 border border-white/10 rounded-xl px-4 py-3">
+          <Panel className="flex flex-wrap items-end gap-3 px-4 py-3">
             <span className="text-sm font-semibold text-slate-200 w-16 self-center">밸류에이션</span>
             <div className="block">
               <span className="text-[11px] text-slate-500 mb-0.5 block">기간</span>
@@ -480,12 +489,11 @@ export default function BackfillClient() {
             <button onClick={startValuationCollection} disabled={valLoading || valRangeInvalid} className={cx.btnPrimary + " ml-auto"}>
               {valLoading ? "요청 중..." : "재계산 시작"}
             </button>
-          </div>
+          </Panel>
         </div>
-      )}
+      </TabsContent>
 
-      {/* 이력 탭 */}
-      {activeTab === "이력" && (
+      <TabsContent value="이력" className={cx.tab.content}>
         <div className="flex flex-col gap-2">
           <div className="flex items-center justify-between flex-shrink-0">
             <h2 className="text-sm font-semibold text-slate-300">
@@ -502,7 +510,7 @@ export default function BackfillClient() {
                 onClick={handleRefresh}
                 title="새로고침"
                 aria-label="새로고침"
-                className="w-8 h-8 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition"
+                className={cx.btnIcon + " size-8"}
               >
                 <svg className={`w-4 h-4 ${refreshing ? "animate-spin" : ""}`} viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                   <polyline points="23 4 23 10 17 10" />
@@ -576,7 +584,7 @@ export default function BackfillClient() {
                         )}
                         {t.status === "FAILED" && (
                           <button onClick={() => retryTask(t.id)}
-                            className="text-xs px-2 py-1 rounded border border-white/15 text-slate-400 hover:text-white transition flex-shrink-0">
+                            className={cx.btnSm + " shrink-0 rounded px-2 py-1"}>
                             재시도
                           </button>
                         )}
@@ -591,18 +599,18 @@ export default function BackfillClient() {
           {totalPages > 1 && (
             <div className="flex items-center justify-center gap-2 flex-shrink-0 pt-1">
               <button onClick={() => setPage(p => Math.max(0, p - 1))} disabled={page <= 0}
-                className="px-3 py-1.5 text-xs rounded-lg border border-white/15 text-slate-300 hover:bg-white/5 transition disabled:opacity-30 disabled:cursor-not-allowed">
+                className={cx.btnSm + " disabled:opacity-30"}>
                 이전
               </button>
               <span className="text-xs text-slate-400 tabular-nums px-2">{page + 1} / {totalPages}</span>
               <button onClick={() => setPage(p => Math.min(totalPages - 1, p + 1))} disabled={page >= totalPages - 1}
-                className="px-3 py-1.5 text-xs rounded-lg border border-white/15 text-slate-300 hover:bg-white/5 transition disabled:opacity-30 disabled:cursor-not-allowed">
+                className={cx.btnSm + " disabled:opacity-30"}>
                 다음
               </button>
             </div>
           )}
         </div>
-      )}
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }

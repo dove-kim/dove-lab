@@ -1,12 +1,18 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import Select from "@/components/Select";
+import { useConfirm } from "@/components/ConfirmProvider";
+import { toast } from "sonner";
+import { cn } from "@/utils/cn";
 import { cx } from "@/utils/cx";
 import CommaInput from "@/components/CommaInput";
 import { type PortfolioPosition, type PortfolioRebalancePlan, CUR_SYMBOL } from "@/types/portfolio";
 import { type StockMatchResult } from "@/types/filter";
 import { usePortfolioData, won, fxRateOf } from "./usePortfolioData";
 import { StatTile } from "./StatTile";
+import Panel from "@/components/Panel";
 
 interface RbItem {
   id: number;
@@ -21,9 +27,9 @@ interface RbItem {
 }
 
 // 고정폭 숫자 입력 클래스 — cx.inputNumber는 w-full이라 폭을 못 줄여서 별도.
-const NUM = "bg-white/5 border border-white/15 rounded-lg px-3 py-2 text-white text-sm focus:outline-none focus:ring-2 focus:ring-indigo-400/50 transition [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none [&::-webkit-outer-spin-button]:appearance-none";
+const NUM = cn(cx.inputNumber, "w-auto text-sm sm:text-sm");
 // 표 셀 안의 소형 숫자 입력.
-const NUMCELL = "w-16 bg-white/5 border border-white/15 rounded px-2 py-1 text-right text-sm text-white [appearance:textfield] [&::-webkit-inner-spin-button]:appearance-none";
+const NUMCELL = cn(cx.inputNumber, "w-16 rounded px-2 py-1 text-right text-sm sm:text-sm");
 /** 프리셋 현금 라인 — 계좌의 특정 통화 잔액이 전략 현금(원화·달러 등 통화별로 각각). weightPct=리밸런싱 목표 비중(슬롯은 무시). */
 interface CashEntry {
   account: string;
@@ -37,6 +43,7 @@ type Mode = "sell" | "buy";
  * 매매 계획 탭 — 리밸런싱(프리셋 목표% 매수·매도), 슬롯 계산(신규 매수액), 프리셋 관리를 제공한다.
  */
 export default function RebalanceTab() {
+  const confirm = useConfirm();
   const { data, err } = usePortfolioData<PortfolioPosition[]>("/api/portfolio/positions");
   const [items, setItems] = useState<RbItem[]>([]);
   const [tab, setTab] = useState<"run" | "slot" | "sell" | "presets">("run");
@@ -141,7 +148,7 @@ export default function RebalanceTab() {
   async function savePlan() {
     const name = planName.trim();
     if (!name) {
-      alert("프리셋 이름을 입력하세요.");
+      toast.warning("프리셋 이름을 입력하세요");
       return;
     }
     const positions = items
@@ -151,7 +158,7 @@ export default function RebalanceTab() {
       .filter((c) => c.account)
       .map((c) => ({ account: c.account, currency: c.currency, weightPct: c.weightPct }));
     if (positions.length + cash.length === 0) {
-      alert("선택된 종목·현금이 없습니다.");
+      toast.warning("선택된 종목이나 현금이 없습니다");
       return;
     }
     const config = { slots: planSlots, partRate, positions, cash };
@@ -171,7 +178,13 @@ export default function RebalanceTab() {
   }
 
   async function deletePlan(id: number) {
-    if (!confirm("이 프리셋을 삭제할까요?")) return;
+    const ok = await confirm({
+      title: "프리셋 삭제",
+      description: "이 리밸런싱 프리셋을 삭제할까요?",
+      confirmText: "삭제",
+      danger: true,
+    });
+    if (!ok) return;
     await fetch(`/api/portfolio/rebalance-plans/${id}`, { method: "DELETE" });
     loadPlans();
     setLoadedId("");
@@ -354,51 +367,45 @@ export default function RebalanceTab() {
   const sellExcess = Math.max(0, sellTotal - sellShortfall); // 통째 매도로 생긴 남는 현금
 
   return (
-    <div className="flex flex-col gap-5">
-      <div className="flex gap-1 border-b border-white/10">
+    <Tabs
+      value={tab}
+      onValueChange={(v) => setTab(v as "run" | "slot" | "sell" | "presets")}
+      className="flex flex-col gap-5"
+    >
+      <TabsList variant="line" className={cx.tab.list}>
         {([["run", "리밸런싱"], ["slot", "슬롯 계산"], ["sell", "매도(급전)"], ["presets", "프리셋 관리"]] as const).map(([k, label]) => (
-          <button
-            key={k}
-            onClick={() => setTab(k)}
-            className={
-              "px-4 py-3 text-sm font-medium border-b-2 -mb-px transition cursor-pointer " +
-              (tab === k ? "border-indigo-400 text-indigo-300" : "border-transparent text-slate-400 hover:text-white")
-            }
-          >
+          <TabsTrigger key={k} value={k} className={cx.tab.trigger}>
             {label}
-          </button>
+          </TabsTrigger>
         ))}
-      </div>
+      </TabsList>
 
-      {/* ── 리밸런싱 ── */}
-      {tab === "run" && (
+      <TabsContent value="run" className={cx.tab.content}>
         <div className="flex flex-col gap-4">
-          <div className="flex flex-wrap items-center gap-2 rounded-xl border border-white/10 bg-white/5 p-2.5">
+          <Panel className="flex flex-wrap items-center gap-2 p-2.5">
             <span className="text-xs text-slate-400">프리셋</span>
-            <select
-              value={loadedId}
-              onChange={(e) => {
-                const p = plans.find((x) => x.id === Number(e.target.value));
+            <Select
+              value={String(loadedId)}
+              placeholder="선택…"
+              onChange={(v) => {
+                const p = plans.find((x) => x.id === Number(v));
                 if (p) applyPlan(p);
               }}
-              className={cx.select}
-            >
-              <option value="">선택…</option>
-              {plans.map((p) => (
-                <option key={p.id} value={p.id}>
-                  {p.name} ({p.config.positions.length})
-                </option>
-              ))}
-            </select>
+              className="w-auto min-w-44"
+              items={plans.map((p) => ({
+                value: String(p.id),
+                label: p.name + " (" + p.config.positions.length + ")",
+              }))}
+            />
             {loadedPlan && <span className="text-xs text-slate-500">불러옴 · 목표는 프리셋 관리에서 수정</span>}
-          </div>
+          </Panel>
 
           {plans.length === 0 ? (
-            <p className="text-sm text-slate-500 py-8 text-center rounded-xl border border-white/10 bg-slate-900/40">
+            <p className={cx.emptyState}>
               저장된 프리셋이 없습니다. <span className="text-slate-300">프리셋 관리</span>에서 목표 배분을 먼저 만드세요.
             </p>
           ) : !loadedPlan ? (
-            <p className="text-sm text-slate-500 py-8 text-center rounded-xl border border-white/10 bg-slate-900/40">
+            <p className={cx.emptyState}>
               프리셋을 선택하면 그 목표 배분으로 매수·매도를 계산합니다. (신규 매수액은 &lsquo;슬롯 계산&rsquo; 탭)
             </p>
           ) : (
@@ -426,11 +433,12 @@ export default function RebalanceTab() {
 
               <div className="flex flex-wrap items-center gap-2">
                 <label className="text-sm text-slate-400">투자금 통화</label>
-                <select value={baseCur} onChange={(e) => setBaseCur(e.target.value)} className={cx.select}>
-                  {currencies.map((c) => (
-                    <option key={c}>{c}</option>
-                  ))}
-                </select>
+                <Select
+                  value={baseCur}
+                  onChange={setBaseCur}
+                  className="w-auto min-w-24"
+                  items={currencies.map((c) => ({ value: c, label: c }))}
+                />
                 <label className="text-sm text-slate-400 ml-2">투자금(추가)</label>
                 <CommaInput decimal value={cash} onChange={setCash} className={NUM + " w-32"} />
                 {mode === "buy" && (
@@ -442,7 +450,7 @@ export default function RebalanceTab() {
                 평가·비중은 현재환율 KRW 기준, 해외 종목은 실행용 원통화 환산액(≈)을 함께 표시. 목표%는 프리셋 값(읽기 전용).
               </p>
 
-              <div className="rounded-xl border border-white/10 bg-slate-900/40 overflow-x-auto">
+              <Panel className="rounded-xl bg-slate-900/40 overflow-x-auto">
                 <table className={cx.table.root}>
                   <thead className={cx.table.head}>
                     <tr>
@@ -495,7 +503,7 @@ export default function RebalanceTab() {
                     )}
                   </tbody>
                 </table>
-              </div>
+              </Panel>
 
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
                 <StatTile size="base" label="목표 합계(현금 포함)" value={Math.round(calc.sumT) + "%"} tone={Math.round(calc.sumT) === 100 ? "text-white" : "text-sky-300"} />
@@ -534,32 +542,31 @@ export default function RebalanceTab() {
             </>
           )}
         </div>
-      )}
+      </TabsContent>
 
-      {/* ── 슬롯 계산 ── */}
-      {tab === "slot" && (
+      <TabsContent value="slot" className={cx.tab.content}>
         <div className="flex flex-col gap-4">
           <p className="text-sm text-slate-400">
             신규 타점에 <b className="text-slate-200">얼마</b> 넣을지 계산합니다. 슬롯당 = (프리셋 내 보유 평가 + 전략현금 + 추가금) ÷ 슬롯수 — 전략현금은 프리셋의 계좌·비율로 자동 반영.
           </p>
-          <div className="flex flex-wrap items-end gap-4 rounded-xl border border-white/10 bg-white/5 p-4">
+          <Panel className="flex flex-wrap items-end gap-4 p-4">
             <div>
               <label className="block text-xs text-slate-400 mb-1">전략 프리셋</label>
-              <select
-                value={slotPlanId}
-                onChange={(e) => {
-                  const id = e.target.value ? Number(e.target.value) : "";
+              <Select
+                value={String(slotPlanId)}
+                placeholder="프리셋 선택…"
+                onChange={(v) => {
+                  const id = v ? Number(v) : "";
                   setSlotPlanId(id);
                   const cfg = id ? plans.find((x) => x.id === id)?.config : null;
                   if (id && cfg) { setSlotN(Math.max(1, Math.round(cfg.slots || 8))); setPartRate(Math.max(0, cfg.partRate ?? 10)); }
                 }}
-                className={cx.select}
-              >
-                <option value="">프리셋 선택…</option>
-                {plans.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.config.positions.length})</option>
-                ))}
-              </select>
+                className="w-auto min-w-44"
+                items={plans.map((p) => ({
+                  value: String(p.id),
+                  label: p.name + " (" + p.config.positions.length + ")",
+                }))}
+              />
             </div>
             <div>
               <label className="block text-xs text-slate-400 mb-1">슬롯 수 <span className="text-slate-600">(프리셋값, 바꿔 계산 가능)</span></label>
@@ -567,10 +574,10 @@ export default function RebalanceTab() {
                 onChange={(e) => setSlotN(Math.max(1, Math.floor(Number(e.target.value) || 1)))}
                 className={NUM + " w-20"} />
             </div>
-          </div>
+          </Panel>
 
           {!slotPlan ? (
-            <p className="text-sm text-slate-500 py-8 text-center rounded-xl border border-white/10 bg-slate-900/40">
+            <p className={cx.emptyState}>
               프리셋을 선택하세요 — 그 프리셋에 담긴 종목의 현재 평가액만으로 슬롯을 나눕니다.
               <br />없으면 <span className="text-slate-300">프리셋 관리</span>에서 전략 종목을 담아 저장하세요.
             </p>
@@ -598,7 +605,7 @@ export default function RebalanceTab() {
                   배치 가능 현금(전략현금+추가금 {won(Math.round(slotCashAvail))})이 슬롯당({won(Math.round(slotAmt))})보다 적어 한 슬롯도 다 못 채웁니다 — 전액 부분 매수하거나 다음 적립을 기다리세요.
                 </p>
               )}
-              <div className="flex flex-wrap items-end gap-4 rounded-xl border border-white/10 bg-slate-900/40 p-4">
+              <Panel className="flex flex-wrap items-end gap-4 rounded-xl bg-slate-900/40 p-4">
                 <div>
                   <label className="block text-xs text-slate-400 mb-1">신규 후보 현재가(선택)</label>
                   <CommaInput value={slotPrice} onChange={setSlotPrice} className={NUM + " w-32"} />
@@ -611,7 +618,7 @@ export default function RebalanceTab() {
                     <span className="text-slate-500">현재가를 넣으면 슬롯당 금액으로 살 정수 주식수를 보여줍니다.</span>
                   )}
                 </div>
-              </div>
+              </Panel>
               <p className="text-xs text-slate-500">
                 부족한 슬롯은 이번에 비워두고 다음 월급 때 채우면 됩니다(적립식). 슬롯 수는 프리셋에 저장돼 자동 로드, 여기서 바꿔 계산만 해볼 수도 있습니다.
               </p>
@@ -622,10 +629,13 @@ export default function RebalanceTab() {
                   <div className="flex flex-wrap items-end gap-4">
                     <div>
                       <label className="block text-xs text-slate-400 mb-1">검색필터</label>
-                      <select value={slotFilterId} onChange={(e) => setSlotFilterId(e.target.value ? Number(e.target.value) : "")} className={cx.select}>
-                        <option value="">필터 선택…</option>
-                        {filters.map((f) => (<option key={f.id} value={f.id}>{f.name}</option>))}
-                      </select>
+                      <Select
+                        value={String(slotFilterId)}
+                        placeholder="필터 선택…"
+                        onChange={(v) => setSlotFilterId(v ? Number(v) : "")}
+                        className="w-auto min-w-40"
+                        items={filters.map((f) => ({ value: String(f.id), label: f.name }))}
+                      />
                     </div>
                     <div>
                       <label className="block text-xs text-slate-400 mb-1">기준일 <span className="text-slate-600">(비우면 최신)</span></label>
@@ -642,7 +652,7 @@ export default function RebalanceTab() {
                   {candErr && <p className="text-sm text-rose-300">{candErr}</p>}
                   {!candErr && candStocks.length > 0 && (
                     <>
-                      <div className="rounded-xl border border-white/10 bg-slate-900/40 overflow-x-auto">
+                      <Panel className="rounded-xl bg-slate-900/40 overflow-x-auto">
                         <table className={cx.table.root}>
                           <thead className={cx.table.head}>
                             <tr>
@@ -669,7 +679,7 @@ export default function RebalanceTab() {
                             ))}
                           </tbody>
                         </table>
-                      </div>
+                      </Panel>
                       <p className="text-xs text-slate-500">
                         매수액 = min(슬롯당 {won(Math.round(slotAmt))}, 참여율 {partRate}%×거래대금). <span className="text-amber-300">유동성</span> 표시는 거래대금이 얇아 슬롯보다 작게 잡힌 종목 — 그만큼만 사고 나머지는 다음 후보/현금으로.
                       </p>
@@ -683,29 +693,34 @@ export default function RebalanceTab() {
             </>
           )}
         </div>
-      )}
+      </TabsContent>
 
-      {/* ── 매도 (급전) — 슬롯과 무관, 필요 현금을 약세부터 청산 ── */}
-      {tab === "sell" && (
+      <TabsContent value="sell" className={cx.tab.content}>
         <div className="flex flex-col gap-4">
           <p className="text-sm text-slate-400">
             급전이 필요할 때 <b className="text-slate-200">전략현금 먼저 쓰고, 부족분만 약세(수익률 낮은)부터</b> 청산합니다. 슬롯과 무관 — 승자는 최대한 보존.
           </p>
-          <div className="flex flex-wrap items-end gap-4 rounded-xl border border-white/10 bg-white/5 p-4">
+          <Panel className="flex flex-wrap items-end gap-4 p-4">
             <div>
               <label className="block text-xs text-slate-400 mb-1">전략 프리셋</label>
-              <select value={slotPlanId} onChange={(e) => setSlotPlanId(e.target.value ? Number(e.target.value) : "")} className={cx.select}>
-                <option value="">프리셋 선택…</option>
-                {plans.map((p) => (<option key={p.id} value={p.id}>{p.name} ({p.config.positions.length})</option>))}
-              </select>
+              <Select
+                value={String(slotPlanId)}
+                placeholder="프리셋 선택…"
+                onChange={(v) => setSlotPlanId(v ? Number(v) : "")}
+                className="w-auto min-w-44"
+                items={plans.map((p) => ({
+                  value: String(p.id),
+                  label: p.name + " (" + p.config.positions.length + ")",
+                }))}
+              />
             </div>
             <div>
               <label className="block text-xs text-slate-400 mb-1">필요 현금</label>
               <CommaInput decimal value={slotNeed} onChange={setSlotNeed} className={NUM + " w-36"} />
             </div>
-          </div>
+          </Panel>
           {!slotPlan ? (
-            <p className="text-sm text-slate-500 py-8 text-center rounded-xl border border-white/10 bg-slate-900/40">프리셋을 선택하세요 — 그 프리셋 보유·현금으로 급전을 마련합니다.</p>
+            <p className={cx.emptyState}>프리셋을 선택하세요 — 그 프리셋 보유·현금으로 급전을 마련합니다.</p>
           ) : (
             <>
               <div className="grid grid-cols-2 lg:grid-cols-4 gap-3">
@@ -721,7 +736,7 @@ export default function RebalanceTab() {
                 <p className="text-sm text-amber-300">전략현금 + 보유 전액을 팔아도 필요 현금({won(Math.round(slotNeedN))})에 못 미칩니다.</p>
               )}
               {sellShortfall > 0.5 && slotPositions.length > 0 && (
-                <div className="rounded-xl border border-white/10 bg-slate-900/40 overflow-x-auto">
+                <Panel className="rounded-xl bg-slate-900/40 overflow-x-auto">
                   <table className={cx.table.root}>
                     <thead className={cx.table.head}>
                       <tr>
@@ -746,7 +761,7 @@ export default function RebalanceTab() {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </Panel>
               )}
               <p className="text-xs text-slate-500">
                 <b className="text-slate-300">전략현금 먼저 → 부족분만 약세부터</b>. 마지막이 수익 중이면 필요분만 부분 매도(승자 보존), 손실이면 통째(초과분=남는 현금). 급전 매도는 전략 밖이니 최소한만.
@@ -754,19 +769,21 @@ export default function RebalanceTab() {
             </>
           )}
         </div>
-      )}
+      </TabsContent>
 
-      {/* ── 프리셋 관리 ── */}
-      {tab === "presets" && (
+      <TabsContent value="presets" className={cx.tab.content}>
         <div className="flex flex-col gap-4">
           {/* 공통: 프리셋 불러오기·이름·저장 */}
-          <div className="flex flex-wrap items-end gap-x-4 gap-y-3 rounded-xl border border-white/10 bg-white/5 p-4">
+          <Panel className="flex flex-wrap items-end gap-x-4 gap-y-3 p-4">
             <div>
               <label className="block text-xs text-slate-400 mb-1">불러오기</label>
-              <select value="" onChange={(e) => { const p = plans.find((x) => x.id === Number(e.target.value)); if (p) applyPlan(p); }} className={cx.select}>
-                <option value="">프리셋 선택…</option>
-                {plans.map((p) => (<option key={p.id} value={p.id}>{p.name}</option>))}
-              </select>
+              <Select
+                value={null}
+                placeholder="프리셋 선택…"
+                onChange={(v) => { const p = plans.find((x) => x.id === Number(v)); if (p) applyPlan(p); }}
+                className="w-auto min-w-44"
+                items={plans.map((p) => ({ value: String(p.id), label: p.name }))}
+              />
             </div>
             <div>
               <label className="block text-xs text-slate-400 mb-1">프리셋 이름</label>
@@ -777,14 +794,14 @@ export default function RebalanceTab() {
               <button onClick={() => deletePlan(plans.find((p) => p.name === planName.trim())!.id)} className={cx.btnSecondary}>삭제</button>
             )}
             {savedMsg && <span className={"self-center text-sm font-medium " + (savedMsg.startsWith("✓") ? "text-emerald-300" : "text-rose-300")}>{savedMsg}</span>}
-          </div>
+          </Panel>
 
           {/* 서브탭 — 비율 조정은 종목이 선택돼야 활성 */}
-          <div className="flex gap-1 rounded-lg border border-white/10 bg-white/5 p-1 w-fit">
+          <div className={cx.panel + " flex w-fit gap-1 rounded-lg p-1"}>
             {([["items", "종목 관리", false], ["weights", "비율 조정", selected.length === 0], ["slots", "슬롯 설정", false]] as const).map(([v, label, disabled]) => (
               <button key={v} disabled={disabled} onClick={() => { if (!disabled) setPresetView(v); }}
                 title={disabled ? "먼저 종목 관리에서 종목을 담으세요" : undefined}
-                className={"px-4 py-1.5 rounded-md text-sm font-medium transition " + (disabled ? "text-slate-600 cursor-not-allowed" : presetView === v ? "bg-indigo-600 text-white" : "text-slate-400 hover:text-white")}>{label}</button>
+                className={"rounded-md px-4 py-1.5 text-sm font-medium " + (disabled ? cx.segment.disabled : presetView === v ? cx.segment.on : cx.segment.off)}>{label}</button>
             ))}
           </div>
 
@@ -798,7 +815,7 @@ export default function RebalanceTab() {
                     <button onClick={() => { clearAll(); setCashEntries([]); }} className="text-xs text-slate-400 hover:text-rose-300 transition">모두 비우기</button>
                   )}
                 </div>
-                <div className="max-h-[28rem] rounded-xl border border-white/10 bg-slate-900/40 overflow-auto">
+                <Panel className="max-h-[28rem] rounded-xl bg-slate-900/40 overflow-auto">
                   <table className={cx.table.root}>
                     <thead className={cx.table.head + " sticky top-0 z-10"}>
                       <tr>
@@ -827,15 +844,20 @@ export default function RebalanceTab() {
                       )}
                     </tbody>
                   </table>
-                </div>
+                </Panel>
               </div>
 
               <div className="flex flex-col gap-3">
-                <div className="rounded-xl border border-white/10 bg-slate-900/40 p-3 flex flex-col gap-2">
+                <Panel className="rounded-xl bg-slate-900/40 p-3 flex flex-col gap-2">
                   <h3 className="text-sm font-medium text-slate-300">종목 추가</h3>
                   <div className="flex flex-wrap gap-2">
                     <input value={search} onChange={(e) => setSearch(e.target.value)} placeholder="종목 검색 / 직접 입력" className={cx.input + " flex-1 min-w-[8rem]"} />
-                    <select value={newCur} onChange={(e) => setNewCur(e.target.value)} className={cx.select}>{["KRW", "USD", "JPY", "CNY", "EUR", "HKD"].map((c) => (<option key={c}>{c}</option>))}</select>
+                    <Select
+                      value={newCur}
+                      onChange={setNewCur}
+                      className="w-auto min-w-24"
+                      items={["KRW", "USD", "JPY", "CNY", "EUR", "HKD"].map((c) => ({ value: c, label: c }))}
+                    />
                     <button onClick={addItem} className={cx.btnSecondary}>＋ 직접</button>
                   </div>
                   {candidates.length > 0 && (
@@ -853,9 +875,9 @@ export default function RebalanceTab() {
                       </table>
                     </div>
                   )}
-                </div>
+                </Panel>
 
-                <div className="rounded-xl border border-white/10 bg-slate-900/40 p-3 flex flex-col gap-2">
+                <Panel className="rounded-xl bg-slate-900/40 p-3 flex flex-col gap-2">
                   <div className="flex items-center justify-between">
                     <h3 className="text-sm font-medium text-slate-300">현금 계좌 <span className="text-xs font-normal text-slate-500">통화별</span></h3>
                     <button onClick={() => setCashEntries([...cashEntries, { account: accounts[0] ?? "", currency: "KRW", weightPct: 0 }])} className={cx.btnSecondary}>＋ 계좌·통화</button>
@@ -866,20 +888,26 @@ export default function RebalanceTab() {
                     <div className="flex flex-col gap-2">
                       {cashEntries.map((c, i) => (
                         <div key={i} className="flex flex-wrap items-center gap-2 text-sm">
-                          <select value={c.account} onChange={(e) => setCashEntries(cashEntries.map((x, j) => (j === i ? { ...x, account: e.target.value } : x)))} className={cx.select}>
-                            {accounts.length === 0 && <option value="">계좌 없음</option>}
-                            {accounts.map((a) => (<option key={a} value={a}>{a}</option>))}
-                          </select>
-                          <select value={c.currency} onChange={(e) => setCashEntries(cashEntries.map((x, j) => (j === i ? { ...x, currency: e.target.value } : x)))} className={cx.select}>
-                            {["KRW", "USD", "JPY", "CNY", "EUR", "HKD"].map((cur) => (<option key={cur}>{cur}</option>))}
-                          </select>
+                          <Select
+                            value={c.account}
+                            placeholder="계좌 없음"
+                            onChange={(v) => setCashEntries(cashEntries.map((x, j) => (j === i ? { ...x, account: v } : x)))}
+                            className="w-auto min-w-32"
+                            items={accounts.map((a) => ({ value: a, label: a }))}
+                          />
+                          <Select
+                            value={c.currency}
+                            onChange={(v) => setCashEntries(cashEntries.map((x, j) => (j === i ? { ...x, currency: v } : x)))}
+                            className="w-auto min-w-24"
+                            items={["KRW", "USD", "JPY", "CNY", "EUR", "HKD"].map((cur) => ({ value: cur, label: cur }))}
+                          />
                           <span className="ml-auto text-xs text-slate-500 tabular-nums">{Math.round(cashNat(c.account, c.currency)).toLocaleString()} {c.currency}</span>
                           <button onClick={() => setCashEntries(cashEntries.filter((_, j) => j !== i))} className="text-xs text-slate-500 hover:text-rose-300 transition">제거</button>
                         </div>
                       ))}
                     </div>
                   )}
-                </div>
+                </Panel>
               </div>
             </div>
           )}
@@ -887,14 +915,14 @@ export default function RebalanceTab() {
           {/* ── 비율 조정 — 목표% ── */}
           {presetView === "weights" && (
             <div className="flex flex-col gap-3">
-              <div className="flex flex-wrap items-center justify-between gap-2 rounded-lg border border-white/10 bg-slate-900/40 px-4 py-2.5 text-sm">
+              <div className={cx.panel + " flex flex-wrap items-center justify-between gap-2 rounded-lg bg-slate-900/40 px-4 py-2.5 text-sm"}>
                 <span className="text-slate-400">종목 <b className="text-white">{selected.length}</b> + 현금 <b className="text-white">{cashEntries.length}</b></span>
                 <span className="text-slate-400">목표합 <b className={Math.round(selTargetSum) === 100 ? "text-emerald-300" : "text-amber-300"}>{Math.round(selTargetSum)}%</b> <span className="text-xs text-slate-500">합 100 권장</span></span>
               </div>
               {selected.length === 0 ? (
-                <p className="text-sm text-slate-500 py-8 text-center rounded-xl border border-white/10 bg-slate-900/40">먼저 &lsquo;종목 관리&rsquo;에서 종목을 담으세요.</p>
+                <p className={cx.emptyState}>먼저 &lsquo;종목 관리&rsquo;에서 종목을 담으세요.</p>
               ) : (
-                <div className="rounded-xl border border-white/10 bg-slate-900/40 overflow-auto max-h-[64vh]">
+                <Panel className="rounded-xl bg-slate-900/40 overflow-auto max-h-[64vh]">
                   <table className={cx.table.root}>
                     <thead className={cx.table.head + " sticky top-0 z-10"}>
                       <tr>
@@ -920,7 +948,7 @@ export default function RebalanceTab() {
                       ))}
                     </tbody>
                   </table>
-                </div>
+                </Panel>
               )}
               <p className="text-xs text-slate-500">&lsquo;리밸런싱&rsquo; 탭이 이 목표%로 매수/매도량을 계산합니다. 슬롯 계산은 비율을 쓰지 않습니다.</p>
             </div>
@@ -928,7 +956,7 @@ export default function RebalanceTab() {
 
           {/* ── 슬롯 설정 — 슬롯 수 + 참여율 ── */}
           {presetView === "slots" && (
-            <div className="flex flex-col gap-4 rounded-xl border border-white/10 bg-slate-900/40 p-5 max-w-2xl">
+            <Panel className="flex flex-col gap-4 rounded-xl bg-slate-900/40 p-5 max-w-2xl">
               <div className="flex items-center justify-between gap-4">
                 <div>
                   <div className="text-sm font-medium text-slate-200">슬롯 수</div>
@@ -946,11 +974,11 @@ export default function RebalanceTab() {
                 </div>
               )}
               <p className="text-xs text-slate-500 border-t border-white/10 pt-4">두 값은 프리셋에 함께 저장돼 &lsquo;슬롯 계산&rsquo; 탭에서 자동 로드됩니다.</p>
-            </div>
+            </Panel>
           )}
         </div>
-      )}
-    </div>
+      </TabsContent>
+    </Tabs>
   );
 }
 

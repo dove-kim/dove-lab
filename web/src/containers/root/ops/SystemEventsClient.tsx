@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import type { SystemEvent, SystemEventPage } from "@/types/ops";
+import Select from "@/components/Select";
 import { cx } from "@/utils/cx";
 
 const EVENT_TYPE_LABEL: Record<string, string> = {
@@ -90,10 +91,12 @@ export default function SystemEventsClient({ initialPage }: Props) {
             </div>
           )}
           {/* 페이지 크기 */}
-          <select value={size} onChange={(e) => changeSize(Number(e.target.value))}
-            className="bg-slate-800 border border-white/10 text-slate-300 text-sm rounded-lg px-3 py-1.5 cursor-pointer">
-            {PAGE_SIZES.map((s) => <option key={s} value={s}>{s}개씩</option>)}
-          </select>
+          <Select
+            value={String(size)}
+            onChange={(v) => changeSize(Number(v))}
+            className="w-auto min-w-28 py-1.5"
+            items={PAGE_SIZES.map((s) => ({ value: String(s), label: `${s}개씩` }))}
+          />
         </div>
       </div>
 

@@ -3,8 +3,10 @@
 import { useEffect, useMemo, useState } from "react";
 import Modal from "@/components/Modal";
 import CommaInput from "@/components/CommaInput";
+import Select from "@/components/Select";
 import { cx } from "@/utils/cx";
 import { CURRENCIES, MARKETS, TX_TYPE_LABEL, natMoney, type PortfolioTx, type TxType } from "@/types/portfolio";
+import Panel from "@/components/Panel";
 
 interface AccountOption {
   id: number;
@@ -342,22 +344,19 @@ export default function AddTransactionModal({
         <div className="flex flex-col gap-4">
           <div className="grid grid-cols-2 gap-3">
             <Field label="계좌">
-              <select value={accountId} disabled className={cx.select + " w-full opacity-50"}>
-                {accounts.map((a) => (
-                  <option key={a.id} value={a.id}>
-                    {a.name}
-                  </option>
-                ))}
-              </select>
+              <Select
+                value={String(accountId)}
+                onChange={() => {}}
+                disabled
+                items={accounts.map((a) => ({ value: String(a.id), label: a.name }))}
+              />
             </Field>
             <Field label="유형">
-              <select value={type} onChange={(e) => setType(e.target.value as TxType)} className={cx.select + " w-full"}>
-                {TRADE_TYPES.map((t) => (
-                  <option key={t} value={t}>
-                    {TX_TYPE_LABEL[t]}
-                  </option>
-                ))}
-              </select>
+              <Select
+                value={type}
+                onChange={(v) => setType(v as TxType)}
+                items={TRADE_TYPES.map((t) => ({ value: t, label: TX_TYPE_LABEL[t] }))}
+              />
             </Field>
           </div>
           <Field label="일자">
@@ -386,16 +385,14 @@ export default function AddTransactionModal({
             {showAdvanced ? "▴ 상세 접기" : "▾ 상세 (통화 · 수수료 · 태그 · 메모)"}
           </button>
           {showAdvanced && (
-            <div className="flex flex-col gap-3 rounded-xl border border-white/10 bg-white/3 p-3">
+            <Panel className="flex flex-col gap-3 rounded-xl bg-white/3 p-3">
               <div className="grid grid-cols-2 gap-3">
                 <Field label="통화">
-                  <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={cx.select + " w-full"}>
-                    {CURRENCIES.map((c) => (
-                      <option key={c} value={c}>
-                        {c}
-                      </option>
-                    ))}
-                  </select>
+                  <Select
+                    value={currency}
+                    onChange={setCurrency}
+                    items={CURRENCIES.map((c) => ({ value: c, label: c }))}
+                  />
                 </Field>
                 <Field label={`수수료 (${currency})`}>
                   <CommaInput decimal value={fee} onChange={setFee} placeholder="0" className={cx.inputNumber} />
@@ -409,7 +406,7 @@ export default function AddTransactionModal({
                   <input value={memo} onChange={(e) => setMemo(e.target.value)} className={cx.input} />
                 </Field>
               </div>
-            </div>
+            </Panel>
           )}
           {error && <p className="text-sm text-rose-300">{error}</p>}
         </div>
@@ -452,14 +449,12 @@ export default function AddTransactionModal({
                 </div>
               </Field>
               <Field label="계좌">
-                <select value={accountId} onChange={(e) => setAccountId(Number(e.target.value))} className={cx.select + " w-full"}>
-                  {accounts.length === 0 && <option value="">계좌 없음</option>}
-                  {accounts.map((a) => (
-                    <option key={a.id} value={a.id}>
-                      {a.name}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  value={String(accountId)}
+                  onChange={(v) => setAccountId(Number(v))}
+                  placeholder="계좌 없음"
+                  items={accounts.map((a) => ({ value: String(a.id), label: a.name }))}
+                />
               </Field>
             </div>
           )}
@@ -467,14 +462,12 @@ export default function AddTransactionModal({
           {curKey === "stock" && (
             <div className="flex flex-col gap-4">
               <Field label="거래소" hint="국내는 이름 검색 · 해외는 티커=심볼">
-                <select value={market} onChange={(e) => onMarketChange(e.target.value)} className={cx.select + " w-full"}>
-                  <option value="">선택</option>
-                  {MARKETS.map((m) => (
-                    <option key={m.value} value={m.value}>
-                      {m.label}
-                    </option>
-                  ))}
-                </select>
+                <Select
+                  value={market}
+                  onChange={onMarketChange}
+                  placeholder="선택"
+                  items={MARKETS.map((m) => ({ value: m.value, label: m.label }))}
+                />
               </Field>
               <Field label="종목" hint={currency !== "KRW" ? `${currency} · 티커=심볼` : "이름/티커로 검색"}>
                 <input value={symbol} onChange={(e) => onSymbolChange(e.target.value)} placeholder="예: 삼성전자 / TSLA" className={cx.input} />
@@ -519,13 +512,11 @@ export default function AddTransactionModal({
               ) : (
                 !hasSymbol && (
                   <Field label="통화">
-                    <select value={currency} onChange={(e) => setCurrency(e.target.value)} className={cx.select + " w-full"}>
-                      {CURRENCIES.map((c) => (
-                        <option key={c} value={c}>
-                          {c}
-                        </option>
-                      ))}
-                    </select>
+                    <Select
+                      value={currency}
+                      onChange={setCurrency}
+                      items={CURRENCIES.map((c) => ({ value: c, label: c }))}
+                    />
                   </Field>
                 )
               )}

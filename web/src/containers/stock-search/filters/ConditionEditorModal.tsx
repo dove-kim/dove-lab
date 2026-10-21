@@ -1,6 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/utils/cn";
 import { cx } from "@/utils/cx";
 import Select from "@/components/Select";
 import {
@@ -461,15 +463,20 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
   const noMetricAvailable = isMetricCondition && metrics.length === 0;
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60">
-      <div className="bg-slate-800 border border-white/15 rounded-xl shadow-2xl w-full max-w-md mx-4 p-6">
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        aria-describedby={undefined}
+        onInteractOutside={(e) => e.preventDefault()}
+        className={cn(cx.dialogSheet, "max-h-[92vh] overflow-y-auto bg-popover p-6 sm:max-w-md")}
+      >
         <div className="flex items-center justify-between mb-5">
-          <h3 className="text-white font-semibold">{CONDITION_TYPE_LABELS[conditionType]}</h3>
-          <button onClick={onClose} className="text-slate-400 hover:text-white transition">
+          <DialogTitle className="text-white font-semibold">{CONDITION_TYPE_LABELS[conditionType]}</DialogTitle>
+          <DialogClose className="text-slate-400 hover:text-white transition" aria-label="닫기">
             <svg className="w-5 h-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M18 6 6 18M6 6l12 12" />
             </svg>
-          </button>
+          </DialogClose>
         </div>
 
         <div className="space-y-4">
@@ -902,7 +909,7 @@ export default function ConditionEditorModal({ conditionType, initial, onConfirm
             {initial ? "수정" : "추가"}
           </button>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

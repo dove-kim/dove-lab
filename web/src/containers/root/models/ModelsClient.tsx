@@ -1,6 +1,10 @@
 "use client";
 
 import { useState, useEffect, useCallback, useRef } from "react";
+import Modal from "@/components/Modal";
+import Select from "@/components/Select";
+import { toast } from "sonner";
+import { Badge } from "@/components/ui/badge";
 import { cx } from "@/utils/cx";
 
 /** 모델 메타·상태·채점 진행 정보. 백엔드 MlModelResponse 미러. */
@@ -72,30 +76,7 @@ function statusChip(status: MlModel["status"]) {
   const cfg = status === "ACTIVE"
     ? "bg-emerald-500/20 text-emerald-300 border-emerald-500/30"
     : "bg-slate-500/20 text-slate-400 border-slate-500/30";
-  return <span className={`px-2 py-0.5 rounded text-xs border ${cfg}`}>{status === "ACTIVE" ? "활성" : "비활성"}</span>;
-}
-
-/** 화면 중앙 고정 크기 모달 셸. */
-function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
-  return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-lg max-h-[85vh] overflow-y-auto rounded-2xl border border-white/10 bg-slate-900 shadow-2xl">
-        <div className="flex items-center justify-between border-b border-white/10 px-5 py-4">
-          <h3 className="text-base font-semibold text-white">{title}</h3>
-          <button
-            onClick={onClose}
-            aria-label="닫기"
-            className="flex h-9 w-9 items-center justify-center rounded-lg text-slate-400 hover:bg-white/8 hover:text-white transition"
-          >
-            <svg className="h-5 w-5" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <path d="M18 6 6 18M6 6l12 12" />
-            </svg>
-          </button>
-        </div>
-        <div className="p-5">{children}</div>
-      </div>
-    </div>
-  );
+  return <Badge variant="outline" className={`rounded ${cfg}`}>{status === "ACTIVE" ? "활성" : "비활성"}</Badge>;
 }
 
 export default function ModelsClient() {
@@ -122,7 +103,7 @@ export default function ModelsClient() {
       const action = model.status === "ACTIVE" ? "deactivate" : "activate";
       const res = await fetch(`/api/admin/ops/models/${model.id}/${action}`, { method: "POST" });
       if (!res.ok) {
-        alert(await readError(res));
+        toast.error(await readError(res));
         return;
       }
       await fetchModels();
@@ -195,19 +176,19 @@ export default function ModelsClient() {
                     </button>
                     <button
                       onClick={() => setResetTarget(m)}
-                      className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/5 transition whitespace-nowrap"
+                      className={cx.btnSm}
                     >
                       커서 리셋
                     </button>
                     <button
                       onClick={() => setScoresTarget(m)}
-                      className="rounded-lg border border-white/15 px-3 py-1.5 text-xs text-slate-300 hover:bg-white/5 transition whitespace-nowrap"
+                      className={cx.btnSm}
                     >
                       점수 삭제
                     </button>
                     <button
                       onClick={() => setDeleteTarget(m)}
-                      className="rounded-lg border border-rose-500/30 px-3 py-1.5 text-xs text-rose-300 hover:bg-rose-500/10 transition whitespace-nowrap"
+                      className={cx.btnDangerSm}
                     >
                       모델 삭제
                     </button>
@@ -441,9 +422,11 @@ function RegisterModal({ onClose, onDone }: { onClose: () => void; onDone: () =>
         )}
         <label className="block">
           <span className="mb-1 block text-xs text-slate-400">채점 주가유형</span>
-          <select value={scorePriceType} onChange={(e) => setScorePriceType(e.target.value)} className={cx.select + " w-full"}>
-            {PRICE_TYPES.map((p) => <option key={p.value} value={p.value}>{p.label}</option>)}
-          </select>
+          <Select
+            value={scorePriceType}
+            onChange={setScorePriceType}
+            items={PRICE_TYPES.map((p) => ({ value: p.value, label: p.label }))}
+          />
         </label>
         {error && <p className="text-sm text-rose-400">{error}</p>}
         <div className="flex justify-end gap-2 pt-1">
@@ -540,7 +523,7 @@ function DeleteModelModal({ model, onClose, onDone }: { model: MlModel; onClose:
           <button
             onClick={submit}
             disabled={submitting || confirmText !== model.name}
-            className="rounded-lg bg-rose-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-rose-500 disabled:opacity-50"
+            className={cx.btnDanger}
           >
             {submitting ? "삭제 중..." : "삭제"}
           </button>
@@ -663,7 +646,7 @@ function DeleteScoresModal({ model, onClose, onDone }: { model: MlModel; onClose
           <button
             onClick={submit}
             disabled={submitting || !confirmChecked || scopeInvalid}
-            className="rounded-lg bg-rose-600 px-5 py-2 text-sm font-medium text-white transition hover:bg-rose-500 disabled:opacity-50"
+            className={cx.btnDanger}
           >
             {submitting ? "삭제 중..." : "삭제"}
           </button>

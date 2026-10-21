@@ -2,6 +2,8 @@
 
 import { useEffect, useMemo, useState } from "react";
 import { useRouter } from "next/navigation";
+import Select from "@/components/Select";
+import { useConfirm } from "@/components/ConfirmProvider";
 import { cx } from "@/utils/cx";
 import { type PortfolioTx, type PortfolioAccount, type PortfolioShare, TX_TYPE_LABEL, CUR_SYMBOL, natMoney } from "@/types/portfolio";
 import AddTransactionModal from "./AddTransactionModal";
@@ -9,6 +11,7 @@ import { useScope, scopeBase, ScopeSelector } from "./scopeView";
 import { usePaged, Pagination } from "@/components/Pagination";
 import { useDateRange, DateRangeFilter } from "./DateRange";
 import { won } from "./usePortfolioData";
+import Panel from "@/components/Panel";
 
 function priceText(tx: PortfolioTx): string {
   if (tx.price == null) return "—";
@@ -28,6 +31,7 @@ const TYPE_CHIP: Record<string, string> = {
  * 매매내역 탭 — 계좌·종목으로 걸러 거래 이력을 본다.
  */
 export default function TransactionsTab() {
+  const confirm = useConfirm();
   const [scope] = useScope();
   const [rows, setRows] = useState<PortfolioTx[] | null>(null);
   const [accounts, setAccounts] = useState<PortfolioAccount[]>([]);
@@ -58,7 +62,13 @@ export default function TransactionsTab() {
   }
 
   async function del(id: number) {
-    if (!confirm("이 거래를 삭제할까요?")) return;
+    const ok = await confirm({
+      title: "거래 삭제",
+      description: "이 거래를 삭제할까요? 보유수량과 평단이 다시 계산됩니다.",
+      confirmText: "삭제",
+      danger: true,
+    });
+    if (!ok) return;
     await fetch(`/api/portfolio/transactions/${id}`, { method: "DELETE" });
     reload();
   }
@@ -138,14 +148,12 @@ export default function TransactionsTab() {
             <option key={s} value={s} />
           ))}
         </datalist>
-        <select value={acct} onChange={(e) => setAcct(e.target.value)} className={cx.select}>
-          <option value="">전체 계좌</option>
-          {accountNames.map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
-          ))}
-        </select>
+        <Select
+          value={acct}
+          onChange={setAcct}
+          className="w-auto min-w-36"
+          items={[{ value: "", label: "전체 계좌" }, ...accountNames.map((a) => ({ value: a, label: a }))]}
+        />
         <DateRangeFilter from={dr.from} to={dr.to} setFrom={dr.setFrom} setTo={dr.setTo} />
         {writable && (
           <button onClick={() => setShowAdd(true)} className={cx.btnPrimary + " ml-auto"}>
@@ -164,7 +172,7 @@ export default function TransactionsTab() {
         </div>
       )}
 
-      <div className="rounded-xl border border-white/10 bg-slate-900/40 overflow-x-auto">
+      <Panel className="rounded-xl bg-slate-900/40 overflow-x-auto">
         <table className={cx.table.root}>
           <thead className={cx.table.head}>
             <tr>
@@ -232,7 +240,7 @@ export default function TransactionsTab() {
             )}
           </tbody>
         </table>
-      </div>
+      </Panel>
 
       <Pagination page={paged.page} pageCount={paged.pageCount} from={paged.from} to={paged.to} total={paged.total} onPage={paged.setPage} />
 
