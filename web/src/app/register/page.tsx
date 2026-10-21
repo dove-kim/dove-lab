@@ -1,7 +1,9 @@
 ﻿"use client";
 
 import { Suspense, useState } from "react";
-import { cx } from "@/utils/cx";
+import { Button } from "@/components/ui/button";
+import { Input } from "@/components/ui/input";
+import { EyeIcon, EyeOffIcon } from "lucide-react";
 import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 
@@ -64,27 +66,25 @@ function RegisterForm() {
             {/* 초대 코드 */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs text-slate-400 font-medium">초대 코드</label>
-              <input
+              <Input
                 name="inviteCode"
                 value={form.inviteCode}
                 onChange={handleChange}
                 placeholder="초대 코드를 입력하세요"
                 required
-                className={cx.input}
               />
             </div>
 
             {/* 아이디 */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs text-slate-400 font-medium">아이디</label>
-              <input
+              <Input
                 name="username"
                 value={form.username}
                 onChange={handleChange}
                 placeholder="영문 소문자, 숫자 (3자 이상)"
                 required
                 minLength={3}
-                className={cx.input}
               />
             </div>
 
@@ -92,7 +92,7 @@ function RegisterForm() {
             <div className="flex flex-col gap-1.5">
               <label className="text-xs text-slate-400 font-medium">비밀번호</label>
               <div className="relative">
-                <input
+                <Input
                   name="password"
                   type={showPassword ? "text" : "password"}
                   value={form.password}
@@ -100,65 +100,52 @@ function RegisterForm() {
                   placeholder="4자 이상"
                   required
                   minLength={4}
-                  className={`pr-10 ${cx.input}`}
+                  className="pr-10"
                 />
-                <button
+                <Button
                   type="button"
+                  variant="ghost"
+                  size="icon-sm"
                   onClick={() => setShowPassword((v) => !v)}
-                  className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white transition cursor-pointer"
+                  className="absolute right-2 top-1/2 -translate-y-1/2 text-slate-400 hover:text-white"
+                  tabIndex={-1}
+                  aria-label={showPassword ? "비밀번호 숨기기" : "비밀번호 보기"}
                 >
-                  {showPassword ? (
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M17.94 17.94A10.07 10.07 0 0 1 12 20c-7 0-11-8-11-8a18.45 18.45 0 0 1 5.06-5.94" />
-                      <path d="M9.9 4.24A9.12 9.12 0 0 1 12 4c7 0 11 8 11 8a18.5 18.5 0 0 1-2.16 3.19" />
-                      <line x1="1" y1="1" x2="23" y2="23" />
-                    </svg>
-                  ) : (
-                    <svg className="w-4 h-4" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                      <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z" />
-                      <circle cx="12" cy="12" r="3" />
-                    </svg>
-                  )}
-                </button>
+                  {showPassword ? <EyeOffIcon /> : <EyeIcon />}
+                </Button>
               </div>
             </div>
 
             {/* 이메일 */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs text-slate-400 font-medium">이메일</label>
-              <input
+              <Input
                 name="email"
                 type="email"
                 value={form.email}
                 onChange={handleChange}
                 placeholder="example@email.com"
                 required
-                className={cx.input}
               />
             </div>
 
             {/* 이름 */}
             <div className="flex flex-col gap-1.5">
               <label className="text-xs text-slate-400 font-medium">이름</label>
-              <input
+              <Input
                 name="name"
                 value={form.name}
                 onChange={handleChange}
                 placeholder="표시될 이름"
                 required
-                className={cx.input}
               />
             </div>
 
             {error && <p className="text-red-400 text-xs text-center">{error}</p>}
 
-            <button
-              type="submit"
-              disabled={loading}
-              className={`w-full ${cx.btnPrimary}`}
-            >
+            <Button type="submit" disabled={loading} className="w-full">
               {loading ? "가입 중..." : "가입하기"}
-            </button>
+            </Button>
           </form>
 
           <p className="text-center text-slate-500 text-xs mt-5">

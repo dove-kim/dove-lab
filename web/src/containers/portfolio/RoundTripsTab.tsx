@@ -8,6 +8,7 @@ import { useScope, scopeBase, ScopeSelector } from "./scopeView";
 import { usePaged, Pagination } from "@/components/Pagination";
 import { useDateRange, DateRangeFilter } from "./DateRange";
 import { StatTile } from "./StatTile";
+import Panel from "@/components/Panel";
 
 function natPrice(v: number | undefined, cur: string): string {
   if (v == null) return "—";
@@ -61,7 +62,7 @@ export default function RoundTripsTab() {
         <DateRangeFilter from={dr.from} to={dr.to} setFrom={dr.setFrom} setTo={dr.setTo} />
       </div>
 
-      <div className="rounded-xl border border-white/10 bg-slate-900/40 overflow-x-auto">
+      <Panel className="rounded-xl bg-slate-900/40 overflow-x-auto">
         <table className={cx.table.root}>
           <thead className={cx.table.head}>
             <tr>
@@ -106,7 +107,7 @@ export default function RoundTripsTab() {
             )}
           </tbody>
         </table>
-      </div>
+      </Panel>
 
       <Pagination page={paged.page} pageCount={paged.pageCount} from={paged.from} to={paged.to} total={paged.total} onPage={paged.setPage} />
 

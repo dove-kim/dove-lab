@@ -3,6 +3,7 @@ import { cookies } from "next/headers";
 import { logout } from "@/actions/auth";
 import MobileMenuButton from "./MobileMenuButton";
 import { decodeJwtPayload } from "@/utils/jwt";
+import { cx } from "@/utils/cx";
 
 export default async function Header() {
   const token = (await cookies()).get("token")?.value;
@@ -25,7 +26,7 @@ export default async function Header() {
           <form action={logout}>
             <button
               type="submit"
-              className="text-sm text-slate-400 hover:text-white border border-white/20 hover:border-white/40 px-3 py-1 rounded-lg transition cursor-pointer"
+              className={cx.btnSm + " px-3 py-1 text-sm"}
             >
               로그아웃
             </button>

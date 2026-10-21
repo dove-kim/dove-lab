@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { StockMatchResult } from "@/types/filter";
 import StockChart, { type PriceBar } from "@/components/chart/StockChart";
+import Select from "@/components/Select";
 import { INDICATOR_META, type PanelId } from "@/components/chart/indicatorMeta";
 import IndicatorManager from "./IndicatorManager";
 import PanelOrderModal from "./PanelOrderModal";
@@ -226,20 +227,17 @@ export default function StockDetailPanel({ result, onBack, presets: presetsHook 
           {/* 툴바 — 모바일: 2줄, 데스크톱: 1줄 */}
           <div className="flex flex-wrap items-center px-3 pt-2 pb-1 gap-1.5">
             {/* 프리셋 선택 */}
-            <select
-              value={activePreset?.id ?? ""}
-              onChange={e => {
-                const p = presets.find(p => p.id === Number(e.target.value));
+            <Select
+              value={activePreset ? String(activePreset.id) : null}
+              onChange={v => {
+                const p = presets.find(p => p.id === Number(v));
                 if (p) setActivePreset(p);
               }}
               disabled={loading || presets.length === 0}
-              className="bg-slate-800 border border-white/10 rounded px-2 py-1.5 text-xs text-white max-w-[110px] truncate disabled:opacity-40"
-            >
-              {presets.length === 0 && <option value="">프리셋 없음</option>}
-              {presets.map(p => (
-                <option key={p.id} value={p.id}>{p.name}</option>
-              ))}
-            </select>
+              placeholder="프리셋 없음"
+              className="w-auto max-w-[130px] px-2 py-1.5 text-xs sm:text-xs"
+              items={presets.map(p => ({ value: String(p.id), label: p.name }))}
+            />
 
             {/* 지표 관리 */}
             <button

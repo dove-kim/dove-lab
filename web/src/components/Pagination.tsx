@@ -1,7 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { cx } from "@/utils/cx";
+import { Button } from "@/components/ui/button";
+import {
+  Pagination as UiPagination,
+  PaginationContent,
+  PaginationItem,
+} from "@/components/ui/pagination";
 
 /**
  * 클라이언트 페이징 훅 — 전체 목록을 페이지 단위로 잘라 반환한다.
@@ -49,21 +54,37 @@ export function Pagination({
 }) {
   if (total === 0) return null;
   return (
-    <div className="flex items-center justify-between gap-2 text-sm text-slate-400">
+    <div className="flex items-center justify-between gap-2 text-sm text-muted-foreground">
       <span className="tabular-nums">
         {from}–{to} <span className="text-slate-600">/ {total}</span>
       </span>
-      <div className="flex items-center gap-2">
-        <button onClick={() => onPage(page - 1)} disabled={page <= 1} className={cx.btnSecondary + " disabled:opacity-40"}>
-          이전
-        </button>
-        <span className="tabular-nums text-slate-300 min-w-16 text-center">
-          {page} / {pageCount}
-        </span>
-        <button onClick={() => onPage(page + 1)} disabled={page >= pageCount} className={cx.btnSecondary + " disabled:opacity-40"}>
-          다음
-        </button>
-      </div>
+      <UiPagination className="mx-0 w-auto justify-end">
+        <PaginationContent className="gap-2">
+          <PaginationItem>
+            <Button
+              variant="outline"
+              className="h-auto px-4 py-2 disabled:opacity-40"
+              disabled={page <= 1}
+              onClick={() => onPage(page - 1)}
+            >
+              이전
+            </Button>
+          </PaginationItem>
+          <PaginationItem className="min-w-16 text-center tabular-nums text-slate-300">
+            {page} / {pageCount}
+          </PaginationItem>
+          <PaginationItem>
+            <Button
+              variant="outline"
+              className="h-auto px-4 py-2 disabled:opacity-40"
+              disabled={page >= pageCount}
+              onClick={() => onPage(page + 1)}
+            >
+              다음
+            </Button>
+          </PaginationItem>
+        </PaginationContent>
+      </UiPagination>
     </div>
   );
 }

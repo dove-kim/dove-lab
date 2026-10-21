@@ -19,6 +19,7 @@ import {
 } from "@/utils/filter";
 import { useState, useEffect } from "react";
 import ConditionEditorModal from "./ConditionEditorModal";
+import { cx } from "@/utils/cx";
 
 interface Props {
   root: GroupNode;
@@ -107,7 +108,7 @@ export default function ExpressionTree({
         </button>
         <button
           onClick={() => handleAddGroup(root.id)}
-          className="px-2.5 py-1 rounded-lg text-xs text-slate-400 border border-white/10 hover:text-white hover:border-white/25 transition"
+          className={cx.btnSm + " px-2.5 py-1"}
         >
           + 그룹
         </button>

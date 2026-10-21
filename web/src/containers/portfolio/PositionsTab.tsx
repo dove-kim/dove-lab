@@ -1,11 +1,13 @@
 "use client";
 
 import { useMemo, useState } from "react";
+import Select from "@/components/Select";
 import { cx } from "@/utils/cx";
 import { type PortfolioPosition, natMoney, natSigned } from "@/types/portfolio";
 import { usePortfolioData, won, signed, pnlColor } from "./usePortfolioData";
 import { useScope, scopeBase, ScopeSelector } from "./scopeView";
 import { usePaged, Pagination } from "@/components/Pagination";
+import Panel from "@/components/Panel";
 
 type Sort = "eval" | "pnl" | "weight";
 
@@ -54,26 +56,29 @@ export default function PositionsTab() {
             <option key={s} value={s} />
           ))}
         </datalist>
-        <select value={acct} onChange={(e) => setAcct(e.target.value)} className={cx.select}>
-          <option value="">전체 계좌</option>
-          {accounts.map((a) => (
-            <option key={a} value={a}>
-              {a}
-            </option>
-          ))}
-        </select>
-        <select value={sort} onChange={(e) => setSort(e.target.value as Sort)} className={cx.select}>
-          <option value="eval">평가액 순</option>
-          <option value="pnl">손익 순</option>
-          <option value="weight">비중 순</option>
-        </select>
+        <Select
+          value={acct}
+          onChange={setAcct}
+          className="w-auto min-w-36"
+          items={[{ value: "", label: "전체 계좌" }, ...accounts.map((a) => ({ value: a, label: a }))]}
+        />
+        <Select
+          value={sort}
+          onChange={(v) => setSort(v as Sort)}
+          className="w-auto min-w-32"
+          items={[
+            { value: "eval", label: "평가액 순" },
+            { value: "pnl", label: "손익 순" },
+            { value: "weight", label: "비중 순" },
+          ]}
+        />
         <div className="ml-auto text-sm text-slate-400">
           평가액 <span className="text-white tabular-nums">{won(totalEval)}</span>원
           <span className={"ml-2 tabular-nums " + pnlColor(totalPnl)}>{signed(totalPnl)}</span>
         </div>
       </div>
 
-      <div className="rounded-xl border border-white/10 bg-slate-900/40 overflow-x-auto">
+      <Panel className="rounded-xl bg-slate-900/40 overflow-x-auto">
         <table className={cx.table.root}>
           <thead className={cx.table.head}>
             <tr>
@@ -128,7 +133,7 @@ export default function PositionsTab() {
             )}
           </tbody>
         </table>
-      </div>
+      </Panel>
 
       <Pagination page={paged.page} pageCount={paged.pageCount} from={paged.from} to={paged.to} total={paged.total} onPage={paged.setPage} />
     </div>

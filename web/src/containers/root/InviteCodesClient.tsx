@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { cx } from "@/utils/cx";
 import Select from "@/components/Select";
 import { clientFetch } from "@/services/client";
+import Panel from "@/components/Panel";
 
 interface InviteCode {
   id: number;
@@ -68,7 +69,7 @@ export default function InviteCodesClient() {
     <div className="flex-1 overflow-y-auto p-6">
       <h2 className="text-white text-lg font-semibold mb-6">초대 코드 관리</h2>
 
-      <div className="bg-white/5 border border-white/10 rounded-xl p-5 mb-6 max-w-md">
+      <Panel className="p-5 mb-6 max-w-md">
         <h3 className="text-slate-300 text-sm font-medium mb-4">새 초대 코드 생성</h3>
         <form onSubmit={handleCreate} className="flex flex-col gap-3">
           <div className="flex gap-3">
@@ -114,9 +115,9 @@ export default function InviteCodesClient() {
             <p className="text-indigo-300 font-mono text-sm break-all">{newCode}</p>
           </div>
         )}
-      </div>
+      </Panel>
 
-      <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+      <Panel className="overflow-hidden">
         <table className="w-full text-sm">
           <thead className={cx.table.head}>
             <tr>
@@ -155,7 +156,7 @@ export default function InviteCodesClient() {
             ))}
           </tbody>
         </table>
-      </div>
+      </Panel>
     </div>
   );
 }

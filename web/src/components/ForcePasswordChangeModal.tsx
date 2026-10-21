@@ -1,6 +1,8 @@
 "use client";
 
 import { useState } from "react";
+import { Dialog, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/utils/cn";
 import { cx } from "@/utils/cx";
 
 const ERROR_MESSAGES: Record<string, string> = {
@@ -49,15 +51,21 @@ export default function ForcePasswordChangeModal() {
   }
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/80 backdrop-blur-sm">
-      <div className="bg-slate-800 border border-white/15 rounded-2xl p-8 w-full max-w-sm shadow-2xl">
+    <Dialog open>
+      <DialogContent
+        showCloseButton={false}
+        aria-describedby={undefined}
+        onEscapeKeyDown={(e) => e.preventDefault()}
+        onInteractOutside={(e) => e.preventDefault()}
+        className={cn(cx.dialogSheet, "bg-popover p-8 sm:max-w-sm")}
+      >
         <div className="mb-6 text-center">
           <div className="w-12 h-12 rounded-full bg-amber-500/20 flex items-center justify-center mx-auto mb-4">
             <svg className="w-6 h-6 text-amber-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2">
               <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z" />
             </svg>
           </div>
-          <h2 className="text-white text-lg font-semibold">비밀번호 변경 필요</h2>
+          <DialogTitle className="text-white text-lg font-semibold">비밀번호 변경 필요</DialogTitle>
           <p className="text-slate-400 text-sm mt-1">
             관리자가 비밀번호를 초기화했습니다.
             <br />새 비밀번호를 설정해야 서비스를 이용할 수 있습니다.
@@ -100,7 +108,7 @@ export default function ForcePasswordChangeModal() {
             {loading ? "변경 중..." : "비밀번호 변경"}
           </button>
         </form>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }

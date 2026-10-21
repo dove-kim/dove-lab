@@ -1,3 +1,6 @@
+import { Card, CardContent } from "@/components/ui/card";
+import { cn } from "@/utils/cn";
+
 /**
  * 라벨·값(·보조설명)을 담는 통계 타일.
  */
@@ -15,12 +18,14 @@ export function StatTile({
   size?: "base" | "lg";
 }) {
   return (
-    <div className="bg-white/5 rounded-lg p-3">
-      <div className="text-xs text-slate-400">{label}</div>
-      <div className={(size === "lg" ? "text-lg" : "text-base") + " font-semibold tabular-nums " + (tone ?? "text-white")}>
-        {value}
-      </div>
-      {sub && <div className="text-xs text-slate-500 mt-0.5">{sub}</div>}
-    </div>
+    <Card className="gap-0 rounded-lg bg-secondary py-3 ring-0 [--card-spacing:--spacing(3)]">
+      <CardContent>
+        <div className="text-xs text-slate-400">{label}</div>
+        <div className={cn("font-semibold tabular-nums", size === "lg" ? "text-lg" : "text-base", tone ?? "text-white")}>
+          {value}
+        </div>
+        {sub && <div className="mt-0.5 text-xs text-slate-500">{sub}</div>}
+      </CardContent>
+    </Card>
   );
 }

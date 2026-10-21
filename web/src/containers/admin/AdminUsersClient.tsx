@@ -7,6 +7,7 @@ import { CAPABILITY_LABELS, ALL_CAPABILITIES } from "@/utils/capability";
 import type { UserSummary } from "@/types/user";
 import type { CustomMetric } from "@/types/customMetric";
 import type { Model } from "@/types/model";
+import Panel from "@/components/Panel";
 
 const ROLE_BADGE: Record<string, string> = {
   USER: "bg-slate-600/30 text-slate-300",
@@ -243,7 +244,7 @@ export default function AdminUsersClient({ users }: Props) {
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6 max-w-5xl">
         {/* 사용자 목록 */}
-        <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden">
+        <Panel className="overflow-hidden">
           <div className="px-4 py-3 border-b border-white/10 flex flex-col gap-2">
             <h3 className="text-slate-300 text-sm font-medium">사용자 목록</h3>
             <input
@@ -286,10 +287,10 @@ export default function AdminUsersClient({ users }: Props) {
               ))}
             </div>
           )}
-        </div>
+        </Panel>
 
         {/* 권한 패널 */}
-        <div className="bg-white/5 border border-white/10 rounded-xl overflow-hidden flex flex-col">
+        <Panel className="overflow-hidden flex flex-col">
           <div className="px-4 py-3 border-b border-white/10">
             <h3 className="text-slate-300 text-sm font-medium">
               {selectedUser ? `${selectedUser.name} — 권한` : "사용자를 선택하세요"}
@@ -396,7 +397,7 @@ export default function AdminUsersClient({ users }: Props) {
               </div>
             </>
           )}
-        </div>
+        </Panel>
       </div>
 
     </div>

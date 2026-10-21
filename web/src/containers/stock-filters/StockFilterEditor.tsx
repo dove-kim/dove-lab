@@ -1,7 +1,11 @@
 "use client";
 
 import { useEffect, useMemo, useRef, useState } from "react";
+import { Dialog, DialogClose, DialogContent, DialogTitle } from "@/components/ui/dialog";
+import { cn } from "@/utils/cn";
+import Select from "@/components/Select";
 import { cx } from "@/utils/cx";
+import { useConfirm } from "@/components/ConfirmProvider";
 import {
   FilterMode,
   NameMatchType,
@@ -15,6 +19,7 @@ import {
   StockTagFieldGroup,
   StockTagsResponse,
 } from "@/types/stock-tag";
+import Panel from "@/components/Panel";
 
 const PREVIEW_PAGE_SIZE = 100;
 
@@ -66,6 +71,7 @@ export default function StockFilterEditor({
   canDelete,
   onDeleted,
 }: Props) {
+  const confirm = useConfirm();
   const readonly = mode === "view";
 
   // 기본 정보
@@ -391,7 +397,13 @@ export default function StockFilterEditor({
 
   async function handleDelete() {
     if (readonly || !initial) return;
-    if (!confirm("정말 삭제하시겠어요?")) return;
+    const ok = await confirm({
+      title: "필터 삭제",
+      description: `'${initial.name}' 필터를 삭제할까요?`,
+      confirmText: "삭제",
+      danger: true,
+    });
+    if (!ok) return;
     const url = scope === "system"
       ? `/api/admin/stock-filters/system/${initial.id}`
       : `/api/stock-filters/personal/${initial.id}`;
@@ -406,23 +418,27 @@ export default function StockFilterEditor({
   const title = mode === "create" ? "새 필터" : mode === "edit" ? "필터 편집" : "필터 보기";
 
   return (
-    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 p-4">
-      <div className="w-full max-w-6xl h-[90vh] flex flex-col bg-slate-800 border border-white/10 rounded-2xl shadow-2xl">
+    <Dialog open onOpenChange={(o) => !o && onClose()}>
+      <DialogContent
+        showCloseButton={false}
+        aria-describedby={undefined}
+        onInteractOutside={(e) => e.preventDefault()}
+        className={cn(cx.dialogSheet, "h-[90vh] bg-popover sm:max-w-6xl")}
+      >
         {/* 헤더 */}
         <div className="flex items-center justify-between px-6 py-4 border-b border-white/10">
-          <h2 className="text-lg font-semibold text-white">
+          <DialogTitle className="text-lg font-semibold text-white">
             {title}
             <span className="ml-3 text-xs text-slate-400">
               ({scope === "system" ? "시스템 필터" : "내 필터"})
             </span>
-          </h2>
-          <button
-            onClick={onClose}
+          </DialogTitle>
+          <DialogClose
             className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10"
-            title="닫기"
+            aria-label="닫기"
           >
             ✕
-          </button>
+          </DialogClose>
         </div>
 
         {/* 본문 — 좌우 2패널 */}
@@ -471,37 +487,29 @@ export default function StockFilterEditor({
               <h3 className="text-sm font-semibold text-slate-300">태그 조건</h3>
               {!readonly && (tags?.tagFields.length ?? 0) > 0 && (
                 <div className="flex flex-wrap gap-2 items-end">
-                  <select
-                    className={cx.select + " min-w-[8rem]"}
+                  <Select
+                    className="min-w-[8rem] w-auto"
                     value={tagDraftField}
-                    onChange={(e) => handleTagFieldChange(e.target.value)}
-                  >
-                    {tags!.tagFields.map((f) => (
-                      <option key={f.field} value={f.field}>{f.label}</option>
-                    ))}
-                  </select>
-                  <select
-                    className={cx.select + " min-w-[8rem]"}
+                    onChange={handleTagFieldChange}
+                    items={tags!.tagFields.map((f) => ({ value: f.field, label: f.label }))}
+                  />
+                  <Select
+                    className="min-w-[8rem] w-auto"
                     value={tagDraftValue}
-                    onChange={(e) => setTagDraftValue(e.target.value)}
+                    onChange={setTagDraftValue}
                     disabled={tagValueOptions(tagDraftField).length === 0}
-                  >
-                    {tagValueOptions(tagDraftField).length === 0 ? (
-                      <option value="">값 없음</option>
-                    ) : (
-                      tagValueOptions(tagDraftField).map((o) => (
-                        <option key={o.value} value={o.value}>{o.label}</option>
-                      ))
-                    )}
-                  </select>
-                  <select
-                    className={cx.select + " min-w-[6rem]"}
+                    placeholder="값 없음"
+                    items={tagValueOptions(tagDraftField).map((o) => ({ value: o.value, label: o.label }))}
+                  />
+                  <Select
+                    className="min-w-[6rem] w-auto"
                     value={tagDraftMode}
-                    onChange={(e) => setTagDraftMode(e.target.value as FilterMode)}
-                  >
-                    <option value="INCLUDE">포함</option>
-                    <option value="EXCLUDE">제외</option>
-                  </select>
+                    onChange={(v) => setTagDraftMode(v as FilterMode)}
+                    items={[
+                      { value: "INCLUDE", label: "포함" },
+                      { value: "EXCLUDE", label: "제외" },
+                    ]}
+                  />
                   <button onClick={handleAddTag} className={cx.btnPrimary}>+ 추가</button>
                 </div>
               )}
@@ -539,23 +547,25 @@ export default function StockFilterEditor({
                     onChange={(e) => setNameDraftPattern(e.target.value)}
                     onKeyDown={(e) => { if (e.key === "Enter") { e.preventDefault(); handleAddName(); } }}
                   />
-                  <select
-                    className={cx.select}
+                  <Select
+                    className="w-auto min-w-24"
                     value={nameDraftMatchType}
-                    onChange={(e) => setNameDraftMatchType(e.target.value as NameMatchType)}
-                  >
-                    <option value="CONTAINS">포함</option>
-                    <option value="STARTS_WITH">시작</option>
-                    <option value="ENDS_WITH">끝</option>
-                  </select>
-                  <select
-                    className={cx.select}
+                    onChange={(v) => setNameDraftMatchType(v as NameMatchType)}
+                    items={[
+                      { value: "CONTAINS", label: "포함" },
+                      { value: "STARTS_WITH", label: "시작" },
+                      { value: "ENDS_WITH", label: "끝" },
+                    ]}
+                  />
+                  <Select
+                    className="w-auto min-w-28"
                     value={nameDraftMode}
-                    onChange={(e) => setNameDraftMode(e.target.value as FilterMode)}
-                  >
-                    <option value="INCLUDE">포함(허용)</option>
-                    <option value="EXCLUDE">제외</option>
-                  </select>
+                    onChange={(v) => setNameDraftMode(v as FilterMode)}
+                    items={[
+                      { value: "INCLUDE", label: "포함(허용)" },
+                      { value: "EXCLUDE", label: "제외" },
+                    ]}
+                  />
                   <button onClick={handleAddName} className={cx.btnPrimary}>+ 추가</button>
                 </div>
               )}
@@ -621,7 +631,7 @@ export default function StockFilterEditor({
                 />
               )}
               {filteredAddCandidates.length > 0 && (
-                <div className="bg-white/5 border border-white/10 rounded-lg max-h-40 overflow-y-auto">
+                <Panel className="rounded-lg max-h-40 overflow-y-auto">
                   {filteredAddCandidates.map((s) => (
                     <div
                       key={stockKey(s.marketType, s.code)}
@@ -639,7 +649,7 @@ export default function StockFilterEditor({
                       </button>
                     </div>
                   ))}
-                </div>
+                </Panel>
               )}
               {includes.length > 0 && (
                 <div className="flex flex-wrap gap-1.5">
@@ -660,7 +670,7 @@ export default function StockFilterEditor({
             </section>
 
             {/* 최종 미리보기 */}
-            <section className="bg-white/5 border border-white/10 rounded-lg px-4 py-3 text-sm text-slate-300">
+            <section className={cx.panel + " rounded-lg px-4 py-3 text-sm text-slate-300"}>
               최종 결과: <span className="text-white font-semibold">{finalCount.toLocaleString()}</span> 종목
               <div className="text-xs text-slate-500 mt-1">
                 태그 통과 {tagPreview.length.toLocaleString()} − 제외 {excludes.length} + 추가 {includes.length}
@@ -773,12 +783,12 @@ export default function StockFilterEditor({
         </div>
 
         {/* 푸터 */}
-        <div className="flex items-center justify-between px-6 py-4 border-t border-white/10 sticky bottom-0 bg-slate-800">
+        <div className="flex flex-shrink-0 items-center justify-between border-t border-white/10 bg-popover px-6 py-4">
           <div>
             {!readonly && canDelete && initial && (
               <button
                 onClick={handleDelete}
-                className="px-4 py-2 rounded-lg text-sm text-rose-300 border border-rose-500/40 hover:bg-rose-500/10"
+                className={cx.btnDangerSm + " px-4 py-2 text-sm"}
               >
                 삭제
               </button>
@@ -797,8 +807,8 @@ export default function StockFilterEditor({
             )}
           </div>
         </div>
-      </div>
-    </div>
+      </DialogContent>
+    </Dialog>
   );
 }
 

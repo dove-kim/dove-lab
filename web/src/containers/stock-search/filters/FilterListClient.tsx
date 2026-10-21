@@ -13,6 +13,7 @@ import { CSS } from "@dnd-kit/utilities";
 import { SearchFilter, GroupNode, DATE_RULE_LABELS, DateRule } from "@/types/filter";
 import { parseExpression } from "@/utils/filter";
 import FilterEditorModal from "./FilterEditorModal";
+import { cx } from "@/utils/cx";
 
 interface StockFilterSummary { id: number; name: string; scope: "SYSTEM" | "MEMBER"; }
 
@@ -118,7 +119,7 @@ function FilterCard({
         </button>
         <button
           onClick={() => onEdit(filter.id)}
-          className="px-3 py-1.5 rounded-lg text-xs text-slate-400 border border-white/15 hover:text-white hover:border-white/30 transition"
+          className={cx.btnSm}
         >
           수정
         </button>

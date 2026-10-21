@@ -2,6 +2,8 @@
 
 import { useEffect, useState } from "react";
 import { type PortfolioTx, TX_TYPE_LABEL, natMoney } from "@/types/portfolio";
+import { cx } from "@/utils/cx";
+import Panel from "@/components/Panel";
 
 interface PortfolioSummary {
   totalKrw: number;
@@ -18,7 +20,7 @@ const signed = (n: number) => (n >= 0 ? "+" : "") + won(n);
 
 function MarketStatusCard() {
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+    <Panel className="p-5">
       <h3 className="text-slate-300 text-sm font-medium mb-4 flex items-center gap-2">
         <svg className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
@@ -33,7 +35,7 @@ function MarketStatusCard() {
         </div>
         <p className="text-slate-500 text-xs">시장 데이터 준비 중</p>
       </div>
-    </div>
+    </Panel>
   );
 }
 
@@ -66,7 +68,7 @@ function PortfolioSummaryCard({ reloadToken }: { reloadToken: number }) {
   }, [reloadToken]);
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-5 h-full">
+    <Panel className="p-5 h-full">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-slate-300 text-sm font-medium flex items-center gap-2">
           <svg className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -86,13 +88,13 @@ function PortfolioSummaryCard({ reloadToken }: { reloadToken: number }) {
           <Stat label="연평균(XIRR)" value={`${s.xirrPct >= 0 ? "+" : ""}${s.xirrPct}%`} tone={s.xirrPct >= 0 ? "up" : "down"} />
         </div>
       )}
-    </div>
+    </Panel>
   );
 }
 
 function WatchlistCard() {
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-5">
+    <Panel className="p-5">
       <h3 className="text-slate-300 text-sm font-medium mb-4 flex items-center gap-2">
         <svg className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M12 20h9" />
@@ -109,7 +111,7 @@ function WatchlistCard() {
         </div>
         <p className="text-slate-500 text-xs">관심 종목 기능 준비 중</p>
       </div>
-    </div>
+    </Panel>
   );
 }
 
@@ -127,7 +129,7 @@ function RecentTradesCard({ reloadToken }: { reloadToken: number }) {
   }, [reloadToken]);
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-5 h-full">
+    <Panel className="p-5 h-full">
       <div className="flex items-center justify-between mb-3">
         <h3 className="text-slate-300 text-sm font-medium flex items-center gap-2">
           <svg className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
@@ -151,7 +153,7 @@ function RecentTradesCard({ reloadToken }: { reloadToken: number }) {
             </span>
           </div>
         ))}
-    </div>
+    </Panel>
   );
 }
 
@@ -245,7 +247,7 @@ function SchedulerStatusCard({ reloadToken }: { reloadToken: number }) {
   }
 
   return (
-    <div className="bg-white/5 border border-white/10 rounded-xl p-5 h-full">
+    <Panel className="h-full p-5">
       <h3 className="text-slate-300 text-sm font-medium mb-4 flex items-center gap-2">
         <svg className="w-4 h-4 text-indigo-400" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <rect x="3" y="4" width="18" height="18" rx="2" /><line x1="16" y1="2" x2="16" y2="6" /><line x1="8" y1="2" x2="8" y2="6" /><line x1="3" y1="10" x2="21" y2="10" />
@@ -302,7 +304,7 @@ function SchedulerStatusCard({ reloadToken }: { reloadToken: number }) {
           </table>
         </div>
       )}
-    </div>
+    </Panel>
   );
 }
 
@@ -333,7 +335,7 @@ export default function Dashboard({ role }: { role: string }) {
             onClick={handleRefresh}
             title="새로고침"
             aria-label="새로고침"
-            className="w-9 h-9 flex items-center justify-center rounded-lg text-slate-400 hover:text-white hover:bg-white/10 transition"
+            className={cx.btnIcon + " size-9"}
           >
             <svg
               className={`w-5 h-5 ${spinning ? "animate-spin" : ""}`}

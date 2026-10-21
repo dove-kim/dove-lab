@@ -1,6 +1,7 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import Select from "@/components/Select";
 import { cx } from "@/utils/cx";
 import type { PortfolioAccount, PortfolioShare } from "@/types/portfolio";
 
@@ -59,27 +60,23 @@ export function ScopeSelector() {
   }, []);
 
   return (
-    <select value={scope} onChange={(e) => setScope(e.target.value)} className={cx.select} title="보기 대상">
-      <option value="own">내 전체</option>
-      {shared.length > 0 && <option value="all">전체 (공유 포함)</option>}
-      {own.length > 0 && (
-        <optgroup label="내 계좌">
-          {own.map((a) => (
-            <option key={a.id} value={String(a.id)}>
-              {a.name}
-            </option>
-          ))}
-        </optgroup>
-      )}
-      {shared.length > 0 && (
-        <optgroup label="공유받은">
-          {shared.map((s) => (
-            <option key={s.id} value={String(s.accountId)}>
-              {s.accountName} · {s.grantee}
-            </option>
-          ))}
-        </optgroup>
-      )}
-    </select>
+    <Select
+      value={scope}
+      onChange={setScope}
+      className="w-auto min-w-36"
+      items={[
+        { value: "own", label: "내 전체" },
+        ...(shared.length > 0 ? [{ value: "all", label: "전체 (공유 포함)" }] : []),
+        ...(own.length > 0
+          ? [{ group: "내 계좌", options: own.map((a) => ({ value: String(a.id), label: a.name })) }]
+          : []),
+        ...(shared.length > 0
+          ? [{
+              group: "공유받은",
+              options: shared.map((s) => ({ value: String(s.accountId), label: s.accountName + " · " + s.grantee })),
+            }]
+          : []),
+      ]}
+    />
   );
 }

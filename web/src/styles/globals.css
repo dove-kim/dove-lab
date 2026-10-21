@@ -1,4 +1,8 @@
 @import "tailwindcss";
+@import "tw-animate-css";
+@import "shadcn/tailwind.css";
+
+@custom-variant dark (&:is(.dark *));
 
 /* ── 스크롤바 ───────────────────────────────────────────────────────────────────
    트랙 너비(8px)는 고정해 레이아웃 시프트 방지.
@@ -43,3 +47,120 @@
 
 /* Firefox */
 * { scrollbar-width: thin; scrollbar-color: rgba(148,163,184,0.18) transparent; }
+
+/* ── 디자인 토큰 ───────────────────────────────────────────────────────────────
+   shadcn 컴포넌트가 쓰는 의미 토큰을 이 앱의 기존 팔레트(slate 배경 + indigo 강조)에
+   매핑한다. 라이트 모드는 쓰지 않으므로 :root 와 .dark 값이 같다.
+   ─────────────────────────────────────────────────────────────────────────── */
+
+@theme inline {
+  --font-sans: var(--font-sans-stack);
+  --font-heading: var(--font-sans-stack);
+
+  --color-background: var(--background);
+  --color-foreground: var(--foreground);
+  --color-card: var(--card);
+  --color-card-foreground: var(--card-foreground);
+  --color-popover: var(--popover);
+  --color-popover-foreground: var(--popover-foreground);
+  --color-popover-hover: var(--popover-hover);
+  --color-primary: var(--primary);
+  --color-primary-foreground: var(--primary-foreground);
+  --color-primary-hover: var(--primary-hover);
+  --color-secondary: var(--secondary);
+  --color-secondary-foreground: var(--secondary-foreground);
+  --color-muted: var(--muted);
+  --color-muted-foreground: var(--muted-foreground);
+  --color-accent: var(--accent);
+  --color-accent-foreground: var(--accent-foreground);
+  --color-destructive: var(--destructive);
+  --color-destructive-hover: var(--destructive-hover);
+  --color-border: var(--border);
+  --color-input: var(--input);
+  --color-ring: var(--ring);
+  --color-surface: var(--surface);
+
+  --color-chart-1: var(--chart-1);
+  --color-chart-2: var(--chart-2);
+  --color-chart-3: var(--chart-3);
+  --color-chart-4: var(--chart-4);
+  --color-chart-5: var(--chart-5);
+
+  --color-sidebar: var(--sidebar);
+  --color-sidebar-foreground: var(--sidebar-foreground);
+  --color-sidebar-primary: var(--sidebar-primary);
+  --color-sidebar-primary-foreground: var(--sidebar-primary-foreground);
+  --color-sidebar-accent: var(--sidebar-accent);
+  --color-sidebar-accent-foreground: var(--sidebar-accent-foreground);
+  --color-sidebar-border: var(--sidebar-border);
+  --color-sidebar-ring: var(--sidebar-ring);
+
+  --radius-sm: calc(var(--radius) * 0.6);
+  --radius-md: calc(var(--radius) * 0.8);
+  --radius-lg: var(--radius);
+  --radius-xl: calc(var(--radius) * 1.4);
+  --radius-2xl: calc(var(--radius) * 1.8);
+  --radius-3xl: calc(var(--radius) * 2.2);
+  --radius-4xl: calc(var(--radius) * 2.6);
+}
+
+:root,
+.dark {
+  --font-sans-stack: ui-sans-serif, system-ui, sans-serif, 'Apple Color Emoji',
+    'Segoe UI Emoji', 'Segoe UI Symbol', 'Noto Color Emoji';
+
+  /* rounded-lg(0.5rem) — 기존 컴포넌트 모서리와 동일 */
+  --radius: 0.5rem;
+
+  --background: oklch(20.8% 0.042 265.755);            /* slate-900 */
+  --foreground: oklch(100% 0 0);                       /* white */
+  --card: oklch(20.8% 0.042 265.755);                  /* slate-900 */
+  --card-foreground: oklch(100% 0 0);
+  --popover: oklch(27.9% 0.041 260.031);               /* slate-800 — 드롭다운 배경 */
+  --popover-foreground: oklch(100% 0 0);
+  --popover-hover: oklch(37.2% 0.044 257.287);         /* slate-700 */
+
+  --primary: oklch(51.1% 0.262 276.966);               /* indigo-600 */
+  --primary-foreground: oklch(100% 0 0);
+  --primary-hover: oklch(58.5% 0.233 277.117);        /* indigo-500 */
+  --secondary: oklch(100% 0 0 / 5%);                   /* white/5 */
+  --secondary-foreground: oklch(70.4% 0.04 256.788);   /* slate-400 */
+  --muted: oklch(100% 0 0 / 5%);
+  --muted-foreground: oklch(70.4% 0.04 256.788);
+  --accent: oklch(100% 0 0 / 8%);                      /* hover 표면 */
+  --accent-foreground: oklch(100% 0 0);
+  --destructive: oklch(58.6% 0.253 17.585);            /* rose-600 */
+  --destructive-hover: oklch(64.5% 0.246 16.439);      /* rose-500 */
+
+  --border: oklch(100% 0 0 / 15%);                     /* white/15 */
+  --input: oklch(100% 0 0 / 15%);
+  --ring: oklch(67.3% 0.182 276.935);                  /* indigo-400 */
+  --surface: oklch(100% 0 0 / 5%);                     /* 유리 느낌 패널 */
+
+  --chart-1: oklch(67.3% 0.182 276.935);               /* indigo-400 */
+  --chart-2: oklch(76.5% 0.177 163.223);               /* emerald-400 */
+  --chart-3: oklch(71.2% 0.194 13.428);                /* rose-400 */
+  --chart-4: oklch(78.5% 0.115 274.713);               /* indigo-300 */
+  --chart-5: oklch(70.4% 0.04 256.788);                /* slate-400 */
+
+  --sidebar: oklch(20.8% 0.042 265.755);
+  --sidebar-foreground: oklch(100% 0 0);
+  --sidebar-primary: oklch(51.1% 0.262 276.966);
+  --sidebar-primary-foreground: oklch(100% 0 0);
+  --sidebar-accent: oklch(100% 0 0 / 8%);
+  --sidebar-accent-foreground: oklch(100% 0 0);
+  --sidebar-border: oklch(100% 0 0 / 10%);
+  --sidebar-ring: oklch(67.3% 0.182 276.935);
+}
+
+@layer base {
+  * {
+    @apply border-border outline-ring/50;
+  }
+  body {
+    @apply bg-background text-foreground;
+  }
+  html {
+    @apply font-sans;
+  }
+}
