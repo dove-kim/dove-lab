@@ -2,6 +2,8 @@ package com.dove.portfolio.application.service;
 
 import java.math.BigDecimal;
 import java.time.LocalDate;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 라운드트립 fold 중 한 (계좌, 종목)의 진행 사이클 상태를 담는 가변 홀더. 금액은 거래 통화(원통화) 기준.
@@ -23,6 +25,7 @@ class RoundTripState {
     BigDecimal sellPxQty = BigDecimal.ZERO;
     BigDecimal costBasis = BigDecimal.ZERO;
     BigDecimal realizedPnl = BigDecimal.ZERO;
+    List<PortfolioRealization> realizations = new ArrayList<>();
 
     RoundTripState(Long accountId, String symbol, String currency) {
         this.accountId = accountId;
@@ -43,5 +46,6 @@ class RoundTripState {
         costBasis = BigDecimal.ZERO;
         realizedPnl = BigDecimal.ZERO;
         investedNat = BigDecimal.ZERO;
+        realizations = new ArrayList<>();
     }
 }

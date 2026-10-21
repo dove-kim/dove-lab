@@ -111,6 +111,6 @@ public class PortfolioSharedController {
 
     private PortfolioRoundTripResponse stripAmounts(PortfolioRoundTripResponse t) {
         return new PortfolioRoundTripResponse(t.id(), t.symbol(), t.currency(), t.group(), t.entry(), t.exit(),
-                t.holdingDays(), null, null, null, 0L, t.pnlPct(), t.open());
+                t.holdingDays(), null, null, null, 0L, t.pnlPct(), t.open(), List.of());
     }
 }

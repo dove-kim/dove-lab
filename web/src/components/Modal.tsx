@@ -11,23 +11,26 @@ import { cn } from "@/utils/cn";
 import { cx } from "@/utils/cx";
 
 /**
- * 공용 모달 — 화면 전체를 덮는 고정 모달(모바일은 바텀시트). Esc·닫기 버튼으로 닫힘(입력 중 실수 방지 위해 배경 클릭으론 안 닫힘).
+ * 공용 모달 — 화면 전체를 덮는 고정 모달(모바일은 바텀시트). 입력 중 실수 방지를 위해 배경 클릭으론 안 닫힌다.
  *
- * @param title    상단 제목
- * @param onClose  닫기 콜백
- * @param children 본문
- * @param footer   하단 액션 영역(선택)
+ * @param title           상단 제목
+ * @param onClose         닫기 콜백
+ * @param children        본문
+ * @param footer          하단 액션 영역(선택)
+ * @param closeOnEscape   Esc로 닫을 수 있는지(기본 true). 여러 단계를 거치는 입력은 false로 두어 실수로 날리지 않게 한다.
  */
 export default function Modal({
   title,
   onClose,
   children,
   footer,
+  closeOnEscape = true,
 }: {
   title: string;
   onClose: () => void;
   children: ReactNode;
   footer?: ReactNode;
+  closeOnEscape?: boolean;
 }) {
   return (
     <Dialog open onOpenChange={(open) => !open && onClose()}>
@@ -35,6 +38,7 @@ export default function Modal({
         showCloseButton={false}
         aria-describedby={undefined}
         onInteractOutside={(e) => e.preventDefault()}
+        onEscapeKeyDown={(e) => !closeOnEscape && e.preventDefault()}
         className={cn(cx.dialogSheet, "max-h-[92vh] sm:max-w-lg")}
       >
         <div className="flex flex-shrink-0 items-center justify-between border-b border-white/10 px-5 py-4">

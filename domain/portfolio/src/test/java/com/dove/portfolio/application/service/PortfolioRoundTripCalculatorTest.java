@@ -113,6 +113,81 @@ class PortfolioRoundTripCalculatorTest {
     }
 
     @Nested
+    @DisplayName("실현 이벤트")
+    class Realizations {
+        @Test
+        @DisplayName("매도마다 날짜·실현손익을 가진 이벤트가 남는다")
+        void shouldRecordOneEventPerSell() {
+            List<PortfolioRoundTrip> result = calculator.fold(List.of(
+                    buy(10L, "삼성전자", "10", "70000", 700_000L, LocalDate.of(2026, 7, 1)),
+                    sell(10L, "삼성전자", "4", "80000", 320_000L, LocalDate.of(2026, 7, 3)),
+                    sell(10L, "삼성전자", "6", "75000", 450_000L, LocalDate.of(2026, 7, 6))), AS_OF);
+
+            List<PortfolioRealization> events = result.get(0).realizations();
+            assertThat(events).hasSize(2);
+            assertThat(events.get(0).sellDate()).isEqualTo(LocalDate.of(2026, 7, 3));
+            assertThat(events.get(0).quantity()).isEqualByComparingTo("4");
+            assertThat(events.get(0).costBasis()).isEqualByComparingTo("280000");
+            assertThat(events.get(0).pnl()).isEqualByComparingTo("40000");
+            assertThat(events.get(1).sellDate()).isEqualTo(LocalDate.of(2026, 7, 6));
+            assertThat(events.get(1).pnl()).isEqualByComparingTo("30000");
+        }
+
+        @Test
+        @DisplayName("실현 이벤트 손익 합계는 사이클 실현손익과 같다")
+        void shouldSumToTripPnl() {
+            List<PortfolioRoundTrip> result = calculator.fold(List.of(
+                    buy(10L, "삼성전자", "10", "70000", 700_000L, LocalDate.of(2026, 7, 1)),
+                    sell(10L, "삼성전자", "4", "80000", 320_000L, LocalDate.of(2026, 7, 3)),
+                    sell(10L, "삼성전자", "6", "75000", 450_000L, LocalDate.of(2026, 7, 6))), AS_OF);
+
+            PortfolioRoundTrip t = result.get(0);
+            BigDecimal summed = t.realizations().stream()
+                    .map(PortfolioRealization::pnl)
+                    .reduce(BigDecimal.ZERO, BigDecimal::add);
+            assertThat(summed).isEqualByComparingTo(t.pnlNat());
+        }
+
+        @Test
+        @DisplayName("보유 중인 사이클도 부분 매도분의 실현 이벤트를 갖는다")
+        void shouldKeepEventsOnOpenCycle() {
+            List<PortfolioRoundTrip> result = calculator.fold(List.of(
+                    buy(10L, "삼성전자", "10", "70000", 700_000L, LocalDate.of(2026, 7, 1)),
+                    sell(10L, "삼성전자", "5", "80000", 400_000L, LocalDate.of(2026, 7, 3))), AS_OF);
+
+            PortfolioRoundTrip t = result.get(0);
+            assertThat(t.open()).isTrue();
+            assertThat(t.realizations()).hasSize(1);
+            assertThat(t.realizations().get(0).pnl()).isEqualByComparingTo("50000");
+        }
+
+        @Test
+        @DisplayName("매도 수수료는 실현 이벤트 손익에서 차감한다")
+        void shouldSubtractFeeFromEvent() {
+            List<PortfolioRoundTrip> result = calculator.fold(List.of(
+                    buy(10L, "삼성전자", "10", "70000", 700_000L, LocalDate.of(2026, 7, 1)),
+                    tx(TxType.SELL, 10L, "삼성전자", "KRW", "10", "80000", 800_000L, "3000",
+                            LocalDate.of(2026, 7, 5))), AS_OF);
+
+            assertThat(result.get(0).realizations().get(0).pnl()).isEqualByComparingTo("97000");
+        }
+
+        @Test
+        @DisplayName("재진입한 사이클의 실현 이벤트에 이전 사이클 것이 섞이지 않는다")
+        void shouldNotCarryEventsAcrossCycles() {
+            List<PortfolioRoundTrip> result = calculator.fold(List.of(
+                    buy(10L, "삼성전자", "10", "70000", 700_000L, LocalDate.of(2026, 5, 1)),
+                    sell(10L, "삼성전자", "10", "75000", 750_000L, LocalDate.of(2026, 5, 20)),
+                    buy(10L, "삼성전자", "5", "72000", 360_000L, LocalDate.of(2026, 6, 10))), AS_OF);
+
+            // 진입일 내림차순 → 재진입 사이클이 먼저
+            assertThat(result.get(0).open()).isTrue();
+            assertThat(result.get(0).realizations()).isEmpty();
+            assertThat(result.get(1).realizations()).hasSize(1);
+        }
+    }
+
+    @Nested
     @DisplayName("재진입")
     class ReEntry {
         @Test

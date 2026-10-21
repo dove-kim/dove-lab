@@ -81,5 +81,23 @@ class PortfolioRoundTripControllerTest {
                     .andExpect(jsonPath("$[0].pnlKrw").value(100_000))
                     .andExpect(jsonPath("$[0].pnlPct").value(14.29));
         }
+
+        @Test
+        @WithApiUser(memberId = MEMBER_ID, capabilities = {"PORTFOLIO_LEDGER"})
+        @DisplayName("부분 매도는 매도 날짜를 가진 실현 이벤트로 함께 내려온다")
+        void shouldExposeRealizationsPerSell() throws Exception {
+            long accountId = accountService.create(MEMBER_ID, "국내", null, null, "tester").getId();
+            trade(TxType.BUY, accountId, "10", "70000", 700_000L, LocalDate.of(2026, 7, 1));
+            trade(TxType.SELL, accountId, "4", "80000", 320_000L, LocalDate.of(2026, 7, 3));
+
+            mockMvc.perform(get("/portfolio/roundtrips"))
+                    .andExpect(status().isOk())
+                    .andExpect(jsonPath("$[0].open").value(true))
+                    .andExpect(jsonPath("$[0].realizations.length()").value(1))
+                    .andExpect(jsonPath("$[0].realizations[0].date").value("2026-07-03"))
+                    .andExpect(jsonPath("$[0].realizations[0].pnlKrw").value(40_000))
+                    .andExpect(jsonPath("$[0].realizations[0].costKrw").value(280_000))
+                    .andExpect(jsonPath("$[0].realizations[0].pnlPct").value(14.29));
+        }
     }
 }

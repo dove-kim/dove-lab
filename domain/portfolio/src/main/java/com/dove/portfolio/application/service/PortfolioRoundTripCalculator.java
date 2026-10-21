@@ -73,6 +73,8 @@ public class PortfolioRoundTripCalculator {
         BigDecimal remaining = s.quantity.subtract(sellQty);
         BigDecimal costOfSold = s.investedNat.subtract(NativeAmounts.proportion(s.investedNat, remaining, s.quantity));
         BigDecimal proceedsNet = t.getAmount().subtract(fee);
+        s.realizations.add(new PortfolioRealization(t.getTradeDate(), sellQty, costOfSold, proceedsNet,
+                proceedsNet.subtract(costOfSold)));
         s.realizedPnl = s.realizedPnl.add(proceedsNet).subtract(costOfSold);
         s.investedNat = NativeAmounts.proportion(s.investedNat, remaining, s.quantity);
         s.quantity = remaining;
@@ -95,7 +97,7 @@ public class PortfolioRoundTripCalculator {
                 : 0.0;
         long holdingDays = ChronoUnit.DAYS.between(s.entryDate, holdingEnd);
         return new PortfolioRoundTrip(s.accountId, s.symbol, s.currency, s.entryDate, exitDate,
-                holdingDays, avgNat, exitNat, s.realizedPnl, pnlPct, open);
+                holdingDays, avgNat, exitNat, s.realizedPnl, pnlPct, open, List.copyOf(s.realizations));
     }
 
     private double round2(double value) {

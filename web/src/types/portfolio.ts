@@ -116,6 +116,17 @@ export interface PortfolioRebalancePlan {
   config: RebalancePlanConfig;
 }
 
+/** 종목 식별 정보 — 종목명을 시장·티커에 묶어 현재가·환율 자동조회의 키가 된다. */
+export interface PortfolioHolding {
+  id: number;
+  accountId?: number;
+  account: string;
+  symbol: string;
+  market: string;
+  ticker: string;
+  currency: string;
+}
+
 /** 계좌 (백엔드 응답과 일치). 잔액·평가액은 아직 미집계. */
 export interface PortfolioAccount {
   id: number;
@@ -142,6 +153,16 @@ export const MARKETS = [
 /** 거래 입력용 통화 목록. */
 export const CURRENCIES = ["KRW", "USD", "HKD", "JPY", "CNY", "EUR"] as const;
 
+/** 매도 한 건에서 확정된 실현 손익. 기간별 집계는 이 날짜를 기준으로 한다. */
+export interface PortfolioRealization {
+  date: string;
+  quantity: number;
+  pnlNat: number;
+  pnlKrw: number;
+  costKrw: number;
+  pnlPct: number;
+}
+
 /** 라운드트립(진입~청산) 성과. */
 export interface PortfolioRoundTrip {
   id: number;
@@ -157,6 +178,7 @@ export interface PortfolioRoundTrip {
   pnlKrw: number;
   pnlPct: number;
   open: boolean;
+  realizations: PortfolioRealization[];
 }
 
 /** 계좌 공유 grant. */

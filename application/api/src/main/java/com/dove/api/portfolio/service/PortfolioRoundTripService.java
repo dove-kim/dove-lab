@@ -56,7 +56,7 @@ public class PortfolioRoundTripService {
             BigDecimal fx = fxRates.getOrDefault(t.currency(), BigDecimal.ONE);
             long pnlKrw = t.pnlNat().multiply(fx).setScale(0, RoundingMode.HALF_UP).longValue();
             String group = accountNames.getOrDefault(t.accountId(), "?");
-            result.add(PortfolioRoundTripResponse.of(id++, t, group, pnlKrw));
+            result.add(PortfolioRoundTripResponse.of(id++, t, group, pnlKrw, fx));
         }
         return result;
     }

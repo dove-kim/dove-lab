@@ -112,12 +112,6 @@ const REBALANCE_ICON = (
   </svg>
 );
 
-const SHARE_ICON = (
-  <svg className="w-4 h-4 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
-    <circle cx="18" cy="5" r="3" /><circle cx="6" cy="12" r="3" /><circle cx="18" cy="19" r="3" /><line x1="8.59" y1="13.51" x2="15.42" y2="17.49" /><line x1="15.41" y1="6.51" x2="8.59" y2="10.49" />
-  </svg>
-);
-
 const LOCK_ICON = (
   <svg className="w-3.5 h-3.5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
     <rect x="3" y="11" width="18" height="11" rx="2" />
@@ -142,11 +136,10 @@ const MENU_GROUPS: MenuGroup[] = [
     label: "자산",
     icon: WALLET_ICON,
     items: [
-      { href: "/portfolio/analysis", label: "분석", icon: REPORT_ICON, capability: "PORTFOLIO_LEDGER", deny: "LOCK" },
-      { href: "/portfolio/transactions", label: "매매내역", icon: TX_ICON, capability: "PORTFOLIO_LEDGER", deny: "LOCK" },
-      { href: "/portfolio/accounts", label: "계좌관리", icon: ACCOUNTS_ICON, capability: "PORTFOLIO_LEDGER", deny: "LOCK" },
+      { href: "/portfolio/now", label: "현황", icon: ACCOUNTS_ICON, capability: "PORTFOLIO_LEDGER", deny: "LOCK" },
+      { href: "/portfolio/ledger", label: "기록", icon: TX_ICON, capability: "PORTFOLIO_LEDGER", deny: "LOCK" },
+      { href: "/portfolio/performance", label: "성과", icon: REPORT_ICON, capability: "PORTFOLIO_LEDGER", deny: "LOCK" },
       { href: "/portfolio/rebalance", label: "매매 계획", icon: REBALANCE_ICON, capability: "PORTFOLIO_REBALANCE", deny: "LOCK" },
-      { href: "/portfolio/share", label: "공유", icon: SHARE_ICON, capability: "PORTFOLIO_LEDGER", deny: "LOCK" },
     ],
   },
 ];
