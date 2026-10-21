@@ -34,12 +34,6 @@ export function scopeBase(scope: string): string {
   return `/api/portfolio/shared/${scope}`;
 }
 
-/** scope 설정용 훅에서 외부(예: 공유 탭)가 대상을 바꾸도록 노출. */
-export function setScopeExternally(id: string) {
-  localStorage.setItem(KEY, id);
-  window.dispatchEvent(new Event(EVENT));
-}
-
 /**
  * 보기 대상 선택자 — 내 전체 / 내 계좌별 / 공유받은 계좌.
  */

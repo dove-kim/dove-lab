@@ -95,7 +95,8 @@ public class PortfolioAllService {
         long id = 1;
         for (PortfolioRoundTripResponse t : all) {
             out.add(new PortfolioRoundTripResponse(id++, t.symbol(), t.currency(), t.group(), t.entry(), t.exit(),
-                    t.holdingDays(), t.avgNat(), t.exitNat(), t.pnlNat(), t.pnlKrw(), t.pnlPct(), t.open()));
+                    t.holdingDays(), t.avgNat(), t.exitNat(), t.pnlNat(), t.pnlKrw(), t.pnlPct(), t.open(),
+                    t.realizations()));
         }
         return out;
     }

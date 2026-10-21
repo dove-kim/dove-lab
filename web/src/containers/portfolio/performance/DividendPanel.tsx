@@ -4,9 +4,9 @@ import { useEffect, useMemo, useState } from "react";
 import Modal from "@/components/Modal";
 import { cx } from "@/utils/cx";
 import { type PortfolioPosition, type PortfolioTx, natMoney } from "@/types/portfolio";
-import { usePortfolioData, won, fxRateOf } from "./usePortfolioData";
+import { usePortfolioData, won, fxRateOf } from "../usePortfolioData";
 import { usePaged, Pagination } from "@/components/Pagination";
-import { useScope, scopeBase, ScopeSelector } from "./scopeView";
+import { useScope, scopeBase } from "../scopeView";
 import Panel from "@/components/Panel";
 
 /** 종목별 실수령 배당 집계 — 세후 합계와 개별 배당 거래 목록. */
@@ -138,10 +138,10 @@ function MonthLines({ series, cur }: { series: YearLine[]; cur: string }) {
 }
 
 /**
- * 배당 관리 탭 — 배당 추적으로 고른 보유 종목의 예상 배당과 실제 수령 배당을 본다.
+ * 배당 패널 — 배당 추적으로 고른 보유 종목의 예상 배당과 실제 수령 배당을 본다.
  * 추적 대상 선택·배당률 편집은 내 계좌에서만 — 공유받은 계좌는 주인 설정으로 열람만.
  */
-export default function DividendTab() {
+export default function DividendPanel() {
   const [scope] = useScope();
   const [reloadKey, setReloadKey] = useState(0);
   const [picking, setPicking] = useState(false);
@@ -263,15 +263,13 @@ export default function DividendTab() {
 
   return (
     <div className="flex flex-col gap-4">
-      <div className="flex items-center gap-2 flex-wrap">
-        <span className="text-sm text-slate-400">보기 대상</span>
-        <ScopeSelector />
-        {editable && (
+      {editable && (
+        <div className="flex flex-wrap items-center gap-2">
           <button onClick={() => setPicking(true)} className={cx.btnSecondary + " ml-auto"}>
             ＋ 종목 추가
           </button>
-        )}
-      </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-3 gap-3">
         <div className="bg-white/5 rounded-lg p-3">
