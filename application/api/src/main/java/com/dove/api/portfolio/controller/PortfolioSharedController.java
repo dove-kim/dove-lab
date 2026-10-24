@@ -100,7 +100,7 @@ public class PortfolioSharedController {
 
     private PortfolioPositionResponse stripAmounts(PortfolioPositionResponse p) {
         return new PortfolioPositionResponse(p.symbol(), p.account(), p.currency(), p.tag(),
-                null, null, null, 0L, 0L, p.pnlPct(), p.weightPct(), p.holdingId(), p.annualDividendPct(),
+                null, null, null, 0L, null, 0L, p.pnlPct(), p.weightPct(), p.holdingId(), p.annualDividendPct(),
                 p.dividendTracked());
     }
 

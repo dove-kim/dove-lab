@@ -78,6 +78,7 @@ export interface PortfolioPosition {
   avgPriceNat: number;
   curPriceNat: number;
   evalKrw: number;
+  investedNat?: number;
   pnlKrw: number;
   pnlPct: number;
   weightPct: number;

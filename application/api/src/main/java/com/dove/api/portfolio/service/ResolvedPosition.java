@@ -12,6 +12,7 @@ import java.math.BigDecimal;
  * @param avgPriceNat 평균 매입 단가(원통화)
  * @param curPriceNat 현재가(원통화)
  * @param evalKrw            평가액(원화)
+ * @param investedNat        현재 보유분의 매입 원가(원통화, 수수료 포함)
  * @param investedKrw        매입 원가(원화)
  * @param holdingId          연동된 보유 ID(미연동이면 null — 배당률 설정 불가)
  * @param annualDividendPct  연 배당수익률(%, 없으면 null)
@@ -25,6 +26,7 @@ record ResolvedPosition(
         BigDecimal avgPriceNat,
         BigDecimal curPriceNat,
         long evalKrw,
+        BigDecimal investedNat,
         long investedKrw,
         Long holdingId,
         Double annualDividendPct,

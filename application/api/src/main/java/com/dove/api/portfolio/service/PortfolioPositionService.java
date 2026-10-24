@@ -94,11 +94,11 @@ public class PortfolioPositionService {
         if (curPrice == null) {
             // 현재가 미연동/미확보 → 원가로 표시(손익 0)
             return new ResolvedPosition(account, cost.symbol(), currency, cost.quantity(), cost.avgPriceNat(),
-                    cost.avgPriceNat(), investedKrw, investedKrw, holdingId, divPct, tracked);
+                    cost.avgPriceNat(), investedKrw, cost.investedNat(), investedKrw, holdingId, divPct, tracked);
         }
         long evalKrw = round(curPrice.multiply(cost.quantity()).multiply(fx));
         return new ResolvedPosition(account, cost.symbol(), currency, cost.quantity(), cost.avgPriceNat(),
-                curPrice, evalKrw, investedKrw, holdingId, divPct, tracked);
+                curPrice, evalKrw, cost.investedNat(), investedKrw, holdingId, divPct, tracked);
     }
 
     /**
@@ -145,7 +145,7 @@ public class PortfolioPositionService {
         double pnlPct = r.investedKrw() != 0 ? round1(pnlKrw * 100.0 / r.investedKrw()) : 0.0;
         double weightPct = totalEval != 0 ? round1(r.evalKrw() * 100.0 / totalEval) : 0.0;
         return new PortfolioPositionResponse(r.symbol(), r.account(), r.currency(), null, r.quantity(),
-                r.avgPriceNat(), r.curPriceNat(), r.evalKrw(), pnlKrw, pnlPct, weightPct, r.holdingId(),
+                r.avgPriceNat(), r.curPriceNat(), r.evalKrw(), r.investedNat(), pnlKrw, pnlPct, weightPct, r.holdingId(),
                 r.annualDividendPct(), r.dividendTracked());
     }
 
