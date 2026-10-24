@@ -54,7 +54,7 @@ public class PortfolioAllService {
         long totalEval = all.stream().mapToLong(PortfolioPositionResponse::evalKrw).sum();
         return all.stream()
                 .map(p -> new PortfolioPositionResponse(p.symbol(), p.account(), p.currency(), p.tag(),
-                        p.quantity(), p.avgPriceNat(), p.curPriceNat(), p.evalKrw(), p.pnlKrw(), p.pnlPct(),
+                        p.quantity(), p.avgPriceNat(), p.curPriceNat(), p.evalKrw(), p.investedNat(), p.pnlKrw(), p.pnlPct(),
                         totalEval != 0 ? Math.round(p.evalKrw() * 1000.0 / totalEval) / 10.0 : 0.0,
                         p.holdingId(), p.annualDividendPct(), p.dividendTracked()))
                 .toList();

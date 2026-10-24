@@ -1,21 +1,19 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Modal from "@/components/Modal";
 import CommaInput from "@/components/CommaInput";
 import Select from "@/components/Select";
 import { cx } from "@/utils/cx";
 import { type PortfolioHolding, type PortfolioPosition, CURRENCIES, natMoney, natSigned } from "@/types/portfolio";
-import { previewTrade } from "./tradePreview";
 import { toSymbolChips } from "./symbolChips";
-import SymbolPicker, { type SymbolSelection } from "./SymbolPicker";
+import SymbolPicker from "./SymbolPicker";
 import { readLastAccountId, writeLastAccountId } from "./lastAccount";
+import { type TradeDraft, draftAmount, emptyDraft, syncDrafts, toTradeInput } from "./tradeDrafts";
+import { previewTrades } from "./tradePreview";
 
 /** 한 번에 기록할 수 있는 일. */
 type Task = "deposit" | "fx" | "buy" | "sell";
-
-/** 안내 흐름의 한 화면. */
-type StepKey = "account" | "tasks" | "date" | "deposit" | "fx" | "symbol" | "trade" | "confirm";
 
 const TASK_LABEL: Record<Task, string> = {
   deposit: "돈을 넣었어요",
@@ -26,6 +24,11 @@ const TASK_LABEL: Record<Task, string> = {
 
 const TASK_ORDER: Task[] = ["deposit", "fx", "buy", "sell"];
 const MAX_CHIPS = 8;
+
+/** 안내 흐름의 한 화면. 매매는 칸마다 종목·수량 화면이 한 쌍씩 생긴다. */
+type Step =
+  | { key: "account" | "tasks" | "date" | "deposit" | "fx" | "confirm" }
+  | { key: "symbol" | "trade"; draft: number };
 
 interface AccountOption {
   id: number;
@@ -42,7 +45,7 @@ function yesterday(): string {
 }
 
 /**
- * 안내 입력 모달 — 한 화면에 하나씩 물어 입금·환전·매매를 한 번에 기록한다.
+ * 안내 입력 모달 — 한 화면에 하나씩 물어 입금·환전·매매를 한 번에 기록한다. 매매는 여러 종목을 이어 적을 수 있다.
  *
  * @param accounts      선택 가능한 계좌 목록
  * @param recentSymbols 최근 거래 순 종목명
@@ -83,14 +86,15 @@ export default function GuidedEntryModal({
   const [fxTo, setFxTo] = useState("");
   const [fxFromCurrency, setFxFromCurrency] = useState("KRW");
   const [fxToCurrency, setFxToCurrency] = useState("USD");
+  const [fxFee, setFxFee] = useState("");
 
-  const [picked, setPicked] = useState<SymbolSelection>({ symbol: "", market: "", ticker: "", currency: "KRW" });
-  const [quantity, setQuantity] = useState("");
-  const [price, setPrice] = useState("");
+  const [drafts, setDrafts] = useState<TradeDraft[]>([]);
+  const nextKey = useRef(1);
 
   const [holdings, setHoldings] = useState<PortfolioHolding[]>([]);
   const [positions, setPositions] = useState<PortfolioPosition[]>([]);
   const [stepIndex, setStepIndex] = useState(0);
+  const [feeOpen, setFeeOpen] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -106,21 +110,28 @@ export default function GuidedEntryModal({
   }, []);
 
   const chips = useMemo(() => toSymbolChips(holdings, recentSymbols, MAX_CHIPS), [holdings, recentSymbols]);
-  const isSell = tasks.includes("sell");
-  const hasTrade = tasks.includes("buy") || isSell;
   const accountName = accounts.find((a) => a.id === accountId)?.name ?? null;
 
-  const steps = useMemo<StepKey[]>(() => {
-    const list: StepKey[] = [];
-    if (accounts.length > 1) list.push("account");
-    list.push("tasks");
-    if (tasks.length > 0) list.push("date");
-    if (tasks.includes("deposit")) list.push("deposit");
-    if (tasks.includes("fx")) list.push("fx");
-    if (hasTrade) list.push("symbol", "trade");
-    if (tasks.length > 0) list.push("confirm");
+  // 고른 할 일에 맞춰 매매 칸을 맞춘다.
+  useEffect(() => {
+    setDrafts((prev) => {
+      const next = syncDrafts(prev, tasks.includes("buy"), tasks.includes("sell"), nextKey.current);
+      nextKey.current += next.length;
+      return next;
+    });
+  }, [tasks]);
+
+  const steps = useMemo<Step[]>(() => {
+    const list: Step[] = [];
+    if (accounts.length > 1) list.push({ key: "account" });
+    list.push({ key: "tasks" });
+    if (tasks.length > 0) list.push({ key: "date" });
+    if (tasks.includes("deposit")) list.push({ key: "deposit" });
+    if (tasks.includes("fx")) list.push({ key: "fx" });
+    drafts.forEach((_, i) => list.push({ key: "symbol", draft: i }, { key: "trade", draft: i }));
+    if (tasks.length > 0) list.push({ key: "confirm" });
     return list;
-  }, [accounts.length, tasks, hasTrade]);
+  }, [accounts.length, tasks, drafts]);
 
   // 뒤로 가서 할 일을 빼면 단계가 줄어든다. 머물던 자리가 사라지면 마지막 단계로 당긴다.
   useEffect(() => {
@@ -128,51 +139,53 @@ export default function GuidedEntryModal({
   }, [steps.length]);
 
   const step = steps[Math.min(stepIndex, steps.length - 1)];
-  const isLast = step === "confirm";
+  const isLast = step?.key === "confirm";
+  const draftIndex = step && "draft" in step ? step.draft : -1;
+  const draft = draftIndex >= 0 ? drafts[draftIndex] : null;
 
-  // 지금 들고 있는 수량 — 전량·반절 버튼의 근거.
+  useEffect(() => setFeeOpen(false), [stepIndex]);
+
+  const previews = useMemo(
+    () => previewTrades(positions, accountName, drafts.map(toTradeInput)),
+    [positions, accountName, drafts]
+  );
+
+  // 지금 들고 있는 수량 — 전부·반절 버튼의 근거.
   const heldQuantity = useMemo(() => {
-    if (!isSell || !picked.symbol.trim()) return null;
+    if (!draft?.isSell || !draft.selection.symbol.trim()) return null;
     const matched = positions.filter(
-      (p) => p.symbol === picked.symbol.trim() && (accountName == null || p.account === accountName)
+      (p) => p.symbol === draft.selection.symbol.trim() && (accountName == null || p.account === accountName)
     );
     return matched.length === 0 ? null : matched.reduce((s, p) => s + p.quantity, 0);
-  }, [isSell, picked.symbol, positions, accountName]);
+  }, [draft, positions, accountName]);
 
-  const tradeAmount = useMemo(() => {
-    const q = parseFloat(quantity);
-    const p = parseFloat(price);
-    return isFinite(q) && isFinite(p) ? Number((q * p).toFixed(8)) : null;
-  }, [quantity, price]);
+  const fxRate = Number(fxFrom) > 0 && Number(fxTo) > 0 ? Number(fxFrom) / Number(fxTo) : null;
 
-  const fxRate =
-    Number(fxFrom) > 0 && Number(fxTo) > 0 ? Number(fxFrom) / Number(fxTo) : null;
-
-  // 저장하면 보유가 어떻게 바뀌는지 — 확인 화면에서 평단 변화를 보여준다.
-  const preview = useMemo(
-    () =>
-      hasTrade
-        ? previewTrade(
-            positions,
-            picked.symbol,
-            accountName,
-            picked.currency,
-            isSell,
-            parseFloat(quantity),
-            parseFloat(price)
-          )
-        : null,
-    [hasTrade, positions, picked.symbol, picked.currency, accountName, isSell, quantity, price]
-  );
+  function patchDraft(index: number, patch: Partial<TradeDraft>) {
+    setDrafts((prev) => prev.map((d, i) => (i === index ? { ...d, ...patch } : d)));
+  }
 
   function toggleTask(task: Task) {
     setError(null);
     setTasks((prev) => (prev.includes(task) ? prev.filter((t) => t !== task) : [...prev, task]));
   }
 
+  /** 같은 종류의 매매 칸을 하나 더 만들고 그 종목 화면으로 옮긴다. */
+  function addDraft() {
+    const problem = validate();
+    if (problem) {
+      setError(problem);
+      return;
+    }
+    const isSell = draft?.isSell ?? false;
+    setError(null);
+    setDrafts((prev) => [...prev, emptyDraft(nextKey.current++, isSell)]);
+    setStepIndex(stepIndex + 1);
+  }
+
   /** 지금 화면의 입력이 다음으로 넘어갈 만한지. 문제가 있으면 메시지를 돌려준다. */
   function validate(): string | null {
-    switch (step) {
+    switch (step?.key) {
       case "account":
         return accountId === "" ? "계좌를 골라주세요." : null;
       case "tasks":
@@ -184,10 +197,10 @@ export default function GuidedEntryModal({
         if (fxFromCurrency === fxToCurrency) return "서로 다른 통화를 골라주세요.";
         return null;
       case "symbol":
-        return picked.symbol.trim() ? null : "종목을 골라주세요.";
+        return draft?.selection.symbol.trim() ? null : "종목을 골라주세요.";
       case "trade":
-        if (!(parseFloat(quantity) > 0)) return "몇 주인지 적어주세요.";
-        if (!(parseFloat(price) > 0)) return "한 주에 얼마였는지 적어주세요.";
+        if (!(parseFloat(draft?.quantity ?? "") > 0)) return "몇 주인지 적어주세요.";
+        if (!(parseFloat(draft?.price ?? "") > 0)) return "한 주에 얼마였는지 적어주세요.";
         return null;
       default:
         return null;
@@ -207,6 +220,32 @@ export default function GuidedEntryModal({
   function back() {
     setError(null);
     setStepIndex((i) => Math.max(0, i - 1));
+  }
+
+  async function postTransaction(body: {
+    type: string;
+    amount: number;
+    currency: string;
+    fee: number;
+    symbol?: string;
+    quantity?: number;
+    price?: number;
+  }): Promise<boolean> {
+    const res = await fetch(createUrl, {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({
+        accountId,
+        tradedAt: date,
+        symbol: body.symbol ?? null,
+        quantity: body.quantity ?? null,
+        price: body.price ?? null,
+        tag: null,
+        memo: null,
+        ...body,
+      }),
+    }).catch(() => null);
+    return !!res?.ok;
   }
 
   async function save() {
@@ -232,6 +271,7 @@ export default function GuidedEntryModal({
         type: "DEPOSIT",
         amount: parseFloat(depositAmount),
         currency: depositCurrency,
+        fee: 0,
       });
       if (!ok) return fail("입금");
       done.push("입금");
@@ -248,7 +288,7 @@ export default function GuidedEntryModal({
           fromAmount: parseFloat(fxFrom),
           toCurrency: fxToCurrency,
           toAmount: parseFloat(fxTo),
-          fee: 0,
+          fee: parseFloat(fxFee) || 0,
           memo: null,
         }),
       }).catch(() => null);
@@ -256,25 +296,28 @@ export default function GuidedEntryModal({
       done.push("환전");
     }
 
-    if (hasTrade) {
+    for (const d of drafts) {
+      const label = `${d.selection.symbol} ${d.isSell ? "매도" : "매수"}`;
       const ok = await postTransaction({
-        type: isSell ? "SELL" : "BUY",
-        amount: tradeAmount ?? 0,
-        currency: picked.currency,
-        symbol: picked.symbol.trim(),
-        quantity: parseFloat(quantity),
-        price: parseFloat(price),
+        type: d.isSell ? "SELL" : "BUY",
+        amount: draftAmount(d) ?? 0,
+        currency: d.selection.currency,
+        fee: parseFloat(d.fee) || 0,
+        symbol: d.selection.symbol.trim(),
+        quantity: parseFloat(d.quantity),
+        price: parseFloat(d.price),
       });
-      if (!ok) return fail(isSell ? "매도" : "매수");
-      if (holdingLink && picked.market && picked.ticker.trim()) {
+      if (!ok) return fail(label);
+      done.push(label);
+      if (holdingLink && d.selection.market && d.selection.ticker.trim()) {
         await fetch("/api/portfolio/holdings", {
           method: "POST",
           headers: { "Content-Type": "application/json" },
           body: JSON.stringify({
             accountId,
-            symbol: picked.symbol.trim(),
-            market: picked.market,
-            ticker: picked.ticker.trim(),
+            symbol: d.selection.symbol.trim(),
+            market: d.selection.market,
+            ticker: d.selection.ticker.trim(),
           }),
         }).catch(() => {});
       }
@@ -284,33 +327,8 @@ export default function GuidedEntryModal({
     onSaved();
   }
 
-  async function postTransaction(body: {
-    type: string;
-    amount: number;
-    currency: string;
-    symbol?: string;
-    quantity?: number;
-    price?: number;
-  }): Promise<boolean> {
-    const res = await fetch(createUrl, {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        accountId,
-        tradedAt: date,
-        symbol: body.symbol ?? null,
-        quantity: body.quantity ?? null,
-        price: body.price ?? null,
-        fee: 0,
-        tag: null,
-        memo: null,
-        ...body,
-      }),
-    }).catch(() => null);
-    return !!res?.ok;
-  }
-
   const position = steps.length > 1 ? `${Math.min(stepIndex, steps.length - 1) + 1} / ${steps.length}` : "";
+  const sameKindCount = draft ? drafts.filter((d) => d.isSell === draft.isSell).length : 0;
 
   return (
     <Modal
@@ -331,7 +349,7 @@ export default function GuidedEntryModal({
       <div className="flex flex-col gap-5">
         {position && <div className="text-xs text-slate-500">{position}</div>}
 
-        {step === "account" && (
+        {step?.key === "account" && (
           <Question title="어느 계좌인가요?">
             <div className="flex flex-col gap-2">
               {accounts.map((a) => (
@@ -348,7 +366,7 @@ export default function GuidedEntryModal({
           </Question>
         )}
 
-        {step === "tasks" && (
+        {step?.key === "tasks" && (
           <Question title="오늘 무엇을 하셨나요?" hint="해당하는 것을 모두 골라주세요. 여러 개여도 괜찮아요.">
             <div className="flex flex-col gap-2">
               {TASK_ORDER.map((t) => (
@@ -365,7 +383,7 @@ export default function GuidedEntryModal({
           </Question>
         )}
 
-        {step === "date" && (
+        {step?.key === "date" && (
           <Question title="언제 하셨나요?">
             <div className="flex flex-col gap-3">
               <div className="flex flex-wrap gap-2">
@@ -385,7 +403,7 @@ export default function GuidedEntryModal({
           </Question>
         )}
 
-        {step === "deposit" && (
+        {step?.key === "deposit" && (
           <Question title="얼마를 넣으셨나요?" hint="계좌로 옮긴 금액을 그대로 적어주세요.">
             <div className="flex flex-col gap-3">
               <CommaInput decimal value={depositAmount} onChange={setDepositAmount} className={cx.inputNumber} />
@@ -398,7 +416,7 @@ export default function GuidedEntryModal({
           </Question>
         )}
 
-        {step === "fx" && (
+        {step?.key === "fx" && (
           <Question title="얼마를 바꾸셨나요?" hint="바꾸기 전 금액과 받은 금액을 적으면 환율은 알아서 계산해요.">
             <div className="flex flex-col gap-3">
               <div className="grid grid-cols-2 gap-3">
@@ -415,62 +433,97 @@ export default function GuidedEntryModal({
                   <Select value={fxToCurrency} onChange={setFxToCurrency} items={CURRENCIES.map((c) => ({ value: c, label: c }))} />
                 </Labeled>
               </div>
-              {fxRate && (
-                <p className="text-sm text-slate-400">
-                  환율 약 {fxRate.toFixed(2)}원이네요.
-                </p>
-              )}
+              {fxRate && <p className="text-sm text-slate-400">환율 약 {fxRate.toFixed(2)}원이네요.</p>}
+              <FeeField
+                open={feeOpen}
+                onOpen={() => setFeeOpen(true)}
+                label={`환전 수수료 (${fxFromCurrency})`}
+                value={fxFee}
+                onChange={setFxFee}
+              />
             </div>
           </Question>
         )}
 
-        {step === "symbol" && (
+        {step?.key === "symbol" && draft && (
           <Question
-            title={isSell ? "어떤 주식을 파셨나요?" : "어떤 주식을 사셨나요?"}
-            hint="전에 거래한 종목은 버튼 한 번으로 고를 수 있어요."
+            title={draft.isSell ? "어떤 주식을 파셨나요?" : "어떤 주식을 사셨나요?"}
+            hint={
+              sameKindCount > 1
+                ? `${draft.isSell ? "판" : "산"} 종목 ${draftIndex + 1}번째예요.`
+                : "전에 거래한 종목은 버튼 한 번으로 고를 수 있어요."
+            }
           >
             {/* 계좌는 앞 단계에서 직접 답했으므로 종목 칩이 덮어쓰지 않는다. */}
-            <SymbolPicker chips={chips} value={picked} onChange={setPicked} />
+            <SymbolPicker
+              chips={chips}
+              value={draft.selection}
+              onChange={(selection) => patchDraft(draftIndex, { selection })}
+            />
           </Question>
         )}
 
-        {step === "trade" && (
+        {step?.key === "trade" && draft && (
           <Question
-            title={`${picked.symbol}, 몇 주를 얼마에 ${isSell ? "파셨나요" : "사셨나요"}?`}
-            hint={`한 주 가격은 ${picked.currency} 기준으로 적어주세요.`}
+            title={`${draft.selection.symbol}, 몇 주를 얼마에 ${draft.isSell ? "파셨나요" : "사셨나요"}?`}
+            hint={`한 주 가격은 ${draft.selection.currency} 기준으로 적어주세요.`}
           >
             <div className="flex flex-col gap-3">
               <Labeled label="몇 주">
-                <CommaInput decimal value={quantity} onChange={setQuantity} className={cx.inputNumber} />
+                <CommaInput
+                  decimal
+                  value={draft.quantity}
+                  onChange={(quantity) => patchDraft(draftIndex, { quantity })}
+                  className={cx.inputNumber}
+                />
               </Labeled>
               {heldQuantity != null && heldQuantity > 0 && (
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="text-xs text-slate-500">지금 {heldQuantity}주 있어요</span>
-                  <button type="button" onClick={() => setQuantity(String(heldQuantity))} className={cx.btnSm}>
+                  <button
+                    type="button"
+                    onClick={() => patchDraft(draftIndex, { quantity: String(heldQuantity) })}
+                    className={cx.btnSm}
+                  >
                     전부
                   </button>
                   <button
                     type="button"
-                    onClick={() => setQuantity(String(Number((heldQuantity / 2).toFixed(8))))}
+                    onClick={() => patchDraft(draftIndex, { quantity: String(Number((heldQuantity / 2).toFixed(8))) })}
                     className={cx.btnSm}
                   >
                     반절
                   </button>
                 </div>
               )}
-              <Labeled label={`한 주에 얼마 (${picked.currency})`}>
-                <CommaInput decimal value={price} onChange={setPrice} className={cx.inputNumber} />
+              <Labeled label={`한 주에 얼마 (${draft.selection.currency})`}>
+                <CommaInput
+                  decimal
+                  value={draft.price}
+                  onChange={(price) => patchDraft(draftIndex, { price })}
+                  className={cx.inputNumber}
+                />
               </Labeled>
-              {tradeAmount != null && (
+              {draftAmount(draft) != null && (
                 <p className="text-sm text-slate-400">
-                  모두 {natMoney(tradeAmount, picked.currency)}네요.
+                  모두 {natMoney(draftAmount(draft) as number, draft.selection.currency)}네요.
                 </p>
               )}
+              <FeeField
+                open={feeOpen}
+                onOpen={() => setFeeOpen(true)}
+                label={`매매 수수료 (${draft.selection.currency})`}
+                value={draft.fee}
+                onChange={(fee) => patchDraft(draftIndex, { fee })}
+              />
+              <button type="button" onClick={addDraft} className={cx.btnSecondary + " self-start"}>
+                ＋ {draft.isSell ? "판" : "산"} 종목이 더 있어요
+              </button>
             </div>
           </Question>
         )}
 
-        {step === "confirm" && (
+        {step?.key === "confirm" && (
           <Question title="이게 맞나요?" hint="맞으면 아래 버튼을 눌러주세요. 틀렸으면 이전으로 돌아가 고칠 수 있어요.">
             <div className="flex flex-col gap-4">
               <div className="flex flex-col gap-2">
@@ -483,43 +536,58 @@ export default function GuidedEntryModal({
                   <Summary label="환전">
                     {natMoney(parseFloat(fxFrom) || 0, fxFromCurrency)} →{" "}
                     {natMoney(parseFloat(fxTo) || 0, fxToCurrency)}
+                    {parseFloat(fxFee) > 0 && ` · 수수료 ${natMoney(parseFloat(fxFee), fxFromCurrency)}`}
                   </Summary>
                 )}
-                {hasTrade && (
-                  <Summary label={isSell ? "매도" : "매수"}>
-                    {picked.symbol} {quantity}주 × {natMoney(parseFloat(price) || 0, picked.currency)} ={" "}
-                    {natMoney(tradeAmount ?? 0, picked.currency)}
+                {drafts.map((d) => (
+                  <Summary key={d.key} label={d.isSell ? "매도" : "매수"}>
+                    {d.selection.symbol} {d.quantity}주 × {natMoney(parseFloat(d.price) || 0, d.selection.currency)} ={" "}
+                    {natMoney(draftAmount(d) ?? 0, d.selection.currency)}
+                    {parseFloat(d.fee) > 0 && ` · 수수료 ${natMoney(parseFloat(d.fee), d.selection.currency)}`}
                   </Summary>
-                )}
+                ))}
               </div>
 
-              {preview && (
-                <div className="flex flex-col gap-2 rounded-xl border border-indigo-500/25 bg-indigo-600/10 p-4">
+              {previews.some(Boolean) && (
+                <div className="flex flex-col gap-3 rounded-xl border border-indigo-500/25 bg-indigo-600/10 p-4">
                   <div className="text-sm font-medium text-indigo-200">기록하면 이렇게 바뀌어요</div>
-                  <Change label="보유 수량">
-                    {preview.beforeQty}주 → <strong className="font-medium text-white">{preview.afterQty}주</strong>
-                  </Change>
-                  {preview.afterAvg != null && (
-                    <Change label="평단가">
-                      {preview.beforeAvg == null ? "처음 매수" : natMoney(preview.beforeAvg, preview.currency)} →{" "}
-                      <strong className="font-medium text-white">
-                        {natMoney(preview.afterAvg, preview.currency)}
-                      </strong>
-                    </Change>
-                  )}
-                  {preview.realizedNat != null && (
-                    <Change label="이번에 확정되는 손익">
-                      <strong className={"font-medium " + (preview.realizedNat >= 0 ? "text-rose-300" : "text-sky-300")}>
-                        {natSigned(preview.realizedNat, preview.currency)}
-                      </strong>
-                    </Change>
-                  )}
-                  {preview.overSelling && (
-                    <p className="text-sm text-amber-300">
-                      지금 {preview.beforeQty}주를 들고 있는데 {quantity}주를 파는 것으로 적혀 있어요. 수량을 다시
-                      확인해주세요.
-                    </p>
-                  )}
+                  {drafts.map((d, i) => {
+                    const preview = previews[i];
+                    if (!preview) return null;
+                    return (
+                      <div key={d.key} className="flex flex-col gap-1">
+                        {drafts.length > 1 && (
+                          <div className="text-xs text-slate-400">{d.selection.symbol}</div>
+                        )}
+                        <Change label="보유 수량">
+                          {preview.beforeQty}주 → <strong className="font-medium text-white">{preview.afterQty}주</strong>
+                        </Change>
+                        {preview.afterAvg != null && (
+                          <Change label="평단가">
+                            {preview.beforeAvg == null ? "처음 매수" : natMoney(preview.beforeAvg, preview.currency)} →{" "}
+                            <strong className="font-medium text-white">
+                              {natMoney(preview.afterAvg, preview.currency)}
+                            </strong>
+                          </Change>
+                        )}
+                        {preview.realizedNat != null && (
+                          <Change label="이번에 확정되는 손익">
+                            <strong
+                              className={"font-medium " + (preview.realizedNat >= 0 ? "text-rose-300" : "text-sky-300")}
+                            >
+                              {natSigned(preview.realizedNat, preview.currency)}
+                            </strong>
+                          </Change>
+                        )}
+                        {preview.overSelling && (
+                          <p className="text-sm text-amber-300">
+                            지금 {preview.beforeQty}주를 들고 있는데 {d.quantity}주를 파는 것으로 적혀 있어요. 수량을
+                            다시 확인해주세요.
+                          </p>
+                        )}
+                      </div>
+                    );
+                  })}
                 </div>
               )}
             </div>
@@ -529,6 +597,34 @@ export default function GuidedEntryModal({
         {error && <p className="text-sm text-rose-300">{error}</p>}
       </div>
     </Modal>
+  );
+}
+
+/** 평소엔 접혀 있는 수수료 입력 — 필요할 때만 펼친다. */
+function FeeField({
+  open,
+  onOpen,
+  label,
+  value,
+  onChange,
+}: {
+  open: boolean;
+  onOpen: () => void;
+  label: string;
+  value: string;
+  onChange: (v: string) => void;
+}) {
+  if (!open && !value) {
+    return (
+      <button type="button" onClick={onOpen} className="self-start text-xs text-slate-400 transition hover:text-white">
+        ＋ 수수료도 적을게요
+      </button>
+    );
+  }
+  return (
+    <Labeled label={label}>
+      <CommaInput decimal value={value} onChange={onChange} placeholder="0" className={cx.inputNumber} />
+    </Labeled>
   );
 }
 

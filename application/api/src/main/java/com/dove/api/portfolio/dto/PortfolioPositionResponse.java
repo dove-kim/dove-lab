@@ -13,6 +13,7 @@ import java.math.BigDecimal;
  * @param avgPriceNat 평균 매입 단가(원통화)
  * @param curPriceNat 현재가(원통화)
  * @param evalKrw     평가액(원화)
+ * @param investedNat 현재 보유분의 매입 원가(원통화, 수수료 포함)
  * @param pnlKrw      평가손익(원화)
  * @param pnlPct            수익률(%)
  * @param weightPct         포트폴리오 내 비중(%)
@@ -29,6 +30,7 @@ public record PortfolioPositionResponse(
         BigDecimal avgPriceNat,
         BigDecimal curPriceNat,
         long evalKrw,
+        BigDecimal investedNat,
         long pnlKrw,
         double pnlPct,
         double weightPct,
