@@ -4,14 +4,16 @@ import com.dove.jobstatus.JobStatusRegistry;
 import com.dove.jobstatus.SchedulerJobName;
 import com.dove.portfolio.application.service.PortfolioFxRateService;
 import com.dove.portfolio.application.service.PortfolioQuoteService;
+import com.dove.portfolio.application.service.PortfolioTransactionService;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.function.IntSupplier;
 
 /**
- * 포트폴리오 시세·환율 일배치 조합 — 보유 해외 종목 종가와 원통화 환율을 갱신한다.
+ * 포트폴리오 시세·환율 일배치 조합 — 보유 해외 종목 종가와 원통화 환율 이력을 갱신한다.
  */
 @Slf4j
 @Service
@@ -20,14 +22,21 @@ public class PortfolioMarketDataService {
 
     private final PortfolioFxRateService fxRateService;
     private final PortfolioQuoteService quoteService;
+    private final PortfolioTransactionService transactionService;
     private final JobStatusRegistry jobStatusRegistry;
 
     /**
-     * 환율과 해외 종가를 순차 갱신한다.
+     * 환율 이력과 해외 종가를 순차 갱신한다.
      */
     public void refresh() {
-        runStage(SchedulerJobName.PORTFOLIO_FX, fxRateService::refreshAll);
+        runStage(SchedulerJobName.PORTFOLIO_FX, this::refreshFxRates);
         runStage(SchedulerJobName.PORTFOLIO_QUOTE, quoteService::refreshOverseas);
+    }
+
+    /** 가장 오래된 거래일을 백필 시작점으로 삼아 환율 이력의 빈 구간을 채운다. */
+    private int refreshFxRates() {
+        LocalDate start = transactionService.oldestTradeDate().orElse(LocalDate.now());
+        return fxRateService.refreshFrom(start);
     }
 
     private void runStage(SchedulerJobName job, IntSupplier task) {

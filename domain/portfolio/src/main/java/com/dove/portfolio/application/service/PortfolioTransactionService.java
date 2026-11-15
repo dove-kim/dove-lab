@@ -12,6 +12,7 @@ import java.math.BigDecimal;
 import java.time.LocalDate;
 import java.util.List;
 import java.util.NoSuchElementException;
+import java.util.Optional;
 
 /**
  * 포트폴리오 거래 서비스 (조회 메서드만 readOnly).
@@ -29,6 +30,14 @@ public class PortfolioTransactionService {
     @Transactional(readOnly = true)
     public List<PortfolioTransaction> findByOwner(Long ownerMemberId) {
         return repository.findByOwnerMemberIdOrderByTradeDateDescIdDesc(ownerMemberId);
+    }
+
+    /**
+     * 전 회원 통틀어 가장 오래된 거래일을 조회한다(환율 백필 시작일 산출용).
+     */
+    @Transactional(readOnly = true)
+    public Optional<LocalDate> oldestTradeDate() {
+        return repository.findTopByOrderByTradeDateAsc().map(PortfolioTransaction::getTradeDate);
     }
 
     /**

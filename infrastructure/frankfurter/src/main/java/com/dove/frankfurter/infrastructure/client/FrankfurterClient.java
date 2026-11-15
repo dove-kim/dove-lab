@@ -2,6 +2,7 @@ package com.dove.frankfurter.infrastructure.client;
 
 import org.springframework.cloud.openfeign.FeignClient;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.RequestParam;
 
 /**
@@ -19,4 +20,17 @@ public interface FrankfurterClient {
      */
     @GetMapping("/v1/latest")
     FrankfurterResponse latest(@RequestParam("base") String base, @RequestParam("symbols") String symbols);
+
+    /**
+     * 기준 통화에 대한 대상 통화들의 구간 환율을 조회한다.
+     *
+     * @param range   조회 구간("2024-03-01..2024-03-05" 형식)
+     * @param base    기준 통화 코드
+     * @param symbols 대상 통화 코드(콤마 구분)
+     * @return 구간 환율 응답
+     */
+    @GetMapping("/v1/{range}")
+    FrankfurterSeriesResponse series(@PathVariable("range") String range,
+                                     @RequestParam("base") String base,
+                                     @RequestParam("symbols") String symbols);
 }
