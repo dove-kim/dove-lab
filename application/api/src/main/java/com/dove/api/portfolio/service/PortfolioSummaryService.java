@@ -2,6 +2,7 @@ package com.dove.api.portfolio.service;
 
 import com.dove.api.portfolio.dto.PortfolioPositionResponse;
 import com.dove.api.portfolio.dto.PortfolioSummaryResponse;
+import com.dove.portfolio.application.service.FxRateTable;
 import com.dove.portfolio.application.service.PortfolioAccountService;
 import com.dove.portfolio.application.service.PortfolioCashCalculator;
 import com.dove.portfolio.application.service.PortfolioFxConversionService;
@@ -26,7 +27,9 @@ import java.util.Map;
 import java.util.OptionalDouble;
 
 /**
- * 포트폴리오 요약 조합 — 통화별 현금(거래·환전 fold)을 현재 환율로 원화 환산하고 보유 평가액을 합쳐 총자산·수익률·XIRR을 낸다.
+ * 포트폴리오 요약 조합 — 통화별 현금(거래·환전 fold)과 보유 평가액을 합쳐 총자산·수익률·XIRR을 낸다.
+ *
+ * <p>현재 잔고와 평가액은 최신 환율로, 외부 입출금 흐름은 거래일 환율로 환산한다.</p>
  */
 @Service
 @RequiredArgsConstructor
@@ -67,13 +70,13 @@ public class PortfolioSummaryService {
         long evalPnl = positions.stream().mapToLong(PortfolioPositionResponse::pnlKrw).sum();
 
         long total = cash + eval;
-        long deposits = toKrw(cashCalculator.depositsByCurrency(txns), fxRates);
-        long withdrawals = toKrw(cashCalculator.withdrawalsByCurrency(txns), fxRates);
-        long netContrib = deposits - withdrawals;
+        // 외부 흐름은 거래일 환율로 환산 — 입금 당시 원화 투입액이 순납입이고, 환차익은 누적 손익에 남는다.
+        List<ExternalFlow> flows = investorFlows(txns, fxRateService.rateTable());
+        long netContrib = -flows.stream().mapToLong(ExternalFlow::amountKrw).sum();
         long growth = total - netContrib;
         double evalPnlPct = invested > 0 ? round1(evalPnl * 100.0 / invested) : 0.0;
 
-        OptionalDouble xirr = Xirr.annualRatePct(investorFlows(txns, fxRates), LocalDate.now(), total);
+        OptionalDouble xirr = Xirr.annualRatePct(flows, LocalDate.now(), total);
         double xirrPct = xirr.isPresent() ? round1(xirr.getAsDouble()) : 0.0;
 
         return new PortfolioSummaryResponse(total, cash, netContrib, growth, evalPnl, evalPnlPct, xirrPct, cashByCurrency);
@@ -106,14 +109,14 @@ public class PortfolioSummaryService {
         return sum.setScale(0, RoundingMode.HALF_UP).longValue();
     }
 
-    /** 외부 현금흐름(투자자 관점: 입금=음수, 출금=양수)을 현재 환율로 원화 환산해 생성한다. */
-    private List<ExternalFlow> investorFlows(List<PortfolioTransaction> txns, Map<String, BigDecimal> fxRates) {
+    /** 외부 현금흐름(투자자 관점: 입금=음수, 출금=양수)을 거래일 환율로 원화 환산해 생성한다. */
+    private List<ExternalFlow> investorFlows(List<PortfolioTransaction> txns, FxRateTable fxTable) {
         List<ExternalFlow> flows = new ArrayList<>();
         for (PortfolioTransaction t : txns) {
             if (t.getType() != TxType.DEPOSIT && t.getType() != TxType.WITHDRAW) {
                 continue;
             }
-            long krw = t.getAmount().multiply(fxRates.getOrDefault(t.getCurrency(), BigDecimal.ONE))
+            long krw = t.getAmount().multiply(fxTable.rateOn(t.getCurrency(), t.getTradeDate()))
                     .setScale(0, RoundingMode.HALF_UP).longValue();
             flows.add(new ExternalFlow(t.getTradeDate(), t.getType() == TxType.DEPOSIT ? -krw : krw));
         }

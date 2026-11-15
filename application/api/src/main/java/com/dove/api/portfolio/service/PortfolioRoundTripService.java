@@ -1,6 +1,7 @@
 package com.dove.api.portfolio.service;
 
 import com.dove.api.portfolio.dto.PortfolioRoundTripResponse;
+import com.dove.portfolio.application.service.FxRateTable;
 import com.dove.portfolio.application.service.PortfolioAccountService;
 import com.dove.portfolio.application.service.PortfolioFxRateService;
 import com.dove.portfolio.application.service.PortfolioRoundTrip;
@@ -11,8 +12,6 @@ import com.dove.portfolio.domain.entity.PortfolioTransaction;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
-import java.math.BigDecimal;
-import java.math.RoundingMode;
 import java.time.LocalDate;
 import java.util.ArrayList;
 import java.util.List;
@@ -20,7 +19,7 @@ import java.util.Map;
 import java.util.stream.Collectors;
 
 /**
- * 라운드트립 조합 — 거래 fold(청산 사이클)에 계좌명과 현재 환율(원화 환산)을 얹는다.
+ * 라운드트립 조합 — 거래 fold(청산 사이클)에 계좌명과 매도일 환율(원화 환산)을 얹는다.
  */
 @Service
 @RequiredArgsConstructor
@@ -48,15 +47,13 @@ public class PortfolioRoundTripService {
         List<PortfolioRoundTrip> trips = roundTripCalculator.fold(txns, LocalDate.now());
         Map<Long, String> accountNames = accountService.findByOwner(memberId).stream()
                 .collect(Collectors.toMap(PortfolioAccount::getId, PortfolioAccount::getName));
-        Map<String, BigDecimal> fxRates = fxRateService.ratesByCurrency();
+        FxRateTable fxTable = fxRateService.rateTable();
 
         List<PortfolioRoundTripResponse> result = new ArrayList<>(trips.size());
         long id = 1;
         for (PortfolioRoundTrip t : trips) {
-            BigDecimal fx = fxRates.getOrDefault(t.currency(), BigDecimal.ONE);
-            long pnlKrw = t.pnlNat().multiply(fx).setScale(0, RoundingMode.HALF_UP).longValue();
             String group = accountNames.getOrDefault(t.accountId(), "?");
-            result.add(PortfolioRoundTripResponse.of(id++, t, group, pnlKrw, fx));
+            result.add(PortfolioRoundTripResponse.of(id++, t, group, fxTable));
         }
         return result;
     }

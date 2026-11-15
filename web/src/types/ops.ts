@@ -17,3 +17,23 @@ export interface SystemEventPage {
   number: number;
   size: number;
 }
+
+export interface FxRateCoverage {
+  currency: string;
+  earliestDate: string | null;
+  latestDate: string | null;
+  latestRate: string | null;
+  rowCount: number;
+}
+
+export interface FxRateRow {
+  rateDate: string;
+  currency: string;
+  rate: string;
+}
+
+export interface FxRateOverview {
+  backfillStartDate: string;
+  coverages: FxRateCoverage[];
+  recent: FxRateRow[];
+}

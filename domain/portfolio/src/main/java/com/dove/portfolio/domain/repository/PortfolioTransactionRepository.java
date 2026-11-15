@@ -16,4 +16,7 @@ public interface PortfolioTransactionRepository extends JpaRepository<PortfolioT
 
     /** 거래 단건 — 본인 소유 확인 포함. */
     Optional<PortfolioTransaction> findByIdAndOwnerMemberId(Long id, Long ownerMemberId);
+
+    /** 전 회원 통틀어 가장 오래된 거래 (환율 백필 시작일 산출용). */
+    Optional<PortfolioTransaction> findTopByOrderByTradeDateAsc();
 }

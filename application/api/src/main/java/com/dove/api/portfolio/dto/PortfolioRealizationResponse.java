@@ -1,5 +1,6 @@
 package com.dove.api.portfolio.dto;
 
+import com.dove.portfolio.application.service.FxRateTable;
 import com.dove.portfolio.application.service.PortfolioRealization;
 
 import java.math.BigDecimal;
@@ -11,8 +12,8 @@ import java.math.RoundingMode;
  * @param date     매도 일자(ISO)
  * @param quantity 매도 수량
  * @param pnlNat   실현 손익(원통화)
- * @param pnlKrw   실현 손익(원화, 현재 환율 근사)
- * @param costKrw  판 만큼의 매입 원가(원화, 현재 환율 근사) — 기간별 수익률의 분모
+ * @param pnlKrw   실현 손익(원화, 매도일 환율)
+ * @param costKrw  판 만큼의 매입 원가(원화, 매도일 환율) — 기간별 수익률의 분모
  * @param pnlPct   수익률(%, 판 만큼의 원가 기준)
  */
 public record PortfolioRealizationResponse(
@@ -24,9 +25,10 @@ public record PortfolioRealizationResponse(
         double pnlPct
 ) {
     /**
-     * 도메인 실현 이벤트를 원화 환산과 함께 응답으로 변환한다.
+     * 도메인 실현 이벤트를 매도일 환율로 환산해 응답으로 변환한다.
      */
-    public static PortfolioRealizationResponse of(PortfolioRealization r, BigDecimal fxRate) {
+    public static PortfolioRealizationResponse of(PortfolioRealization r, String currency, FxRateTable fxTable) {
+        BigDecimal fxRate = fxTable.rateOn(currency, r.sellDate());
         long pnlKrw = r.pnl().multiply(fxRate).setScale(0, RoundingMode.HALF_UP).longValue();
         long costKrw = r.costBasis().multiply(fxRate).setScale(0, RoundingMode.HALF_UP).longValue();
         double pnlPct = r.costBasis().signum() > 0

@@ -604,14 +604,15 @@ CREATE TABLE IF NOT EXISTS PORTFOLIO_HOLDING (
     INDEX IDX_PORTFOLIO_HOLDING_OWNER (OWNER_MEMBER_ID)
 ) COMMENT='포트폴리오 종목 식별';
 
--- 포트폴리오 평가용 원통화 환율(통화당 1행, 매일 덮어쓰기). 이력 미보존.
+-- 포트폴리오 원통화 환율 이력((통화,고시일)당 1행). 과거 거래의 원화 환산에 쓴다.
+-- 50년 누적 추정: 통화 3개 × 영업일 260일 × 50년 ≈ 4만 행(수 MB)으로 압축 불필요.
 CREATE TABLE IF NOT EXISTS PORTFOLIO_FX_RATE (
     CURRENCY   VARCHAR(10)   NOT NULL COMMENT '원통화 코드(USD 등)',
-    RATE       DECIMAL(18,6) NOT NULL COMMENT '원통화 1단위당 원화',
     RATE_DATE  DATE          NOT NULL COMMENT '환율 고시 일자',
+    RATE       DECIMAL(18,6) NOT NULL COMMENT '원통화 1단위당 원화',
     FETCHED_AT DATETIME(6)   NOT NULL COMMENT '수집 일시(신선도 확인용)',
-    PRIMARY KEY (CURRENCY)
-) COMMENT='포트폴리오 환율';
+    PRIMARY KEY (CURRENCY, RATE_DATE)
+) COMMENT='포트폴리오 환율 이력';
 
 -- 포트폴리오 해외 종목 최신 종가((시장,티커)당 1행, 매일 덮어쓰기). 국내는 STOCK_PRICE 재사용.
 CREATE TABLE IF NOT EXISTS PORTFOLIO_QUOTE (

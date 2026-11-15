@@ -202,6 +202,17 @@ const ROOT_SYSTEM_EVENTS_ITEM: NavItem = {
   ),
 };
 
+const ROOT_FX_RATES_ITEM: NavItem = {
+  href: "/root/ops/fx-rates",
+  label: "환율 이력",
+  icon: (
+    <svg className="w-5 h-5 flex-shrink-0" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <polyline points="3 17 9 11 13 15 21 7" />
+      <polyline points="15 7 21 7 21 13" />
+    </svg>
+  ),
+};
+
 const ROOT_STOCK_TAGS_ITEM: NavItem = {
   href: "/root/ops/stock-tags",
   label: "분류 표시명",
@@ -356,6 +367,7 @@ export default function Sidebar({ role, capabilities, mobileOpen, onMobileClose 
               <NavLink item={ROOT_STOCK_TAGS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
               <NavLink item={ROOT_MODELS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
               <NavLink item={ROOT_CUSTOM_METRICS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
+              <NavLink item={ROOT_FX_RATES_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
               <NavLink item={ROOT_SYSTEM_EVENTS_ITEM} pathname={pathname} collapsed={collapsed} mobileOpen={mobileOpen} />
             </>
           )}
