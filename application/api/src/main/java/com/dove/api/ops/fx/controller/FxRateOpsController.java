@@ -43,10 +43,10 @@ public class FxRateOpsController {
     }
 
     /**
-     * 빈 구간의 환율을 지금 채운다.
+     * 빈 구간의 환율과 해외 종가를 지금 채운다.
      */
     @PostMapping("/refresh")
     public FxRateRefreshResponse refresh() {
-        return new FxRateRefreshResponse(service.refresh());
+        return new FxRateRefreshResponse(service.refreshRates(), service.refreshQuotes());
     }
 }

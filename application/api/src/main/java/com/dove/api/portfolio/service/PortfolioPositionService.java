@@ -14,7 +14,6 @@ import com.dove.portfolio.application.service.PortfolioQuoteService;
 import com.dove.portfolio.application.service.PortfolioTransactionService;
 import com.dove.portfolio.domain.entity.PortfolioAccount;
 import com.dove.portfolio.domain.entity.PortfolioHolding;
-import com.dove.portfolio.domain.entity.PortfolioQuote;
 import com.dove.portfolio.domain.entity.PortfolioTransaction;
 import com.dove.portfolio.domain.enums.PortfolioMarket;
 import lombok.RequiredArgsConstructor;
@@ -66,8 +65,7 @@ public class PortfolioPositionService {
         Map<Long, String> accountNames = accountService.findByOwner(memberId).stream()
                 .collect(Collectors.toMap(PortfolioAccount::getId, PortfolioAccount::getName));
         Map<String, BigDecimal> fxRates = fxRateService.ratesByCurrency();
-        Map<String, BigDecimal> quotes = quoteService.findAll().stream()
-                .collect(Collectors.toMap(q -> key(q.getMarket(), q.getTicker()), PortfolioQuote::getClosePrice));
+        Map<String, BigDecimal> quotes = quoteService.latestByKey();
         // 국내 현재가는 보유 거래소의 최신 거래일 전 종목을 한 번에 로드(종목별 N+1 조회 회피). key=ticker.
         Map<String, StockPrice> domesticPrices = domesticPrices(holdings.values());
 

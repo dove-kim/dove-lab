@@ -52,7 +52,8 @@ public class PortfolioSharedController {
         PortfolioAccess access = accessService.resolveRead(user.memberId(), accountId);
         PortfolioSummaryResponse s = summaryService.compute(access.ownerMemberId(), accountId);
         return access.hideAmounts()
-                ? new PortfolioSummaryResponse(0, 0, 0, 0, 0, s.evalPnlPct(), s.xirrPct(), java.util.Map.of())
+                ? new PortfolioSummaryResponse(0, 0, 0, 0, 0, s.evalPnlPct(), s.xirrPct(), s.xirrByPeriod(),
+                        java.util.Map.of())
                 : s;
     }
 

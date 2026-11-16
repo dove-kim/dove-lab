@@ -4,6 +4,7 @@ import com.dove.api.TestApiApplication;
 import com.dove.api.support.WithApiUser;
 import com.dove.portfolio.application.port.FxQuote;
 import com.dove.portfolio.application.port.FxRatePort;
+import com.dove.portfolio.application.port.OverseasPricePort;
 import com.dove.portfolio.domain.entity.PortfolioFxRate;
 import com.dove.portfolio.domain.repository.PortfolioFxRateRepository;
 import org.junit.jupiter.api.DisplayName;
@@ -39,6 +40,8 @@ class FxRateOpsControllerTest {
     @Autowired PortfolioFxRateRepository fxRateRepository;
 
     @MockitoBean FxRatePort fxRatePort;
+
+    @MockitoBean OverseasPricePort overseasPricePort;
 
     @Nested
     @DisplayName("GET /admin/ops/fx")
@@ -99,7 +102,7 @@ class FxRateOpsControllerTest {
 
         @Test
         @WithApiUser(role = "ROOT")
-        @DisplayName("받아온 환율 행수를 반환한다")
+        @DisplayName("받아온 환율과 종가 행수를 반환한다")
         void shouldReturnSavedCount() throws Exception {
             when(fxRatePort.fetchSeriesToKrw(eq("USD"), any(), any())).thenReturn(List.of(
                     new FxQuote("USD", new BigDecimal("1335.62"), LocalDate.of(2024, 3, 1)),
@@ -107,7 +110,8 @@ class FxRateOpsControllerTest {
 
             mockMvc.perform(post("/admin/ops/fx/refresh"))
                     .andExpect(status().isOk())
-                    .andExpect(jsonPath("$.saved").value(2));
+                    .andExpect(jsonPath("$.savedRates").value(2))
+                    .andExpect(jsonPath("$.savedQuotes").value(0));
         }
     }
 }

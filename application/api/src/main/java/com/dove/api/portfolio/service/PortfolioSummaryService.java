@@ -5,6 +5,8 @@ import com.dove.api.portfolio.dto.PortfolioSummaryResponse;
 import com.dove.portfolio.application.service.FxRateTable;
 import com.dove.portfolio.application.service.PortfolioAccountService;
 import com.dove.portfolio.application.service.PortfolioCashCalculator;
+import com.dove.portfolio.application.service.PortfolioHoldingService;
+import com.dove.portfolio.domain.entity.PortfolioHolding;
 import com.dove.portfolio.application.service.PortfolioFxConversionService;
 import com.dove.portfolio.application.service.PortfolioFxRateService;
 import com.dove.portfolio.application.service.PortfolioTransactionService;
@@ -35,12 +37,16 @@ import java.util.OptionalDouble;
 @RequiredArgsConstructor
 public class PortfolioSummaryService {
 
+    private static final String PERIOD_ALL = "all";
+
     private final PortfolioTransactionService transactionService;
     private final PortfolioPositionService positionService;
     private final PortfolioCashCalculator cashCalculator;
     private final PortfolioFxRateService fxRateService;
     private final PortfolioFxConversionService fxConversionService;
     private final PortfolioAccountService accountService;
+    private final PortfolioHoldingService holdingService;
+    private final PortfolioAssetSnapshotService snapshotService;
 
     /**
      * 소유 회원의 포트폴리오 요약을 계산한다.
@@ -71,15 +77,20 @@ public class PortfolioSummaryService {
 
         long total = cash + eval;
         // 외부 흐름은 거래일 환율로 환산 — 입금 당시 원화 투입액이 순납입이고, 환차익은 누적 손익에 남는다.
-        List<ExternalFlow> flows = investorFlows(txns, fxRateService.rateTable());
+        FxRateTable fxTable = fxRateService.rateTable();
+        List<ExternalFlow> flows = investorFlows(txns, fxTable);
         long netContrib = -flows.stream().mapToLong(ExternalFlow::amountKrw).sum();
         long growth = total - netContrib;
         double evalPnlPct = invested > 0 ? round1(evalPnl * 100.0 / invested) : 0.0;
 
-        OptionalDouble xirr = Xirr.annualRatePct(flows, LocalDate.now(), total);
-        double xirrPct = xirr.isPresent() ? round1(xirr.getAsDouble()) : 0.0;
+        List<PortfolioHolding> holdings = holdingService.findByOwner(memberId).stream()
+                .filter(h -> accountFilter == null || accountFilter.equals(h.getAccountId()))
+                .toList();
+        Map<String, Double> xirrByPeriod = xirrByPeriod(txns, convs, holdings, flows, fxTable, total);
+        double xirrPct = xirrByPeriod.getOrDefault(PERIOD_ALL, 0.0);
 
-        return new PortfolioSummaryResponse(total, cash, netContrib, growth, evalPnl, evalPnlPct, xirrPct, cashByCurrency);
+        return new PortfolioSummaryResponse(total, cash, netContrib, growth, evalPnl, evalPnlPct, xirrPct,
+                xirrByPeriod, cashByCurrency);
     }
 
     /**
@@ -107,6 +118,52 @@ public class PortfolioSummaryService {
             sum = sum.add(e.getValue().multiply(fxRates.getOrDefault(e.getKey(), BigDecimal.ONE)));
         }
         return sum.setScale(0, RoundingMode.HALF_UP).longValue();
+    }
+
+    /**
+     * 기간별 연환산 XIRR(%)을 계산한다. 구간이 있으면 직전일 총자산을 시작 투입으로, 구간 말 총자산을 회수로 둔다.
+     */
+    private Map<String, Double> xirrByPeriod(List<PortfolioTransaction> txns, List<PortfolioFxConversion> convs,
+                                             List<PortfolioHolding> holdings, List<ExternalFlow> allFlows,
+                                             FxRateTable fxTable, long totalNow) {
+        LocalDate today = LocalDate.now();
+        int year = today.getYear();
+        Map<String, Double> result = new LinkedHashMap<>();
+        result.put(PERIOD_ALL, rate(Xirr.annualRatePct(allFlows, today, totalNow)));
+        result.put("thisYear", periodRate(txns, convs, holdings, allFlows, fxTable, totalNow,
+                LocalDate.of(year, 1, 1), today));
+        result.put("lastYear", periodRate(txns, convs, holdings, allFlows, fxTable, totalNow,
+                LocalDate.of(year - 1, 1, 1), LocalDate.of(year - 1, 12, 31)));
+        result.put("last12m", periodRate(txns, convs, holdings, allFlows, fxTable, totalNow,
+                today.minusYears(1), today));
+        return result;
+    }
+
+    /** 한 구간 [from, to]의 XIRR(%)을 계산한다. 구간에 자산도 흐름도 없으면 0. */
+    private double periodRate(List<PortfolioTransaction> txns, List<PortfolioFxConversion> convs,
+                              List<PortfolioHolding> holdings, List<ExternalFlow> allFlows,
+                              FxRateTable fxTable, long totalNow, LocalDate from, LocalDate to) {
+        LocalDate today = LocalDate.now();
+        long opening = snapshotService.totalAssetOn(txns, convs, holdings, from.minusDays(1), fxTable);
+        long closing = to.isBefore(today)
+                ? snapshotService.totalAssetOn(txns, convs, holdings, to, fxTable)
+                : totalNow;
+
+        List<ExternalFlow> flows = new ArrayList<>();
+        if (opening != 0) {
+            flows.add(new ExternalFlow(from, -opening));
+        }
+        allFlows.stream()
+                .filter(f -> !f.date().isBefore(from) && !f.date().isAfter(to))
+                .forEach(flows::add);
+        if (flows.isEmpty()) {
+            return 0.0;
+        }
+        return rate(Xirr.annualRatePct(flows, to.isBefore(today) ? to : today, closing));
+    }
+
+    private double rate(OptionalDouble value) {
+        return value.isPresent() ? round1(value.getAsDouble()) : 0.0;
     }
 
     /** 외부 현금흐름(투자자 관점: 입금=음수, 출금=양수)을 거래일 환율로 원화 환산해 생성한다. */

@@ -1,8 +1,11 @@
 package com.dove.kis.infrastructure.adapter;
 
 import com.dove.kis.infrastructure.client.KisOverseasClient;
+import com.dove.kis.infrastructure.client.dto.KisOverseasDailyOutput;
+import com.dove.kis.infrastructure.client.dto.KisOverseasDailyResponse;
 import com.dove.kis.infrastructure.client.dto.KisOverseasPriceResponse;
 import com.dove.kis.quota.KisGate;
+import com.dove.portfolio.application.port.OverseasClose;
 import com.dove.portfolio.application.port.OverseasPricePort;
 import com.dove.portfolio.domain.enums.PortfolioMarket;
 import lombok.RequiredArgsConstructor;
@@ -10,6 +13,11 @@ import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Component;
 
 import java.math.BigDecimal;
+import java.time.LocalDate;
+import java.time.format.DateTimeFormatter;
+import java.util.LinkedHashMap;
+import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 
 /**
@@ -21,7 +29,13 @@ import java.util.Optional;
 public class KisOverseasPriceAdapter implements OverseasPricePort {
 
     private static final String TR_PRICE = "HHDFS00000300";
+    private static final String TR_DAILY = "HHDFS76240000";
     private static final String AUTH = "";
+    private static final String GUBN_DAY = "0";
+    private static final String MODP_ADJUSTED = "1";
+    private static final DateTimeFormatter YMD = DateTimeFormatter.ofPattern("yyyyMMdd");
+    /** 한 종목당 연속조회 상한 — 100건씩이므로 넉넉히 50페이지(약 20년). */
+    private static final int MAX_PAGES = 50;
 
     private final KisOverseasClient client;
     private final KisGate kisGate;
@@ -45,6 +59,59 @@ public class KisOverseasPriceAdapter implements OverseasPricePort {
         } catch (RuntimeException e) {
             log.warn("KIS overseas price fetch failed {} {}: {}", excd, ticker, e.getMessage());
             return Optional.empty();
+        }
+    }
+
+    @Override
+    public List<OverseasClose> fetchDailyCloses(PortfolioMarket market, String ticker, LocalDate from) {
+        String excd = excd(market);
+        if (excd == null) {
+            return List.of();
+        }
+        Map<LocalDate, BigDecimal> collected = new LinkedHashMap<>();
+        LocalDate cursor = LocalDate.now();
+        // 기준일을 과거로 밀며 연속 조회 — 한 페이지가 비거나 from 이전에 닿으면 종료.
+        for (int page = 0; page < MAX_PAGES && !cursor.isBefore(from); page++) {
+            List<KisOverseasDailyOutput> rows = fetchPage(excd, ticker, cursor);
+            if (rows.isEmpty()) {
+                break;
+            }
+            LocalDate oldest = null;
+            for (KisOverseasDailyOutput row : rows) {
+                LocalDate date = row.getDateValue();
+                BigDecimal close = row.getCloseValue();
+                if (date == null || close == null) {
+                    continue;
+                }
+                if (oldest == null || date.isBefore(oldest)) {
+                    oldest = date;
+                }
+                if (!date.isBefore(from)) {
+                    collected.putIfAbsent(date, close);
+                }
+            }
+            if (oldest == null) {
+                break;
+            }
+            cursor = oldest.minusDays(1);
+        }
+        return collected.entrySet().stream()
+                .map(e -> new OverseasClose(e.getKey(), e.getValue()))
+                .toList();
+    }
+
+    /** 기준일 한 페이지(최대 100건)를 받아온다. 실패하면 빈 목록. */
+    private List<KisOverseasDailyOutput> fetchPage(String excd, String ticker, LocalDate bymd) {
+        try {
+            KisOverseasDailyResponse res = kisGate.call(
+                    () -> client.getDailyPrice(TR_DAILY, AUTH, excd, ticker, GUBN_DAY, bymd.format(YMD), MODP_ADJUSTED));
+            if (res == null || !res.isSuccess() || res.getOutputs() == null) {
+                return List.of();
+            }
+            return res.getOutputs();
+        } catch (RuntimeException e) {
+            log.warn("KIS overseas daily fetch failed {} {} {}: {}", excd, ticker, bymd, e.getMessage());
+            return List.of();
         }
     }
 

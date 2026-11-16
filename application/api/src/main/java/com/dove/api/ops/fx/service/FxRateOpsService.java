@@ -2,6 +2,7 @@ package com.dove.api.ops.fx.service;
 
 import com.dove.portfolio.application.service.FxRateCoverage;
 import com.dove.portfolio.application.service.PortfolioFxRateService;
+import com.dove.portfolio.application.service.PortfolioQuoteService;
 import com.dove.portfolio.application.service.PortfolioTransactionService;
 import com.dove.portfolio.domain.entity.PortfolioFxRate;
 import lombok.RequiredArgsConstructor;
@@ -11,13 +12,14 @@ import java.time.LocalDate;
 import java.util.List;
 
 /**
- * 환율 이력 운영 조합 — 보유 현황·최근 고시 조회와 수동 채우기를 묶는다.
+ * 환율 이력 운영 조합 — 보유 현황·최근 고시 조회와 환율·해외 종가 수동 채우기를 묶는다.
  */
 @Service
 @RequiredArgsConstructor
 public class FxRateOpsService {
 
     private final PortfolioFxRateService fxRateService;
+    private final PortfolioQuoteService quoteService;
     private final PortfolioTransactionService transactionService;
 
     /**
@@ -46,7 +48,16 @@ public class FxRateOpsService {
      *
      * @return 새로 저장된 행 수
      */
-    public int refresh() {
+    public int refreshRates() {
         return fxRateService.refreshFrom(backfillStartDate());
+    }
+
+    /**
+     * 빈 구간의 해외 종가를 지금 채운다(기간별 수익률이 과거 평가액을 쓰므로 환율과 함께 필요하다).
+     *
+     * @return 새로 저장된 행 수
+     */
+    public int refreshQuotes() {
+        return quoteService.refreshFrom(backfillStartDate());
     }
 }

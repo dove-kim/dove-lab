@@ -72,7 +72,12 @@ export default function FxRatesClient({ initial }: Props) {
       const res = await fetch("/api/admin/ops/fx/refresh", { method: "POST" });
       if (res.ok) {
         const data = await res.json();
-        setMessage(data.saved > 0 ? `${data.saved}행을 새로 받았습니다.` : "새로 받을 환율이 없습니다.");
+        const total = (data.savedRates ?? 0) + (data.savedQuotes ?? 0);
+        setMessage(
+          total > 0
+            ? `환율 ${data.savedRates}행, 해외 종가 ${data.savedQuotes}행을 새로 받았습니다.`
+            : "새로 받을 환율과 종가가 없습니다.",
+        );
         await reload();
       } else {
         setMessage("채우기에 실패했습니다.");
@@ -154,9 +159,9 @@ export default function FxRatesClient({ initial }: Props) {
             {rowsByDate.length === 0 ? (
               <p className={cx.emptyState}>아직 받아온 환율이 없습니다.</p>
             ) : (
-              <div className="overflow-x-auto">
+              <div className="max-h-[520px] overflow-auto">
                 <table className={cx.table.root}>
-                  <thead className={cx.table.head}>
+                  <thead className={cn(cx.table.head, "sticky top-0 z-10")}>
                     <tr>
                       <th scope="col" className={cx.table.th}>
                         고시일

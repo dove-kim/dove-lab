@@ -614,17 +614,16 @@ CREATE TABLE IF NOT EXISTS PORTFOLIO_FX_RATE (
     PRIMARY KEY (CURRENCY, RATE_DATE)
 ) COMMENT='포트폴리오 환율 이력';
 
--- 포트폴리오 해외 종목 최신 종가((시장,티커)당 1행, 매일 덮어쓰기). 국내는 STOCK_PRICE 재사용.
+-- 포트폴리오 해외 종목 일자별 종가 이력((시장,티커,기준일)당 1행). 국내는 STOCK_PRICE 재사용.
+-- 50년 누적 추정: 종목 50개 × 영업일 250일 × 50년 ≈ 62만 행 — 압축 적용.
 CREATE TABLE IF NOT EXISTS PORTFOLIO_QUOTE (
-    ID          BIGINT        NOT NULL AUTO_INCREMENT,
     MARKET      VARCHAR(20)   NOT NULL COMMENT '상장 시장',
     TICKER      VARCHAR(20)   NOT NULL COMMENT '시장 내 종목 코드',
-    CLOSE_PRICE DECIMAL(24,8) NOT NULL COMMENT '최신 종가(원통화)',
     AS_OF       DATE          NOT NULL COMMENT '종가 기준 일자',
+    CLOSE_PRICE DECIMAL(24,8) NOT NULL COMMENT '종가(원통화)',
     FETCHED_AT  DATETIME(6)   NOT NULL COMMENT '수집 일시(신선도 확인용)',
-    PRIMARY KEY (ID),
-    UNIQUE KEY UK_PORTFOLIO_QUOTE_MARKET_TICKER (MARKET, TICKER)
-) COMMENT='포트폴리오 해외 종가';
+    PRIMARY KEY (MARKET, TICKER, AS_OF)
+) ROW_FORMAT=COMPRESSED COMMENT='포트폴리오 해외 종가 이력';
 
 -- 포트폴리오 계좌 공유(소유자→수신자, 계좌 단위 열람/쓰기 권한).
 CREATE TABLE IF NOT EXISTS PORTFOLIO_SHARE (
