@@ -80,7 +80,8 @@ public class PortfolioAllService {
         long netContrib = own.netContribKrw();
         long growth = total - netContrib;
         double evalPnlPct = invested > 0 ? Math.round(pnl * 1000.0 / invested) / 10.0 : 0.0;
-        return new PortfolioSummaryResponse(total, cash, netContrib, growth, pnl, evalPnlPct, own.xirrPct(), cashByCurrency);
+        return new PortfolioSummaryResponse(total, cash, netContrib, growth, pnl, evalPnlPct, own.xirrPct(),
+                own.xirrByPeriod(), cashByCurrency);
     }
 
     /**

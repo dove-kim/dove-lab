@@ -86,7 +86,7 @@ class PortfolioPositionControllerTest {
             long accountId = accountService.create(MEMBER_ID, "미국", null, null, "tester").getId();
             buy(accountId, "TSLA", "USD", "10", "180", 1_800L); // 금액도 원통화: 10×180=1,800 USD
             holdingService.attach(MEMBER_ID, accountId, "TSLA", PortfolioMarket.NASDAQ, "TSLA", "tester");
-            quoteRepository.save(PortfolioQuote.create(PortfolioMarket.NASDAQ, "TSLA", new BigDecimal("200")));
+            quoteRepository.save(PortfolioQuote.create(PortfolioMarket.NASDAQ, "TSLA", new BigDecimal("200"), LocalDate.now()));
             fxRateRepository.save(PortfolioFxRate.create("USD", new BigDecimal("1400"), LocalDate.of(2026, 7, 13)));
 
             // 원가 1,800×1,400=2,520,000 / 평가 200×10×1,400=2,800,000 → 손익 280,000

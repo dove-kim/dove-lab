@@ -1,5 +1,8 @@
 package com.dove.api.portfolio.dto;
 
+import java.math.BigDecimal;
+import java.util.Map;
+
 /**
  * 포트폴리오 요약 응답 — 대시보드·리포트 헤드라인.
  *
@@ -9,7 +12,8 @@ package com.dove.api.portfolio.dto;
  * @param growthKrw       증가액(총자산−순납입, 원화)
  * @param evalPnlKrw      보유 평가손익(원화)
  * @param evalPnlPct      보유 평가수익률(%)
- * @param xirrPct         연환산 XIRR(%)
+ * @param xirrPct         연환산 XIRR(%, 전체 기간)
+ * @param xirrByPeriod    기간별 연환산 XIRR(%) — 키는 all, thisYear, lastYear, last12m
  * @param cashByCurrency  통화별 현금 잔액(원통화, 예: {KRW: …, USD: …})
  */
 public record PortfolioSummaryResponse(
@@ -20,5 +24,6 @@ public record PortfolioSummaryResponse(
         long evalPnlKrw,
         double evalPnlPct,
         double xirrPct,
-        java.util.Map<String, java.math.BigDecimal> cashByCurrency
+        Map<String, Double> xirrByPeriod,
+        Map<String, BigDecimal> cashByCurrency
 ) {}

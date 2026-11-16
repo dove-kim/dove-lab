@@ -43,6 +43,8 @@ export default function OverallStats({
     : null;
 
   const wholePeriod = period.key === "all";
+  // 서버가 기간별로 계산해 내려준다. 구버전 응답이면 전체 기간 값으로 떨어진다.
+  const periodXirr = summary.xirrByPeriod?.[period.key] ?? summary.xirrPct;
 
   return (
     <section className="flex flex-col gap-3">
@@ -67,9 +69,9 @@ export default function OverallStats({
         />
         <StatTile
           label="연환산 수익률 (XIRR)"
-          value={`${summary.xirrPct >= 0 ? "+" : ""}${summary.xirrPct}%`}
-          sub="전체 현금흐름 기준"
-          tone={pnlColor(summary.xirrPct)}
+          value={`${periodXirr >= 0 ? "+" : ""}${periodXirr}%`}
+          sub={wholePeriod ? "전체 현금흐름 기준" : `${period.label} · 구간 시작 평가액 기준`}
+          tone={pnlColor(periodXirr)}
         />
       </div>
 
@@ -88,7 +90,8 @@ export default function OverallStats({
       )}
 
       <p className="text-xs text-slate-600">
-        실현 손익은 매도 시점에 귀속되므로 기간을 정확히 자른다. 평가 손익과 XIRR은 과거 시점으로 쪼갤 수 없어 현재 기준이다.
+        실현 손익은 매도 시점에 귀속되므로 기간을 정확히 자른다. XIRR은 구간 시작일의 평가액을 투입으로 보고 다시 계산한다.
+        평가 손익은 과거 시점으로 쪼갤 수 없어 현재 기준이다.
       </p>
     </section>
   );

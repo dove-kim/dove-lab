@@ -13,7 +13,7 @@ import java.time.LocalDate;
 import java.util.function.IntSupplier;
 
 /**
- * 포트폴리오 시세·환율 일배치 조합 — 보유 해외 종목 종가와 원통화 환율 이력을 갱신한다.
+ * 포트폴리오 시세·환율 일배치 조합 — 가장 오래된 거래일을 기준점으로 환율과 해외 종가 이력의 빈 구간을 채운다.
  */
 @Slf4j
 @Service
@@ -29,14 +29,9 @@ public class PortfolioMarketDataService {
      * 환율 이력과 해외 종가를 순차 갱신한다.
      */
     public void refresh() {
-        runStage(SchedulerJobName.PORTFOLIO_FX, this::refreshFxRates);
-        runStage(SchedulerJobName.PORTFOLIO_QUOTE, quoteService::refreshOverseas);
-    }
-
-    /** 가장 오래된 거래일을 백필 시작점으로 삼아 환율 이력의 빈 구간을 채운다. */
-    private int refreshFxRates() {
-        LocalDate start = transactionService.oldestTradeDate().orElse(LocalDate.now());
-        return fxRateService.refreshFrom(start);
+        LocalDate start = transactionService.oldestTradeDate().orElseGet(LocalDate::now);
+        runStage(SchedulerJobName.PORTFOLIO_FX, () -> fxRateService.refreshFrom(start));
+        runStage(SchedulerJobName.PORTFOLIO_QUOTE, () -> quoteService.refreshFrom(start));
     }
 
     private void runStage(SchedulerJobName job, IntSupplier task) {

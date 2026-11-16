@@ -65,6 +65,8 @@ export interface PortfolioSummary {
   evalPnlKrw: number;
   evalPnlPct: number;
   xirrPct: number;
+  /** 기간별 연환산 XIRR(%) — 키는 all, thisYear, lastYear, last12m */
+  xirrByPeriod?: Record<string, number>;
   cashByCurrency: Record<string, number>;
 }
 
