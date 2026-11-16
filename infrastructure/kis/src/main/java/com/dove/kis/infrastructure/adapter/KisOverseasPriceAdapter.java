@@ -36,6 +36,10 @@ public class KisOverseasPriceAdapter implements OverseasPricePort {
     private static final DateTimeFormatter YMD = DateTimeFormatter.ofPattern("yyyyMMdd");
     /** 한 종목당 연속조회 상한 — 100건씩이므로 넉넉히 50페이지(약 20년). */
     private static final int MAX_PAGES = 50;
+    /** 빈 응답을 만났을 때 기준일을 물릴 일수(휴장 연휴 흡수). */
+    private static final int BLANK_STEP_DAYS = 7;
+    /** 연속 빈 응답 허용 횟수 — 넘으면 더 과거 데이터가 없다고 본다. */
+    private static final int MAX_BLANK_PAGES = 3;
 
     private final KisOverseasClient client;
     private final KisGate kisGate;
@@ -70,12 +74,18 @@ public class KisOverseasPriceAdapter implements OverseasPricePort {
         }
         Map<LocalDate, BigDecimal> collected = new LinkedHashMap<>();
         LocalDate cursor = LocalDate.now();
-        // 기준일을 과거로 밀며 연속 조회 — 한 페이지가 비거나 from 이전에 닿으면 종료.
+        int blanks = 0;
+        // 기준일을 과거로 밀며 연속 조회 — 휴장일·장 시작 전에는 빈 페이지가 오므로 며칠 물러나 다시 본다.
         for (int page = 0; page < MAX_PAGES && !cursor.isBefore(from); page++) {
             List<KisOverseasDailyOutput> rows = fetchPage(excd, ticker, cursor);
             if (rows.isEmpty()) {
-                break;
+                if (++blanks > MAX_BLANK_PAGES) {
+                    break;
+                }
+                cursor = cursor.minusDays(BLANK_STEP_DAYS);
+                continue;
             }
+            blanks = 0;
             LocalDate oldest = null;
             for (KisOverseasDailyOutput row : rows) {
                 LocalDate date = row.getDateValue();
@@ -105,7 +115,17 @@ public class KisOverseasPriceAdapter implements OverseasPricePort {
         try {
             KisOverseasDailyResponse res = kisGate.call(
                     () -> client.getDailyPrice(TR_DAILY, AUTH, excd, ticker, GUBN_DAY, bymd.format(YMD), MODP_ADJUSTED));
-            if (res == null || !res.isSuccess() || res.getOutputs() == null) {
+            if (res == null) {
+                log.warn("KIS overseas daily returned null {} {} {}", excd, ticker, bymd);
+                return List.of();
+            }
+            if (!res.isSuccess()) {
+                log.warn("KIS overseas daily rejected {} {} {}: rt_cd={} msg_cd={} msg={}",
+                        excd, ticker, bymd, res.getResultCode(), res.getMessageCode(), res.getMessage());
+                return List.of();
+            }
+            if (res.getOutputs() == null || res.getOutputs().isEmpty()) {
+                log.info("KIS overseas daily empty page {} {} {}", excd, ticker, bymd);
                 return List.of();
             }
             return res.getOutputs();
